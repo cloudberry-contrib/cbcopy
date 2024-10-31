@@ -2,7 +2,8 @@ package builtin_test
 
 import (
 	"fmt"
-	"github.com/greenplum-db/gp-common-go-libs/testhelper"
+	//"github.com/greenplum-db/gp-common-go-libs/testhelper"
+	"github.com/cloudberrydb/cbcopy/internal/testhelper"
 
 	// "github.com/greenplum-db/gpbackup/backup"
 	"github.com/cloudberrydb/cbcopy/meta/builtin"

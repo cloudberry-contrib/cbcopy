@@ -24,7 +24,7 @@ $(GOIMPORTS):
 	$(GO_ENV) go install golang.org/x/tools/cmd/goimports
 
 format: $(GOIMPORTS)
-	@goimports -w $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+	$(GOIMPORTS) -w $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 unit: $(GINKGO)
 	@echo "Running unit tests..."

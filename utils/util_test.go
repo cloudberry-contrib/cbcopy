@@ -1,7 +1,8 @@
 package utils_test
 
 import (
-	"github.com/greenplum-db/gp-common-go-libs/testhelper"
+	//"github.com/greenplum-db/gp-common-go-libs/testhelper"
+	"github.com/cloudberrydb/cbcopy/internal/testhelper"
 
 	"github.com/cloudberrydb/cbcopy/internal/dbconn"
 
