@@ -12,6 +12,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/greenplum-db/gp-common-go-libs/structmatcher"
+
 	//"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/cloudberrydb/cbcopy/internal/testhelper"
 

@@ -8,8 +8,9 @@ package builtin
 import (
 	"database/sql"
 	"fmt"
-	"github.com/pkg/errors"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/cloudberrydb/cbcopy/internal/dbconn"
 	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"

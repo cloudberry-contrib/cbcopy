@@ -3,12 +3,13 @@ package integration
 import (
 	"bytes"
 	"fmt"
-	"github.com/cloudberrydb/cbcopy/options"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/cloudberrydb/cbcopy/options"
+	"github.com/greenplum-db/gp-common-go-libs/gplog"
 
 	// "github.com/greenplum-db/gp-common-go-libs/cluster"
 	"github.com/cloudberrydb/cbcopy/internal/cluster"

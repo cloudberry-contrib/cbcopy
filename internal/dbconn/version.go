@@ -1,9 +1,10 @@
 package dbconn
 
 import (
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"regexp"
 	"strings"
+
+	"github.com/greenplum-db/gp-common-go-libs/gplog"
 
 	"github.com/blang/semver"
 )

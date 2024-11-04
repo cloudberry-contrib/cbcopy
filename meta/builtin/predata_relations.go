@@ -7,11 +7,12 @@ package builtin
 
 import (
 	"fmt"
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
-	"github.com/pkg/errors"
 	"math"
 	"regexp"
 	"strings"
+
+	"github.com/cloudberrydb/cbcopy/internal/dbconn"
+	"github.com/pkg/errors"
 
 	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
 	"github.com/cloudberrydb/cbcopy/utils"

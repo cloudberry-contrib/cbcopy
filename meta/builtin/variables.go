@@ -1,11 +1,12 @@
 package builtin
 
 import (
+	"strings"
+
 	"github.com/cloudberrydb/cbcopy/internal/dbconn"
 	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
 	"github.com/cloudberrydb/cbcopy/options"
 	"github.com/spf13/pflag"
-	"strings"
 )
 
 // gpbackup, backup/global_variables.go

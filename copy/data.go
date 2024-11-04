@@ -2,12 +2,13 @@ package copy
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/cloudberrydb/cbcopy/internal/dbconn"
 	"github.com/cloudberrydb/cbcopy/meta/builtin"
 	"github.com/cloudberrydb/cbcopy/options"
 	"github.com/cloudberrydb/cbcopy/utils"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
-	"sync"
 )
 
 func doCopyTasks(srcConn, destConn *dbconn.DBConn, tasks chan options.TablePair, progressBar utils.ProgressBar) []map[string]int {

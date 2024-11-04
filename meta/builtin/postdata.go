@@ -7,11 +7,12 @@ package builtin
  */
 
 import (
+	"strings"
+
 	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
 	"github.com/cloudberrydb/cbcopy/utils"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 // currently, this function (PrintCreateIndexStatements) has some diff as gpbackup, copy whole function from gpbackup first, to see if any issue in test

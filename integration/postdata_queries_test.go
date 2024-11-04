@@ -3,6 +3,7 @@ package integration
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/cloudberrydb/cbcopy/options"
 
 	"github.com/greenplum-db/gp-common-go-libs/structmatcher"

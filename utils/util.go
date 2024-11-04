@@ -8,10 +8,6 @@ package utils
 import (
 	"bufio"
 	"fmt"
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
-	"github.com/greenplum-db/gp-common-go-libs/operating"
-	"github.com/pkg/errors"
 	"io"
 	"net"
 	"os"
@@ -19,6 +15,11 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+
+	"github.com/cloudberrydb/cbcopy/internal/dbconn"
+	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/greenplum-db/gp-common-go-libs/operating"
+	"github.com/pkg/errors"
 )
 
 const MINIMUM_GPDB4_VERSION = "4.3.17"

@@ -7,9 +7,10 @@ package builtin
  */
 
 import (
+	"regexp"
+
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"github.com/pkg/errors"
-	"regexp"
 
 	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
 	"github.com/cloudberrydb/cbcopy/utils"

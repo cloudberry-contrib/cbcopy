@@ -2,20 +2,22 @@ package testutils
 
 import (
 	"fmt"
+	"regexp"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"github.com/greenplum-db/gp-common-go-libs/operating"
 	"github.com/greenplum-db/gp-common-go-libs/structmatcher"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"regexp"
 
 	//"github.com/greenplum-db/gpbackup/backup"
-	"github.com/cloudberrydb/cbcopy/meta/builtin"
-	"github.com/sergi/go-diff/diffmatchpatch"
 	"io"
 	"os/exec"
 	"strings"
+
+	"github.com/cloudberrydb/cbcopy/meta/builtin"
+	"github.com/sergi/go-diff/diffmatchpatch"
 
 	//"github.com/greenplum-db/gp-common-go-libs/cluster"
 	//"github.com/greenplum-db/gpbackup/backup"

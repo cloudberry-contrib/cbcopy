@@ -2,10 +2,11 @@ package helper
 
 import (
 	"fmt"
-	"github.com/cloudberrydb/cbcopy/utils"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"net"
 	"os"
+
+	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/greenplum-db/gp-common-go-libs/gplog"
 )
 
 type OneTimeServer struct {

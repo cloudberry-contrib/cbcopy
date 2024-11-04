@@ -2,11 +2,12 @@ package helper
 
 import (
 	"compress/gzip"
-	"github.com/golang/snappy"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"io"
 	"net"
 	"sync"
+
+	"github.com/golang/snappy"
+	"github.com/greenplum-db/gp-common-go-libs/gplog"
 
 	"github.com/cloudberrydb/cbcopy/internal/reader"
 )
