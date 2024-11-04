@@ -18,8 +18,9 @@ The project requires the Go Programming language version 1.19 or higher. Follow 
 
 ## Downloading
 
+Clone the repository:
 ```bash
-go get TBD
+git clone https://github.com/HashDataInc/cbcopy.git
 ```
 
 ## Building and installing binaries
