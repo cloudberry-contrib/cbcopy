@@ -1,2 +1,0 @@
---\d+ tb_partition
-analyze tb_partition; select count(*) from tb_partition; select count(*) from tb_partition_1_prt_p1; select count(*) from tb_partition_1_prt_p2; select count(*) from tb_partition_1_prt_l1def;

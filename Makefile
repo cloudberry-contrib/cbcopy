@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := all
-.PHONY: integration
+.PHONY: integration end_to_end
 
 CBCOPY=cbcopy
 COPYHELPER=cbcopy_helper
@@ -36,7 +36,7 @@ integration: $(GINKGO)
 
 test: unit integration
 
-end_to_end: $(GINKGO)
+end_to_end: $(GINKGO) install
 	@echo "Running end to end tests..."
 	$(GINKGO) $(GINKGO_FLAGS) end_to_end
 
@@ -44,7 +44,7 @@ build:
 	$(GO_ENV) go build -tags '$(CBCOPY)' $(GOFLAGS) -o $(CBCOPY) -ldflags $(VERSION_STR)
 	$(GO_ENV) go build -tags '$(COPYHELPER)' $(GOFLAGS) -o $(COPYHELPER) -ldflags $(VERSION_STR)
 
-install:
+install: build
 	cp $(CBCOPY) $(GPHOME)/bin
 	cp $(COPYHELPER) $(GPHOME)/bin
 

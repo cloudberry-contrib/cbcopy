@@ -397,7 +397,42 @@ func (edlc *ExtDestLtCopy) IsCopyFromStarted(rows int64) bool {
 	return rows == int64(len(edlc.DestSegmentsIpInfo))
 }
 
+func createTestCopyStrategy(strategy string, workerId int, srcSegs []utils.SegmentHostInfo, destSegs []utils.SegmentIpInfo) CopyCommand {
+	compArg := "--compress-type snappy"
+
+	switch strategy {
+	case "CopyOnMaster":
+		return &CopyOnMaster{CopyCommon: CopyCommon{
+			WorkerId:            workerId,
+			SrcSegmentsHostInfo: srcSegs,
+			DestSegmentsIpInfo:  destSegs,
+			CompArg:             compArg,
+		}}
+	case "CopyOnSegment":
+		return &CopyOnSegment{CopyCommon: CopyCommon{
+			WorkerId:            workerId,
+			SrcSegmentsHostInfo: srcSegs,
+			DestSegmentsIpInfo:  destSegs,
+			CompArg:             compArg,
+		}}
+	case "ExtDestGeCopy":
+		return &ExtDestGeCopy{CopyCommon: CopyCommon{
+			WorkerId:            workerId,
+			SrcSegmentsHostInfo: srcSegs,
+			DestSegmentsIpInfo:  destSegs,
+			CompArg:             compArg,
+		}}
+	default:
+		return newExtDestLtCopy(workerId, srcSegs, destSegs, compArg)
+	}
+}
+
 func CreateCopyStrategy(numTuples int64, workerId int, srcSegs []utils.SegmentHostInfo, destSegs []utils.SegmentIpInfo, srcConn, destConn *dbconn.DBConn) CopyCommand {
+	if strategy := os.Getenv("TEST_COPY_STRATEGY"); strategy != "" {
+		gplog.Debug("Using test copy strategy: %s", strategy)
+		return createTestCopyStrategy(strategy, workerId, srcSegs, destSegs)
+	}
+
 	compArg := "--compress-type snappy"
 	if numTuples <= int64(utils.MustGetFlagInt(options.ON_SEGMENT_THRESHOLD)) {
 		if !utils.MustGetFlagBool(options.COMPRESSION) {
