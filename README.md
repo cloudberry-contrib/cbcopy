@@ -76,6 +76,19 @@ To run end to end tests (requires a running GPDB instance), use:
 make end_to_end
 ```
 
+## Code Style
+
+We use `goimports` to maintain consistent code formatting. Before submitting any changes, please run:
+```bash
+make format
+```
+
+This will:
+- Format all Go files according to Go standard formatting rules
+- Organize imports into groups (standard library, external packages, internal packages)
+- Remove any unused imports
+- Ensure consistent code style across the project
+
 ## Migrating Data with cbcopy
 
 Before migrating data, you need to copy cbcopy_helper to the `$GPHOME/bin` directory on all nodes of both the source and target databases. Then you need to find a host that can connect to both the source database and the target database, and use the cbcopy command on that host to initiate the migration. By default, both metadata and data are migrated.
