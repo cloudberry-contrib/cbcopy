@@ -7,7 +7,7 @@ cbcopy is designed to migrate Greenplum Database clusters, including both metada
 ## How does cbcopy work?
 
 ### Metadata migration
-The metadata migration feature of cbcopy is based on gpbackup and gprestore. Its primary advantage over the built-in `pg_dump` of GPDB lies in its use of batch retrieval for metadata. Unlike `pg_dump`, which fetches metadata one row at a time, cbcopy retrieves it in batches. This approach significantly enhances performance, particularly when migrating large volumes of metadata from the source database compared to `pg_dump`.
+The metadata migration feature of cbcopy is based on gpbackup. Its primary advantage over the built-in `pg_dump` of GPDB lies in its use of batch retrieval for metadata. Unlike `pg_dump`, which fetches metadata one row at a time, cbcopy retrieves it in batches. This approach significantly enhances performance, particularly when migrating large volumes of metadata from the source database compared to `pg_dump`.
 ### Data migration
 
 Both GPDB and CBDB support starting programs via SQL commands, and cbcopy utilizes this feature. During data migration, it uses SQL commands to start a program on the target database to receive and load data, while simultaneously using SQL commands to start a program on the source database to unload data and send it to the program on the target database.
