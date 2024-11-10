@@ -78,14 +78,14 @@ func (b *BuiltinMeta) Open(srcConn, destConn *dbconn.DBConn) {
 	ownerMap = b.OwnerMap
 }
 
-func (b *BuiltinMeta) CopyDatabaseMetaData(tablec chan options.TablePair, donec chan struct{}) utils.ProgressBar {
+func (b *BuiltinMeta) CopyDatabaseMetaData(tablec chan option.TablePair, donec chan struct{}) utils.ProgressBar {
 	gplog.Info("Copying metadata from database \"%v\" to \"%v\"", b.SrcConn.DBName, b.DestConn.DBName)
 
 	b.extractDDL(nil, nil)
 	return b.executeDDL(tablec, donec)
 }
 
-func (b *BuiltinMeta) CopySchemaMetaData(sschemas, dschemas []*options.DbSchema, tablec chan options.TablePair, donec chan struct{}) utils.ProgressBar {
+func (b *BuiltinMeta) CopySchemaMetaData(sschemas, dschemas []*option.DbSchema, tablec chan option.TablePair, donec chan struct{}) utils.ProgressBar {
 	i := 0
 
 	for _, v := range sschemas {
@@ -105,10 +105,10 @@ func (b *BuiltinMeta) CopySchemaMetaData(sschemas, dschemas []*options.DbSchema,
 	return b.executeDDL(tablec, donec)
 }
 
-func (b *BuiltinMeta) CopyTableMetaData(dschemas []*options.DbSchema,
+func (b *BuiltinMeta) CopyTableMetaData(dschemas []*option.DbSchema,
 	sschemas []string,
 	tables []string,
-	tablec chan options.TablePair,
+	tablec chan option.TablePair,
 	donec chan struct{}) utils.ProgressBar {
 	gplog.Info("Copying table metadata")
 
@@ -173,7 +173,7 @@ func (b *BuiltinMeta) extractDDL(inSchemas, inTables []string) {
 	gplog.Info("Metadata file written done")
 }
 
-func (b *BuiltinMeta) executeDDL(tablec chan options.TablePair, donec chan struct{}) utils.ProgressBar {
+func (b *BuiltinMeta) executeDDL(tablec chan option.TablePair, donec chan struct{}) utils.ProgressBar {
 	gplog.Info("Metadata will be restored from %s, WithGlobal: %v", b.MetaFile, b.WithGlobal)
 
 	if b.WithGlobal {
@@ -418,7 +418,7 @@ func restorePredata(conn *dbconn.DBConn,
 	metadataFilename string,
 	partNameMap map[string][]string,
 	tabMap map[string]string,
-	tablec chan options.TablePair,
+	tablec chan option.TablePair,
 	donec chan struct{},
 	statements []toc.StatementWithType,
 	progressBar utils.ProgressBar) {

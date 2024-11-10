@@ -528,8 +528,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				testhelper.AssertQueryRuns(connectionPool, "GRANT ALL ON TABLE testschema.testtable TO testrole")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON TABLE testschema.testtable IS 'This is a table comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_RELATION)
 
@@ -549,8 +549,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				testhelper.AssertQueryRuns(connectionPool, "GRANT ALL ON TABLE testschema.testtable TO testrole")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON TABLE testschema.testtable IS 'This is a table comment.'")
 
-				// _ = backupCmdFlags.Set(options.EXCLUDE_SCHEMA, "public")
-				builtin.SetSchemaFilter(options.EXCLUDE_SCHEMA, "public")
+				// _ = backupCmdFlags.Set(option.EXCLUDE_SCHEMA, "public")
+				builtin.SetSchemaFilter(option.EXCLUDE_SCHEMA, "public")
 
 				resultMetadataMap := builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_RELATION)
 
@@ -576,8 +576,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				testhelper.AssertQueryRuns(connectionPool, "REVOKE ALL ON FUNCTION testschema.add(integer, integer) FROM PUBLIC")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON FUNCTION testschema.add(integer, integer) IS 'This is a function comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_FUNCTION)
 
@@ -597,8 +597,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				testhelper.AssertQueryRuns(connectionPool, "GRANT ALL ON testschema.testview TO testrole")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON VIEW testschema.testview IS 'This is a view comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_RELATION)
 
@@ -621,8 +621,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				testhelper.AssertQueryRuns(connectionPool, "GRANT ALL ON testschema.testmview TO testrole")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON MATERIALIZED VIEW testschema.testmview IS 'This is a materialized view comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_RELATION)
 
@@ -670,8 +670,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP AGGREGATE testschema.agg_prefunc(numeric, numeric)")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON AGGREGATE testschema.agg_prefunc(numeric, numeric) IS 'This is an aggregate comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_AGGREGATE)
 
@@ -690,8 +690,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP TYPE testschema.testtype")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON TYPE testschema.testtype IS 'This is a type comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_TYPE)
 
@@ -717,8 +717,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR testschema.#### (bigint, NONE)")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON OPERATOR testschema.#### (bigint, NONE) IS 'This is an operator comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_OPERATOR)
 
@@ -739,8 +739,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR FAMILY testschema.testfam USING hash")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON OPERATOR FAMILY testschema.testfam USING hash IS 'This is an operator family comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_OPERATORFAMILY)
 
@@ -767,8 +767,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				}
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON OPERATOR CLASS testschema.testclass USING hash IS 'This is an operator class comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_OPERATORCLASS)
 
@@ -788,8 +788,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP TEXT SEARCH DICTIONARY testschema.testdictionary")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON TEXT SEARCH DICTIONARY testschema.testdictionary IS 'This is a text search dictionary comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_TSDICTIONARY)
 
@@ -812,8 +812,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP TEXT SEARCH CONFIGURATION testschema.testconfiguration")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON TEXT SEARCH CONFIGURATION testschema.testconfiguration IS 'This is a text search configuration comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap = builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_TSCONFIGURATION)
 
@@ -832,8 +832,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP COLLATION testschema.some_coll")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON COLLATION testschema.some_coll IS 'This is a collation comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetMetadataForObjectType(connectionPool, builtin.TYPE_COLLATION)
 
@@ -1080,8 +1080,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE testschema.testtable")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON INDEX testschema.testindex1 IS 'This is an index comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetCommentsForObjectType(connectionPool, builtin.TYPE_INDEX)
 
@@ -1102,8 +1102,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE testschema.testtable")
 				testhelper.AssertQueryRuns(connectionPool, "COMMENT ON CONSTRAINT testtable_i_key ON testschema.testtable IS 'This is a constraint comment.'")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetCommentsForObjectType(connectionPool, builtin.TYPE_CONSTRAINT)
 
@@ -1128,8 +1128,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 
 				uniqueID := testutils.UniqueIDFromObjectName(connectionPool, "testschema", "testparser", builtin.TYPE_TSPARSER)
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetCommentsForObjectType(connectionPool, builtin.TYPE_TSPARSER)
 
@@ -1151,8 +1151,8 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 
 				uniqueID := testutils.UniqueIDFromObjectName(connectionPool, "testschema", "testtemplate", builtin.TYPE_TSTEMPLATE)
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				resultMetadataMap := builtin.GetCommentsForObjectType(connectionPool, builtin.TYPE_TSTEMPLATE)
 

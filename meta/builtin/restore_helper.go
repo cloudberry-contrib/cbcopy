@@ -211,7 +211,7 @@ func RestoreConstraints(conn *dbconn.DBConn, metadataFile string, progressBar ut
 	ExecuteRestoreMetadataStatements(conn, stmts, "Pre-data constraint objects", progressBar, utils.PB_VERBOSE, false)
 }
 
-func RestoreDependentObjects(conn *dbconn.DBConn, metadataFile string, progressBar utils.ProgressBar, partNameMap map[string][]string, tabMap map[string]string, tablec chan options.TablePair) {
+func RestoreDependentObjects(conn *dbconn.DBConn, metadataFile string, progressBar utils.ProgressBar, partNameMap map[string][]string, tabMap map[string]string, tablec chan option.TablePair) {
 	gplog.Verbose("Restoring dependent objects in parallel mode")
 
 	// the reason for those exclude object types is the function calling this function has restored them, see this function caller

@@ -31,8 +31,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP SCHEMA testschema CASCADE")
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE testschema.testtable(t text)")
 
-			//includeRelationsQuoted, err := options.QuoteTableNames(connectionPool, builtin.MustGetFlagStringArray(options.INCLUDE_RELATION))
-			includeRelationsQuoted, err := options.QuoteTableNames(connectionPool, make([]string, 0))
+			//includeRelationsQuoted, err := option.QuoteTableNames(connectionPool, builtin.MustGetFlagStringArray(option.INCLUDE_RELATION))
+			includeRelationsQuoted, err := option.QuoteTableNames(connectionPool, make([]string, 0))
 
 			Expect(err).NotTo(HaveOccurred())
 
@@ -49,7 +49,7 @@ var _ = Describe("cbcopy integration tests", func() {
 
 		Context("leaf-partition-data flag", func() {
 			It("returns both parent and leaf partition tables if the leaf-partition-data flag is set and there are no include tables", func() {
-				//_ = backupCmdFlags.Set(options.LEAF_PARTITION_DATA, "true")
+				//_ = backupCmdFlags.Set(option.LEAF_PARTITION_DATA, "true")
 				createStmt := `CREATE TABLE public.rank (id int, rank int, year int, gender
 				char(1), count int )
 				DISTRIBUTED BY (id)
@@ -83,8 +83,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE testschema.foo(i int)")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE testschema.foo")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			tables := builtin.GetIncludedUserTableRelations(connectionPool, []string{})
 
@@ -101,11 +101,11 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE testschema.foo(i int)")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE testschema.foo")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "testschema.foo")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "testschema.foo")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "testschema.foo")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "testschema.foo")
 
-			//includeRelationsQuoted, err := options.QuoteTableNames(connectionPool, builtin.MustGetFlagStringArray(options.INCLUDE_RELATION))
-			includeRelationsQuoted, err := options.QuoteTableNames(connectionPool, []string{"testschema.foo"})
+			//includeRelationsQuoted, err := option.QuoteTableNames(connectionPool, builtin.MustGetFlagStringArray(option.INCLUDE_RELATION))
+			includeRelationsQuoted, err := option.QuoteTableNames(connectionPool, []string{"testschema.foo"})
 
 			Expect(err).NotTo(HaveOccurred())
 			tables := builtin.GetIncludedUserTableRelations(connectionPool, includeRelationsQuoted)
@@ -125,10 +125,10 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE testschema.\"user\"(i int)")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE testschema.\"user\"")
 
-			//_ = backupCmdFlags.Set(options.EXCLUDE_RELATION, "testschema.foo")
-			//_ = backupCmdFlags.Set(options.EXCLUDE_RELATION, "testschema.user")
-			builtin.SetRelationFilter(options.EXCLUDE_TABLE, "testschema.foo")
-			builtin.SetRelationFilter(options.EXCLUDE_TABLE, "testschema.user")
+			//_ = backupCmdFlags.Set(option.EXCLUDE_RELATION, "testschema.foo")
+			//_ = backupCmdFlags.Set(option.EXCLUDE_RELATION, "testschema.user")
+			builtin.SetRelationFilter(option.EXCLUDE_TABLE, "testschema.foo")
+			builtin.SetRelationFilter(option.EXCLUDE_TABLE, "testschema.user")
 
 			tables := builtin.GetIncludedUserTableRelations(connectionPool, []string{})
 
@@ -149,12 +149,12 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE testschema.\"user\"(i int)")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE testschema.\"user\"")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			//_ = backupCmdFlags.Set(options.EXCLUDE_RELATION, "testschema.foo")
-			//_ = backupCmdFlags.Set(options.EXCLUDE_RELATION, "testschema.user")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
-			builtin.SetRelationFilter(options.EXCLUDE_TABLE, "testschema.foo")
-			builtin.SetRelationFilter(options.EXCLUDE_TABLE, "testschema.user")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			//_ = backupCmdFlags.Set(option.EXCLUDE_RELATION, "testschema.foo")
+			//_ = backupCmdFlags.Set(option.EXCLUDE_RELATION, "testschema.user")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
+			builtin.SetRelationFilter(option.EXCLUDE_TABLE, "testschema.foo")
+			builtin.SetRelationFilter(option.EXCLUDE_TABLE, "testschema.user")
 
 			tables := builtin.GetIncludedUserTableRelations(connectionPool, []string{})
 
@@ -166,8 +166,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE public.foo(i int)")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE public.foo")
 
-			//_ = backupCmdFlags.Set(options.EXCLUDE_RELATION, "testschema.nonexistant")
-			builtin.SetRelationFilter(options.EXCLUDE_TABLE, "testschema.nonexistant")
+			//_ = backupCmdFlags.Set(option.EXCLUDE_RELATION, "testschema.nonexistant")
+			builtin.SetRelationFilter(option.EXCLUDE_TABLE, "testschema.nonexistant")
 
 			tables := builtin.GetIncludedUserTableRelations(connectionPool, []string{})
 
@@ -207,8 +207,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE SEQUENCE testschema.my_sequence")
 			mySequence := builtin.Relation{Schema: "testschema", Name: "my_sequence"}
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			sequences := builtin.GetAllSequences(connectionPool)
 
@@ -222,8 +222,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE public.seq_table")
 			testhelper.AssertQueryRuns(connectionPool, "ALTER SEQUENCE public.my_sequence OWNED BY public.seq_table.i")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.seq_table")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "public.seq_table")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.seq_table")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "public.seq_table")
 
 			sequences := builtin.GetAllSequences(connectionPool)
 
@@ -237,8 +237,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "ALTER SEQUENCE public.my_sequence OWNED BY public.seq_table.i")
 			mySequence := builtin.Relation{Schema: "public", Name: "my_sequence"}
 
-			//_ = backupCmdFlags.Set(options.EXCLUDE_RELATION, "public.seq_table")
-			builtin.SetRelationFilter(options.EXCLUDE_TABLE, "public.seq_table")
+			//_ = backupCmdFlags.Set(option.EXCLUDE_RELATION, "public.seq_table")
+			builtin.SetRelationFilter(option.EXCLUDE_TABLE, "public.seq_table")
 
 			sequences := builtin.GetAllSequences(connectionPool)
 
@@ -253,8 +253,8 @@ var _ = Describe("cbcopy integration tests", func() {
 
 			sequence2 := builtin.Relation{Schema: "public", Name: "sequence2"}
 
-			//_ = backupCmdFlags.Set(options.EXCLUDE_RELATION, "public.sequence1")
-			builtin.SetRelationFilter(options.EXCLUDE_TABLE, "public.sequence1")
+			//_ = backupCmdFlags.Set(option.EXCLUDE_RELATION, "public.sequence1")
+			builtin.SetRelationFilter(option.EXCLUDE_TABLE, "public.sequence1")
 
 			sequences := builtin.GetAllSequences(connectionPool)
 
@@ -269,8 +269,8 @@ var _ = Describe("cbcopy integration tests", func() {
 
 			sequence1 := builtin.Relation{Schema: "public", Name: "sequence1"}
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.sequence1")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "public.sequence1")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.sequence1")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "public.sequence1")
 
 			sequences := builtin.GetAllSequences(connectionPool)
 
@@ -347,8 +347,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE SEQUENCE public.my_sequence OWNED BY public.my_table.a;")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP SEQUENCE public.my_sequence")
 
-			//_ = backupCmdFlags.Set(options.EXCLUDE_RELATION, "public.my_table")
-			builtin.SetRelationFilter(options.EXCLUDE_TABLE, "public.my_table")
+			//_ = backupCmdFlags.Set(option.EXCLUDE_RELATION, "public.my_table")
+			builtin.SetRelationFilter(option.EXCLUDE_TABLE, "public.my_table")
 
 			sequences := builtin.GetAllSequences(connectionPool)
 
@@ -364,10 +364,10 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE SEQUENCE public.my_sequence OWNED BY public.my_table.a;")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP SEQUENCE public.my_sequence")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.my_sequence")
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.my_table")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "public.my_sequence")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "public.my_table")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.my_sequence")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.my_table")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "public.my_sequence")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "public.my_table")
 
 			sequences := builtin.GetAllSequences(connectionPool)
 
@@ -381,8 +381,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE SEQUENCE public.my_sequence OWNED BY public.my_table.a;")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP SEQUENCE public.my_sequence")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.my_table")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "public.my_table")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.my_table")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "public.my_table")
 
 			sequences := builtin.GetAllSequences(connectionPool)
 			Expect(sequences).To(HaveLen(0))
@@ -456,8 +456,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE VIEW testschema.simpleview AS SELECT 1")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP VIEW testschema.simpleview")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			results := builtin.GetAllViews(connectionPool)
 			view := builtin.View{Oid: 1, Schema: "testschema", Name: "simpleview", Definition: viewDef}

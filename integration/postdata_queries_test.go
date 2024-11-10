@@ -166,8 +166,8 @@ PARTITION BY RANGE (date)
 			testhelper.AssertQueryRuns(connectionPool, "CREATE INDEX simple_table_idx1 ON testschema.simple_table(i)")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP INDEX testschema.simple_table_idx1")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			index1 := builtin.IndexDefinition{Oid: 0, Name: "simple_table_idx1", OwningSchema: "testschema", OwningTable: "simple_table", Def: sql.NullString{String: "CREATE INDEX simple_table_idx1 ON testschema.simple_table USING btree (i)", Valid: true}}
 
@@ -190,8 +190,8 @@ PARTITION BY RANGE (date)
 			testhelper.AssertQueryRuns(connectionPool, "CREATE INDEX simple_table_idx1 ON testschema.simple_table(i)")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP INDEX testschema.simple_table_idx1")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "testschema.simple_table")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "testschema.simple_table")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "testschema.simple_table")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "testschema.simple_table")
 
 			index1 := builtin.IndexDefinition{Oid: 0, Name: "simple_table_idx1", OwningSchema: "testschema", OwningTable: "simple_table", Def: sql.NullString{String: "CREATE INDEX simple_table_idx1 ON testschema.simple_table USING btree (i)", Valid: true}}
 
@@ -325,8 +325,8 @@ PARTITION BY RANGE (date)
 			testhelper.AssertQueryRuns(connectionPool, "CREATE RULE double_insert AS ON INSERT TO testschema.rule_table1 DO INSERT INTO testschema.rule_table1 (i) VALUES (1)")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP RULE double_insert ON testschema.rule_table1")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "public")
-			builtin.SetSchemaFilter(options.SCHEMA, "public")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "public")
+			builtin.SetSchemaFilter(option.SCHEMA, "public")
 
 			results := builtin.GetRules(connectionPool)
 
@@ -345,8 +345,8 @@ PARTITION BY RANGE (date)
 			testhelper.AssertQueryRuns(connectionPool, "CREATE RULE double_insert AS ON INSERT TO testschema.rule_table1 DO INSERT INTO testschema.rule_table1 (i) VALUES (1)")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP RULE double_insert ON testschema.rule_table1")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.rule_table1")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "public.rule_table1")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.rule_table1")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "public.rule_table1")
 
 			results := builtin.GetRules(connectionPool)
 
@@ -417,8 +417,8 @@ PARTITION BY RANGE (date)
 			testhelper.AssertQueryRuns(connectionPool, triggerString2)
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TRIGGER sync_trigger_table1 ON testschema.trigger_table1")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			trigger1 := builtin.TriggerDefinition{Oid: 0, Name: "sync_trigger_table1", OwningSchema: "testschema", OwningTable: "trigger_table1", Def: sql.NullString{String: triggerString2, Valid: true}}
 
@@ -445,8 +445,8 @@ PARTITION BY RANGE (date)
 			testhelper.AssertQueryRuns(connectionPool, triggerString2)
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TRIGGER sync_trigger_table1 ON testschema.trigger_table1")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "testschema.trigger_table1")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "testschema.trigger_table1")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "testschema.trigger_table1")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "testschema.trigger_table1")
 
 			trigger1 := builtin.TriggerDefinition{Oid: 0, Name: "sync_trigger_table1", OwningSchema: "testschema", OwningTable: "trigger_table1", Def: sql.NullString{String: triggerString2, Valid: true}}
 

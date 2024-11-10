@@ -178,10 +178,10 @@ var _ = BeforeEach(func() {
 	utils.CmdFlags = backupCmdFlags
 
 	// reset configuration in testcase, otherwise one testcase config setting might impact other testcase execution
-	builtin.SetSchemaFilter(options.SCHEMA, "")
-	builtin.SetSchemaFilter(options.EXCLUDE_SCHEMA, "")
-	builtin.SetRelationFilter(options.INCLUDE_TABLE, "")
-	builtin.SetRelationFilter(options.EXCLUDE_TABLE, "")
+	builtin.SetSchemaFilter(option.SCHEMA, "")
+	builtin.SetSchemaFilter(option.EXCLUDE_SCHEMA, "")
+	builtin.SetRelationFilter(option.INCLUDE_TABLE, "")
+	builtin.SetRelationFilter(option.EXCLUDE_TABLE, "")
 
 	//restoreCmdFlags = pflag.NewFlagSet("gprestore", pflag.ExitOnError)
 	//restore.SetCmdFlags(restoreCmdFlags)

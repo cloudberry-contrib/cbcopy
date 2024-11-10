@@ -26,7 +26,7 @@ func relationAndSchemaFilterClause(connectionPool *dbconn.DBConn) string {
 	filterRelationClause = SchemaFilterClause("n")
 	if len(excludeRelations) > 0 {
 		// https://github.com/greenplum-db/gpbackup/commit/1122088597ac9fb08f38587f1d87671264bc77d6
-		quotedExcludeRelations, err := options.QuoteTableNames(connectionPool, excludeRelations)
+		quotedExcludeRelations, err := option.QuoteTableNames(connectionPool, excludeRelations)
 		gplog.FatalOnError(err)
 
 		excludeOids := getOidsFromRelationList(connectionPool, quotedExcludeRelations)
@@ -36,7 +36,7 @@ func relationAndSchemaFilterClause(connectionPool *dbconn.DBConn) string {
 	}
 	if len(includeRelations) > 0 {
 		gplog.Debug("terry debug, relationAndSchemaFilterClause, includeRelations: %v", includeRelations)
-		quotedIncludeRelations, err := options.QuoteTableNames(connectionPool, includeRelations)
+		quotedIncludeRelations, err := option.QuoteTableNames(connectionPool, includeRelations)
 		gplog.FatalOnError(err)
 
 		includeOids := getOidsFromRelationList(connectionPool, quotedIncludeRelations)
@@ -55,8 +55,8 @@ func relationAndSchemaFilterClause() string {
 		return filterRelationClause
 	}
 	filterRelationClause = SchemaFilterClause("n")
-	if len(MustGetFlagStringArray(options.EXCLUDE_RELATION)) > 0 {
-		quotedExcludeRelations, err := options.QuoteTableNames(connectionPool, MustGetFlagStringArray(options.EXCLUDE_RELATION))
+	if len(MustGetFlagStringArray(option.EXCLUDE_RELATION)) > 0 {
+		quotedExcludeRelations, err := option.QuoteTableNames(connectionPool, MustGetFlagStringArray(option.EXCLUDE_RELATION))
 		gplog.FatalOnError(err)
 
 		excludeOids := getOidsFromRelationList(connectionPool, quotedExcludeRelations)
@@ -64,8 +64,8 @@ func relationAndSchemaFilterClause() string {
 			filterRelationClause += fmt.Sprintf("\nAND c.oid NOT IN (%s)", strings.Join(excludeOids, ", "))
 		}
 	}
-	if len(MustGetFlagStringArray(options.INCLUDE_RELATION)) > 0 {
-		quotedIncludeRelations, err := options.QuoteTableNames(connectionPool, MustGetFlagStringArray(options.INCLUDE_RELATION))
+	if len(MustGetFlagStringArray(option.INCLUDE_RELATION)) > 0 {
+		quotedIncludeRelations, err := option.QuoteTableNames(connectionPool, MustGetFlagStringArray(option.INCLUDE_RELATION))
 		gplog.FatalOnError(err)
 
 		includeOids := getOidsFromRelationList(connectionPool, quotedIncludeRelations)
@@ -118,7 +118,7 @@ func getUserTableRelations(connectionPool *dbconn.DBConn) []Relation {
 	/*
 		 * note: gpbackup has below code, but we don't need it
 		 *
-		if !MustGetFlagBool(options.LEAF_PARTITION_DATA) && connectionPool.Version.Before("7") {
+		if !MustGetFlagBool(option.LEAF_PARTITION_DATA) && connectionPool.Version.Before("7") {
 			// Filter out non-external child partitions in GPDB6 and earlier.
 			// In GPDB7+ we do not want to exclude child partitions, they function as separate tables.
 			childPartitionFilter = `
@@ -159,8 +159,8 @@ func getUserTableRelations(connectionPool *dbconn.DBConn) []Relation {
 	return results
 }
 
-// note gpbackup has two getUserTableRelationsWithIncludeFiltering (this one and another one in options/options.go)
-// but we just have one. The one in options/options.go has gone some change for GP7 support (https://github.com/greenplum-db/gpbackup/commit/e00d2a1f6c027b2f634177d4b022fe3b70404619)
+// note gpbackup has two getUserTableRelationsWithIncludeFiltering (this one and another one in options/option.go)
+// but we just have one. The one in options/option.go has gone some change for GP7 support (https://github.com/greenplum-db/gpbackup/commit/e00d2a1f6c027b2f634177d4b022fe3b70404619)
 // not sure if there's any issue.
 
 func getUserTableRelationsWithIncludeFiltering(connectionPool *dbconn.DBConn, includedRelationsQuoted []string) []Relation {
@@ -323,9 +323,9 @@ func GetAllSequences(connectionPool *dbconn.DBConn) []Sequence {
 	// Exclude owning table and owning column info for sequences
 	// where owning table is excluded from backup
 	excludeOids := make([]string, 0)
-	if len(utils.MustGetFlagStringSlice(options.EXCLUDE_TABLE)) > 0 {
+	if len(utils.MustGetFlagStringSlice(option.EXCLUDE_TABLE)) > 0 {
 		excludeOids = getOidsFromRelationList(connectionPool,
-			utils.MustGetFlagStringSlice(options.EXCLUDE_TABLE))
+			utils.MustGetFlagStringSlice(option.EXCLUDE_TABLE))
 	}
 	for i := range results {
 		found := utils.Exists(excludeOids, results[i].OwningTableOid)

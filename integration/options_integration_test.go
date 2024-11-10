@@ -44,7 +44,7 @@ var _ = Describe("Options Integration", func() {
 				`foo."""bar"`,
 			}
 
-			resultFQNs, err := options.QuoteTableNames(connectionPool, tableList)
+			resultFQNs, err := option.QuoteTableNames(connectionPool, tableList)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(expected).To(Equal(resultFQNs))
 		})
@@ -112,9 +112,9 @@ bar";
 		})
 
 		It("adds parent table when child partition with special chars is included", func() {
-			err := backupCmdFlags.Set(options.INCLUDE_RELATION, `public.CAPpart_1_prt_girls`)
+			err := backupCmdFlags.Set(option.INCLUDE_RELATION, `public.CAPpart_1_prt_girls`)
 			Expect(err).ToNot(HaveOccurred())
-			subject, err := options.NewOptions(backupCmdFlags)
+			subject, err := option.NewOptions(backupCmdFlags)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(subject.GetIncludedTables()).To(ContainElement("public.CAPpart_1_prt_girls"))
 			Expect(subject.GetIncludedTables()).To(HaveLen(1))
@@ -122,7 +122,7 @@ bar";
 			err = subject.ExpandIncludesForPartitions(connectionPool, backupCmdFlags)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(subject.GetIncludedTables()).To(HaveLen(2))
-			Expect(backupCmdFlags.GetStringArray(options.INCLUDE_RELATION)).To(HaveLen(2))
+			Expect(backupCmdFlags.GetStringArray(option.INCLUDE_RELATION)).To(HaveLen(2))
 			Expect(subject.GetIncludedTables()).To(ContainElement("public.CAPpart_1_prt_girls"))
 			Expect(subject.GetIncludedTables()).To(ContainElement("public.CAPpart"))
 
@@ -142,9 +142,9 @@ bar";
 			`)
 			defer testhelper.AssertQueryRuns(connectionPool, `DROP TABLE public."""hasquote"""`)
 
-			err := backupCmdFlags.Set(options.INCLUDE_RELATION, `public."hasquote"_1_prt_girls`)
+			err := backupCmdFlags.Set(option.INCLUDE_RELATION, `public."hasquote"_1_prt_girls`)
 			Expect(err).ToNot(HaveOccurred())
-			subject, err := options.NewOptions(backupCmdFlags)
+			subject, err := option.NewOptions(backupCmdFlags)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(subject.GetIncludedTables()).To(ContainElement(`public."hasquote"_1_prt_girls`))
 			Expect(subject.GetIncludedTables()).To(HaveLen(1))
@@ -152,13 +152,13 @@ bar";
 			err = subject.ExpandIncludesForPartitions(connectionPool, backupCmdFlags)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(subject.GetIncludedTables()).To(HaveLen(2))
-			Expect(backupCmdFlags.GetStringArray(options.INCLUDE_RELATION)).To(HaveLen(2))
+			Expect(backupCmdFlags.GetStringArray(option.INCLUDE_RELATION)).To(HaveLen(2))
 			Expect(subject.GetIncludedTables()[0]).To(Equal(`public."hasquote"_1_prt_girls`))
 			Expect(subject.GetIncludedTables()[1]).To(Equal(`public."hasquote"`))
 		})
 		It("returns child partition tables for an included parent table if the leaf-partition-data flag is set and the filter includes a parent partition table", func() {
-			_ = backupCmdFlags.Set(options.LEAF_PARTITION_DATA, "true")
-			_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.rank")
+			_ = backupCmdFlags.Set(option.LEAF_PARTITION_DATA, "true")
+			_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.rank")
 
 			createStmt := `CREATE TABLE public.rank (id int, rank int, year int, gender
 char(1), count int )
@@ -172,7 +172,7 @@ PARTITION BY LIST (gender)
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE public.test_table(i int)")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE public.test_table")
 
-			subject, err := options.NewOptions(backupCmdFlags)
+			subject, err := option.NewOptions(backupCmdFlags)
 			Expect(err).To(Not(HaveOccurred()))
 
 			err = subject.ExpandIncludesForPartitions(connectionPool, backupCmdFlags)
@@ -191,8 +191,8 @@ PARTITION BY LIST (gender)
 			Expect(tables).To(Equal(expectedTableNames))
 		})
 		It("returns parent and external leaf partition table if the filter includes a leaf table and leaf-partition-data is set", func() {
-			_ = backupCmdFlags.Set(options.LEAF_PARTITION_DATA, "true")
-			_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.partition_table_1_prt_boys")
+			_ = backupCmdFlags.Set(option.LEAF_PARTITION_DATA, "true")
+			_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.partition_table_1_prt_boys")
 			testhelper.AssertQueryRuns(connectionPool, `CREATE TABLE public.partition_table (id int, gender char(1))
 DISTRIBUTED BY (id)
 PARTITION BY LIST (gender)
@@ -206,7 +206,7 @@ FORMAT 'csv';`)
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE public.partition_table")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE public.partition_table_ext_part_")
 
-			subject, err := options.NewOptions(backupCmdFlags)
+			subject, err := option.NewOptions(backupCmdFlags)
 			Expect(err).To(Not(HaveOccurred()))
 
 			err = subject.ExpandIncludesForPartitions(connectionPool, backupCmdFlags)
@@ -230,8 +230,8 @@ FORMAT 'csv';`)
 			Expect(tables).To(Equal(expectedTableNames))
 		})
 		It("returns external partition tables for an included parent table if the filter includes a parent partition table", func() {
-			_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.partition_table1")
-			_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.partition_table2_1_prt_other")
+			_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.partition_table1")
+			_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.partition_table2_1_prt_other")
 
 			testhelper.AssertQueryRuns(connectionPool, `CREATE TABLE public.partition_table1 (id int, gender char(1))
 DISTRIBUTED BY (id)
@@ -270,7 +270,7 @@ FORMAT 'csv';`)
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE public.partition_table3")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE public.partition_table3_ext_part_")
 
-			subject, err := options.NewOptions(backupCmdFlags)
+			subject, err := option.NewOptions(backupCmdFlags)
 			Expect(err).To(Not(HaveOccurred()))
 
 			err = subject.ExpandIncludesForPartitions(connectionPool, backupCmdFlags)

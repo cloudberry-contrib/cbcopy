@@ -24,8 +24,8 @@ var _ = Describe("Wrappers Integration", func() {
 			builtin.DoInit(rootCmd) // initialize the ObjectCount
 		})
 		It("returns the data tables that have names with special characters", func() {
-			_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.foo")
-			_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.BAR")
+			_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.foo")
+			_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.BAR")
 
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE public.foo(i int); INSERT INTO public.foo VALUES (1);")
 			testhelper.AssertQueryRuns(connectionPool, `CREATE TABLE public."BAR"(i int); INSERT INTO public."BAR" VALUES (1);`)

@@ -274,8 +274,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TYPE testschema.shell_type")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TYPE testschema.shell_type")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			results := builtin.GetShellTypes(connectionPool)
 			shellTypeOtherSchema := builtin.ShellType{Schema: "testschema", Name: "shell_type"}
@@ -362,8 +362,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, `CREATE COLLATION testschema.some_coll (lc_collate = 'POSIX', lc_ctype = 'POSIX');`)
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP COLLATION testschema.some_coll")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			results := builtin.GetCollations(connectionPool)
 

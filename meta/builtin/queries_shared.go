@@ -297,11 +297,11 @@ note: it does look option setting, this provides convenient way to let test chan
 
 func SchemaFilterClause(namespace string) string {
 	schemaFilterClauseStr := ""
-	if len(MustGetFlagStringArray(options.INCLUDE_SCHEMA)) > 0 {
-		schemaFilterClauseStr = fmt.Sprintf("\nAND %s.nspname IN (%s)", namespace, utils.SliceToQuotedString(MustGetFlagStringArray(options.INCLUDE_SCHEMA)))
+	if len(MustGetFlagStringArray(option.INCLUDE_SCHEMA)) > 0 {
+		schemaFilterClauseStr = fmt.Sprintf("\nAND %s.nspname IN (%s)", namespace, utils.SliceToQuotedString(MustGetFlagStringArray(option.INCLUDE_SCHEMA)))
 	}
-	if len(MustGetFlagStringArray(options.EXCLUDE_SCHEMA)) > 0 {
-		schemaFilterClauseStr = fmt.Sprintf("\nAND %s.nspname NOT IN (%s)", namespace, utils.SliceToQuotedString(MustGetFlagStringArray(options.EXCLUDE_SCHEMA)))
+	if len(MustGetFlagStringArray(option.EXCLUDE_SCHEMA)) > 0 {
+		schemaFilterClauseStr = fmt.Sprintf("\nAND %s.nspname NOT IN (%s)", namespace, utils.SliceToQuotedString(MustGetFlagStringArray(option.EXCLUDE_SCHEMA)))
 	}
 	return fmt.Sprintf(`%s.nspname NOT LIKE 'pg_temp_%%' AND %s.nspname NOT LIKE 'pg_toast%%' AND %s.nspname NOT IN ('gp_toolkit', 'information_schema', 'pg_aoseg', 'pg_bitmapindex', 'pg_catalog') %s`, namespace, namespace, namespace, schemaFilterClauseStr)
 }
@@ -317,7 +317,7 @@ func SchemaFilterClauseWithAlteredPartitionSchemas(namespace string, partitionAl
 	if len(includeSchemas) > 0 {
 		includeSchemaArray := make([]string, 0)
 
-		// Add partitionAlteredSchemas keys to the string array of options.INCLUDE_SCHEMA
+		// Add partitionAlteredSchemas keys to the string array of option.INCLUDE_SCHEMA
 		for _, includeSchema := range includeSchemas {
 			partitionAlteredSchemas[includeSchema] = true
 		}
@@ -332,7 +332,7 @@ func SchemaFilterClauseWithAlteredPartitionSchemas(namespace string, partitionAl
 	if len(excludeSchemas) > 0 {
 		excludeSchemaArray := make([]string, 0)
 
-		// Remove partitionAlteredSchemas keys from the string array of options.EXCLUDE_SCHEMA
+		// Remove partitionAlteredSchemas keys from the string array of option.EXCLUDE_SCHEMA
 		for _, excludeSchema := range excludeSchemas {
 			if !partitionAlteredSchemas[excludeSchema] {
 				excludeSchemaArray = append(excludeSchemaArray, excludeSchema)

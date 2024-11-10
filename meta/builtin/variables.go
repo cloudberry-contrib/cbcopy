@@ -67,13 +67,13 @@ func SetFilterRelationClause(filterClause string) {
 }
 
 func SetSchemaFilter(optionName string, optionValue string) {
-	if optionName == options.SCHEMA {
+	if optionName == option.SCHEMA {
 		if strings.TrimSpace(optionValue) != "" {
 			includeSchemas = append(includeSchemas, optionValue)
 		} else {
 			includeSchemas = includeSchemas[0:0]
 		}
-	} else if optionName == options.EXCLUDE_SCHEMA {
+	} else if optionName == option.EXCLUDE_SCHEMA {
 		if strings.TrimSpace(optionValue) != "" {
 			excludeSchemas = append(excludeSchemas, optionValue)
 		} else {
@@ -83,13 +83,13 @@ func SetSchemaFilter(optionName string, optionValue string) {
 }
 
 func SetRelationFilter(optionName string, optionValue string) {
-	if optionName == options.INCLUDE_TABLE {
+	if optionName == option.INCLUDE_TABLE {
 		if strings.TrimSpace(optionValue) != "" {
 			includeRelations = append(includeRelations, optionValue)
 		} else {
 			includeRelations = includeRelations[0:0]
 		}
-	} else if optionName == options.EXCLUDE_TABLE {
+	} else if optionName == option.EXCLUDE_TABLE {
 		if strings.TrimSpace(optionValue) != "" {
 			excludeRelations = append(excludeRelations, optionValue)
 		} else {

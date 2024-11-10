@@ -100,8 +100,8 @@ MODIFIES SQL DATA
 				Volatility: "v", IsStrict: false, IsSecurityDefiner: false, PlannerSupport: plannerSupportValue, Config: "", Cost: 100, NumRows: 0, DataAccess: "c",
 				Language: "sql", ExecLocation: "a", Parallel: proparallelValue}
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			results := builtin.GetFunctions(connectionPool)
 
@@ -480,8 +480,8 @@ STABLE
 				Schema: "testschema", Name: "add", ReturnsSet: false, FunctionBody: "SELECT $1 + $2", BinaryPath: "",
 				Volatility: "v", IsStrict: false, IsSecurityDefiner: false, Language: "sql", ExecLocation: "a"}
 
-			// _ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			// _ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			results := builtin.GetFunctions4(connectionPool)
 
@@ -619,8 +619,8 @@ CREATE AGGREGATE public.agg_prefunc(numeric, numeric) (
 				aggregateDef.Parallel = "u"
 			}
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			result := builtin.GetAggregates(connectionPool)
 
@@ -946,8 +946,8 @@ LANGUAGE SQL`)
 
 			expectedConversion := builtin.Conversion{Oid: 0, Schema: "testschema", Name: "testconv", ForEncoding: "LATIN1", ToEncoding: "MULE_INTERNAL", ConversionFunction: "pg_catalog.latin1_to_mic", IsDefault: false}
 
-			// _ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			// _ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			resultConversions := builtin.GetConversions(connectionPool)
 

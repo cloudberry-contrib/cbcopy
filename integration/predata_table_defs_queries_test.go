@@ -366,8 +366,8 @@ PARTITION BY LIST (gender)
 						`)
 			oid := testutils.OidFromObjectName(connectionPool, "public", "part_table", builtin.TYPE_RELATION)
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.part_table")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "public.part_table")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.part_table")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "public.part_table")
 
 			results, _ := builtin.GetPartitionDetails(connectionPool)
 			Expect(results).To(HaveLen(1))
@@ -405,8 +405,8 @@ PARTITION BY LIST (gender)
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE public.part_table2")
 			oid := testutils.OidFromObjectName(connectionPool, "public", "part_table", builtin.TYPE_RELATION)
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.part_table")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "public.part_table")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.part_table")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "public.part_table")
 
 			results, _ := builtin.GetPartitionDetails(connectionPool)
 			Expect(results).To(HaveLen(1))
@@ -444,8 +444,8 @@ PARTITION BY LIST (gender)
 						`)
 			oid := testutils.OidFromObjectName(connectionPool, "testschema", "part_table", builtin.TYPE_RELATION)
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			results, _ := builtin.GetPartitionDetails(connectionPool)
 			Expect(results).To(HaveLen(1))
@@ -555,8 +555,8 @@ SET SUBPARTITION TEMPLATE
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE public.part_table2")
 			oid := testutils.OidFromObjectName(connectionPool, "public", "part_table", builtin.TYPE_RELATION)
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.part_table")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "public.part_table")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.part_table")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "public.part_table")
 
 			_, results := builtin.GetPartitionDetails(connectionPool)
 			Expect(results).To(HaveLen(1))
@@ -623,8 +623,8 @@ SET SUBPARTITION TEMPLATE
 			    EVERY (INTERVAL '1 month') ) `)
 			oid := testutils.OidFromObjectName(connectionPool, "testschema", "part_table", builtin.TYPE_RELATION)
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-			builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+			builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 			_, results := builtin.GetPartitionDetails(connectionPool)
 			Expect(results).To(HaveLen(1))
@@ -857,8 +857,8 @@ SET SUBPARTITION TEMPLATE
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE public.parent(i int)")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE public.parent")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.parent")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "public.parent")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.parent")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "public.parent")
 
 			tables := make([]builtin.Relation, 0)
 
@@ -874,8 +874,8 @@ SET SUBPARTITION TEMPLATE
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE public.child_two() INHERITS (public.parent)")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE public.child_two")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, "public.child_one")
-			builtin.SetRelationFilter(options.INCLUDE_TABLE, "public.child_one")
+			//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, "public.child_one")
+			builtin.SetRelationFilter(option.INCLUDE_TABLE, "public.child_one")
 
 			childOne.Oid = testutils.OidFromObjectName(connectionPool, "public", "child_one", builtin.TYPE_RELATION)
 			tables := []builtin.Relation{childOne}

@@ -33,43 +33,43 @@ func initializeFlags(cmd *cobra.Command) {
 }
 
 func SetFlagDefaults(flagSet *pflag.FlagSet) {
-	flagSet.Bool(options.APPEND, false, "Append destination table if it exists")
-	flagSet.StringSlice(options.DBNAME, []string{}, "The database(s) to be copied, separated by commas")
-	flagSet.Bool(options.DEBUG, false, "Print debug log messages")
-	flagSet.StringSlice(options.DEST_DBNAME, []string{}, "The database(s) in destination cluster to copy to, separated by commas")
-	flagSet.String(options.DEST_HOST, "", "The host of destination cluster")
-	flagSet.Int(options.DEST_PORT, 5432, "The port of destination cluster")
-	flagSet.StringSlice(options.DEST_TABLE, []string{}, "The renamed dest table(s) for include-table, separated by commas")
-	flagSet.String(options.DEST_TABLE_FILE, "", "The renamed dest table(s) for include-table-file, The line format is \"dbname.schema.table\"")
-	flagSet.String(options.DEST_USER, "gpadmin", "The user of destination cluster")
-	flagSet.StringSlice(options.EXCLUDE_TABLE, []string{}, "Copy all tables except the specified table(s), separated by commas")
-	flagSet.String(options.EXCLUDE_TABLE_FILE, "", "Copy all tables except the specified table(s) listed in the file, The line format is \"dbname.schema.table\"")
-	flagSet.Bool(options.FULL, false, "Copy full data cluster")
+	flagSet.Bool(option.APPEND, false, "Append destination table if it exists")
+	flagSet.StringSlice(option.DBNAME, []string{}, "The database(s) to be copied, separated by commas")
+	flagSet.Bool(option.DEBUG, false, "Print debug log messages")
+	flagSet.StringSlice(option.DEST_DBNAME, []string{}, "The database(s) in destination cluster to copy to, separated by commas")
+	flagSet.String(option.DEST_HOST, "", "The host of destination cluster")
+	flagSet.Int(option.DEST_PORT, 5432, "The port of destination cluster")
+	flagSet.StringSlice(option.DEST_TABLE, []string{}, "The renamed dest table(s) for include-table, separated by commas")
+	flagSet.String(option.DEST_TABLE_FILE, "", "The renamed dest table(s) for include-table-file, The line format is \"dbname.schema.table\"")
+	flagSet.String(option.DEST_USER, "gpadmin", "The user of destination cluster")
+	flagSet.StringSlice(option.EXCLUDE_TABLE, []string{}, "Copy all tables except the specified table(s), separated by commas")
+	flagSet.String(option.EXCLUDE_TABLE_FILE, "", "Copy all tables except the specified table(s) listed in the file, The line format is \"dbname.schema.table\"")
+	flagSet.Bool(option.FULL, false, "Copy full data cluster")
 	flagSet.Bool("help", false, "Print help info and exit")
-	flagSet.StringSlice(options.INCLUDE_TABLE, []string{}, "Copy only the specified table(s), separated by commas, in the format database.schema.table")
-	flagSet.String(options.INCLUDE_TABLE_FILE, "", "Copy only the specified table(s) listed in the file, The line format is \"dbname.schema.table\"")
-	flagSet.Int(options.COPY_JOBS, 4, "The maximum number of tables that concurrently copies, valid values are between 1 and 64512")
-	flagSet.Int(options.METADATA_JOBS, 2, "The maximum number of metadata restore tasks, valid values are between 1 and 64512")
-	flagSet.Bool(options.METADATA_ONLY, false, "Only copy metadata, do not copy data")
-	flagSet.Bool(options.GLOBAL_METADATA_ONLY, false, "Only copy global metadata, do not copy data")
-	flagSet.Bool(options.DATA_ONLY, false, "Only copy data, do not copy metadata")
-	flagSet.Bool(options.WITH_GLOBALMETA, false, "Copy global meta objects (default: false)")
-	flagSet.Bool(options.COMPRESSION, false, "Transfer the compression data, instead of the plain data")
-	flagSet.Int(options.ON_SEGMENT_THRESHOLD, 1000000, "Copy between Coordinators directly, if the table has smaller or same number of rows")
-	flagSet.Bool(options.QUIET, false, "Suppress non-warning, non-error log messages")
-	flagSet.String(options.SOURCE_HOST, "127.0.0.1", "The host of source cluster")
-	flagSet.Int(options.SOURCE_PORT, 5432, "The port of source cluster")
-	flagSet.String(options.SOURCE_USER, "gpadmin", "The user of source cluster")
-	flagSet.Bool(options.TRUNCATE, false, "Truncate destination table if it exists prior to copying data")
-	flagSet.StringSlice(options.SCHEMA, []string{}, "The schema(s) to be copied, separated by commas, in the format database.schema")
-	flagSet.StringSlice(options.DEST_SCHEMA, []string{}, "The schema(s) in destination database to copy to, separated by commas")
-	flagSet.Bool(options.VERBOSE, false, "Print verbose log messages")
-	flagSet.Bool(options.VALIDATE, true, "Perform data validation when copy is complete")
-	flagSet.String(options.SCHEMA_MAPPING_FILE, "", "Schema mapping file, The line format is \"source_dbname.source_schema,dest_dbname.dest_schema\"")
-	flagSet.String(options.OWNER_MAPPING_FILE, "", "Object owner mapping file, The line format is \"source_role_name,dest_role_name\"")
-	flagSet.String(options.TABLESPACE, "", "Create objects in this tablespace")
+	flagSet.StringSlice(option.INCLUDE_TABLE, []string{}, "Copy only the specified table(s), separated by commas, in the format database.schema.table")
+	flagSet.String(option.INCLUDE_TABLE_FILE, "", "Copy only the specified table(s) listed in the file, The line format is \"dbname.schema.table\"")
+	flagSet.Int(option.COPY_JOBS, 4, "The maximum number of tables that concurrently copies, valid values are between 1 and 64512")
+	flagSet.Int(option.METADATA_JOBS, 2, "The maximum number of metadata restore tasks, valid values are between 1 and 64512")
+	flagSet.Bool(option.METADATA_ONLY, false, "Only copy metadata, do not copy data")
+	flagSet.Bool(option.GLOBAL_METADATA_ONLY, false, "Only copy global metadata, do not copy data")
+	flagSet.Bool(option.DATA_ONLY, false, "Only copy data, do not copy metadata")
+	flagSet.Bool(option.WITH_GLOBALMETA, false, "Copy global meta objects (default: false)")
+	flagSet.Bool(option.COMPRESSION, false, "Transfer the compression data, instead of the plain data")
+	flagSet.Int(option.ON_SEGMENT_THRESHOLD, 1000000, "Copy between Coordinators directly, if the table has smaller or same number of rows")
+	flagSet.Bool(option.QUIET, false, "Suppress non-warning, non-error log messages")
+	flagSet.String(option.SOURCE_HOST, "127.0.0.1", "The host of source cluster")
+	flagSet.Int(option.SOURCE_PORT, 5432, "The port of source cluster")
+	flagSet.String(option.SOURCE_USER, "gpadmin", "The user of source cluster")
+	flagSet.Bool(option.TRUNCATE, false, "Truncate destination table if it exists prior to copying data")
+	flagSet.StringSlice(option.SCHEMA, []string{}, "The schema(s) to be copied, separated by commas, in the format database.schema")
+	flagSet.StringSlice(option.DEST_SCHEMA, []string{}, "The schema(s) in destination database to copy to, separated by commas")
+	flagSet.Bool(option.VERBOSE, false, "Print verbose log messages")
+	flagSet.Bool(option.VALIDATE, true, "Perform data validation when copy is complete")
+	flagSet.String(option.SCHEMA_MAPPING_FILE, "", "Schema mapping file, The line format is \"source_dbname.source_schema,dest_dbname.dest_schema\"")
+	flagSet.String(option.OWNER_MAPPING_FILE, "", "Object owner mapping file, The line format is \"source_role_name,dest_role_name\"")
+	flagSet.String(option.TABLESPACE, "", "Create objects in this tablespace")
 	flagSet.Bool("version", false, "Print version number and exit")
-	flagSet.String(options.DATA_PORT_RANGE, "1024-65535", "The range of listening port number to choose for receiving data on dest cluster")
+	flagSet.String(option.DATA_PORT_RANGE, "1024-65535", "The range of listening port number to choose for receiving data on dest cluster")
 }
 
 // This function handles setup that can be done before parsing flags.
@@ -101,36 +101,36 @@ func DoSetup() {
 
 	SetLoggerVerbosity()
 
-	if utils.MustGetFlagBool(options.GLOBAL_METADATA_ONLY) {
-		options.MakeIncludeOptions(utils.CmdFlags, CbcopyTestTable)
+	if utils.MustGetFlagBool(option.GLOBAL_METADATA_ONLY) {
+		option.MakeIncludeOptions(utils.CmdFlags, CbcopyTestTable)
 	}
 
 	gplog.Debug("I'm called with: [%s]", strings.Join(os.Args, " "))
 	gplog.Info("Starting copy...")
 	gplog.Info("Copy Timestamp = %s", timestamp)
 
-	option, err = options.NewOption(utils.CmdFlags)
+	config, err = option.NewOption(utils.CmdFlags)
 	gplog.FatalOnError(err)
 
 	gplog.Info("Establishing 1 source db management connection(s)...")
 	srcManageConn = initializeConnectionPool("postgres",
-		utils.MustGetFlagString(options.SOURCE_USER),
-		utils.MustGetFlagString(options.SOURCE_HOST),
-		utils.MustGetFlagInt(options.SOURCE_PORT),
+		utils.MustGetFlagString(option.SOURCE_USER),
+		utils.MustGetFlagString(option.SOURCE_HOST),
+		utils.MustGetFlagInt(option.SOURCE_PORT),
 		1)
 	gplog.Info("Finished establishing source db management connection")
 
-	if utils.MustGetFlagBool(options.GLOBAL_METADATA_ONLY) {
+	if utils.MustGetFlagBool(option.GLOBAL_METADATA_ONLY) {
 		CreateTestTable(srcManageConn, CbcopyTestTable)
 	}
 
 	gplog.Info("Establishing %v dest db management connection(s)...",
-		utils.MustGetFlagInt(options.COPY_JOBS))
+		utils.MustGetFlagInt(option.COPY_JOBS))
 	destManageConn = initializeConnectionPool("postgres",
-		utils.MustGetFlagString(options.DEST_USER),
-		utils.MustGetFlagString(options.DEST_HOST),
-		utils.MustGetFlagInt(options.DEST_PORT),
-		utils.MustGetFlagInt(options.COPY_JOBS))
+		utils.MustGetFlagString(option.DEST_USER),
+		utils.MustGetFlagString(option.DEST_HOST),
+		utils.MustGetFlagInt(option.DEST_PORT),
+		utils.MustGetFlagInt(option.COPY_JOBS))
 	gplog.Info("Finished establishing dest db management connection")
 
 	ValidateDbnames(GetDbNameMap())
@@ -141,48 +141,48 @@ func initializeConn(srcDbName, destDbName string) (*dbconn.DBConn, *dbconn.DBCon
 
 	gplog.Info("Establishing 1 source db (%v) metadata connection(s)...", srcDbName)
 	srcMetaConn = initializeConnectionPool(srcDbName,
-		utils.MustGetFlagString(options.SOURCE_USER),
-		utils.MustGetFlagString(options.SOURCE_HOST),
-		utils.MustGetFlagInt(options.SOURCE_PORT),
+		utils.MustGetFlagString(option.SOURCE_USER),
+		utils.MustGetFlagString(option.SOURCE_HOST),
+		utils.MustGetFlagInt(option.SOURCE_PORT),
 		1)
 	gplog.Info("Finished establishing 1 source db (%v) metadata connection", srcDbName)
 
-	if option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY), utils.MustGetFlagBool(options.DATA_ONLY)) {
+	if config.ContainsMetadata(utils.MustGetFlagBool(option.METADATA_ONLY), utils.MustGetFlagBool(option.DATA_ONLY)) {
 		CreateDbIfNotExist(destManageConn, destDbName)
 	}
 
 	gplog.Info("Establishing %v dest db (%v) metadata connection(s)...",
-		utils.MustGetFlagInt(options.METADATA_JOBS), destDbName)
+		utils.MustGetFlagInt(option.METADATA_JOBS), destDbName)
 	destMetaConn = initializeConnectionPool(destDbName,
-		utils.MustGetFlagString(options.DEST_USER),
-		utils.MustGetFlagString(options.DEST_HOST),
-		utils.MustGetFlagInt(options.DEST_PORT),
-		utils.MustGetFlagInt(options.METADATA_JOBS))
+		utils.MustGetFlagString(option.DEST_USER),
+		utils.MustGetFlagString(option.DEST_HOST),
+		utils.MustGetFlagInt(option.DEST_PORT),
+		utils.MustGetFlagInt(option.METADATA_JOBS))
 	gplog.Info("Finished establishing dest db (%v) metadata connection", destDbName)
 
 	gplog.Info("Establishing %v dest db (%v) data connection(s)...",
-		utils.MustGetFlagInt(options.COPY_JOBS), destDbName)
+		utils.MustGetFlagInt(option.COPY_JOBS), destDbName)
 	destConn = initializeConnectionPool(destDbName,
-		utils.MustGetFlagString(options.DEST_USER),
-		utils.MustGetFlagString(options.DEST_HOST),
-		utils.MustGetFlagInt(options.DEST_PORT),
-		utils.MustGetFlagInt(options.COPY_JOBS))
+		utils.MustGetFlagString(option.DEST_USER),
+		utils.MustGetFlagString(option.DEST_HOST),
+		utils.MustGetFlagInt(option.DEST_PORT),
+		utils.MustGetFlagInt(option.COPY_JOBS))
 	gplog.Info("Finished establishing dest db (%v) data connection", destDbName)
 
 	for i := 0; i < destMetaConn.NumConns; i++ {
 		destMetaConn.MustExec("set gp_ignore_error_table to on", i)
-		if len(utils.MustGetFlagString(options.TABLESPACE)) > 0 {
-			destMetaConn.MustExec("set default_tablespace to "+utils.MustGetFlagString(options.TABLESPACE), i)
+		if len(utils.MustGetFlagString(option.TABLESPACE)) > 0 {
+			destMetaConn.MustExec("set default_tablespace to "+utils.MustGetFlagString(option.TABLESPACE), i)
 		}
 	}
 
-	numJobs := utils.MustGetFlagInt(options.COPY_JOBS)
+	numJobs := utils.MustGetFlagInt(option.COPY_JOBS)
 
 	gplog.Info("Establishing %v source db (%v) data connection(s)...", numJobs, srcDbName)
 	srcConn = initializeConnectionPool(srcDbName,
-		utils.MustGetFlagString(options.SOURCE_USER),
-		utils.MustGetFlagString(options.SOURCE_HOST),
-		utils.MustGetFlagInt(options.SOURCE_PORT),
+		utils.MustGetFlagString(option.SOURCE_USER),
+		utils.MustGetFlagString(option.SOURCE_HOST),
+		utils.MustGetFlagInt(option.SOURCE_PORT),
 		numJobs)
 	gplog.Info("Finished establishing source db (%v) data connection", srcDbName)
 
@@ -233,15 +233,15 @@ func DoCopy() {
 		}
 		metaOps = meta.CreateMetaImpl(convertDDL,
 			needGlobalMetaData(i == 0),
-			utils.MustGetFlagBool(options.METADATA_ONLY),
+			utils.MustGetFlagBool(option.METADATA_ONLY),
 			timestamp,
 			partNameMap,
 			formUserTableMap(srcTables, destTables),
-			option.GetOwnerMap())
+			config.GetOwnerMap())
 		metaOps.Open(srcMetaConn, destMetaConn)
 
 		tablec, donec, pgsd := doPreDataTask(srcMetaConn, destMetaConn, srcTables, destTables)
-		if utils.MustGetFlagBool(options.METADATA_ONLY) {
+		if utils.MustGetFlagBool(option.METADATA_ONLY) {
 			<-donec
 		} else {
 			copyManager := NewCopyManager(srcConn, destConn, pgsd)
@@ -271,11 +271,11 @@ func DoCopy() {
 }
 
 func needGlobalMetaData(isFirstDB bool) bool {
-	if utils.MustGetFlagBool(options.WITH_GLOBALMETA) {
+	if utils.MustGetFlagBool(option.WITH_GLOBALMETA) {
 		return true
 	}
 
-	if option.GetCopyMode() == options.CopyModeFull && isFirstDB {
+	if config.GetCopyMode() == option.CopyModeFull && isFirstDB {
 		return true
 	}
 

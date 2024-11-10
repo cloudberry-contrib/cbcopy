@@ -7,17 +7,17 @@ import (
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 )
 
-func doPreDataTask(srcConn, destConn *dbconn.DBConn, srcTables, destTables []options.Table) (chan options.TablePair, chan struct{}, utils.ProgressBar) {
+func doPreDataTask(srcConn, destConn *dbconn.DBConn, srcTables, destTables []option.Table) (chan option.TablePair, chan struct{}, utils.ProgressBar) {
 	var pgd utils.ProgressBar
 
-	m := option.GetCopyMode()
+	m := config.GetCopyMode()
 
 	donec := make(chan struct{})
-	tablec := make(chan options.TablePair, len(destTables))
+	tablec := make(chan option.TablePair, len(destTables))
 
 	gplog.Info("doPreDataTask, mode: \"%v\"", m)
 
-	if !option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY), utils.MustGetFlagBool(options.DATA_ONLY)) {
+	if !config.ContainsMetadata(utils.MustGetFlagBool(option.METADATA_ONLY), utils.MustGetFlagBool(option.DATA_ONLY)) {
 		pgd = fillTablePairChan(srcTables, destTables, tablec, donec)
 
 		gplog.Info("doPreDataTask, no metadata to copy")
@@ -26,18 +26,18 @@ func doPreDataTask(srcConn, destConn *dbconn.DBConn, srcTables, destTables []opt
 	}
 
 	switch m {
-	case options.CopyModeFull:
+	case option.CopyModeFull:
 		fallthrough
-	case options.CopyModeDb:
+	case option.CopyModeDb:
 		pgd = metaOps.CopyDatabaseMetaData(tablec, donec)
-	case options.CopyModeSchema:
-		pgd = metaOps.CopySchemaMetaData(option.GetSourceSchemas(), option.GetDestSchemas(), tablec, donec)
-	case options.CopyModeTable:
-		if len(option.GetDestTables()) == 0 {
+	case option.CopyModeSchema:
+		pgd = metaOps.CopySchemaMetaData(config.GetSourceSchemas(), config.GetDestSchemas(), tablec, donec)
+	case option.CopyModeTable:
+		if len(config.GetDestTables()) == 0 {
 			ValidateSchemaExists(destConn, destTables)
 			includeSchemas, includeTables := CollectTablesAndSchemas(srcTables, GetPartTableMap(srcConn, destConn, true))
 
-			pgd = metaOps.CopyTableMetaData(option.GetDestSchemas(), includeSchemas, includeTables, tablec, donec)
+			pgd = metaOps.CopyTableMetaData(config.GetDestSchemas(), includeSchemas, includeTables, tablec, donec)
 		} else {
 			pgd = fillTablePairChan(srcTables, destTables, tablec, donec)
 		}
@@ -47,8 +47,8 @@ func doPreDataTask(srcConn, destConn *dbconn.DBConn, srcTables, destTables []opt
 }
 
 func fillTablePairChan(srcTables,
-	destTables []options.Table,
-	tablec chan options.TablePair,
+	destTables []option.Table,
+	tablec chan option.TablePair,
 	donec chan struct{}) utils.ProgressBar {
 	if len(destTables) == 0 {
 		return nil
@@ -58,10 +58,10 @@ func fillTablePairChan(srcTables,
 	pgd := utils.NewProgressBar(len(destTables), title, utils.PB_VERBOSE)
 
 	for i, t := range srcTables {
-		tablec <- options.TablePair{SrcTable: options.Table{Schema: t.Schema,
+		tablec <- option.TablePair{SrcTable: option.Table{Schema: t.Schema,
 			Name:      t.Name,
 			RelTuples: t.RelTuples},
-			DestTable: options.Table{Schema: destTables[i].Schema,
+			DestTable: option.Table{Schema: destTables[i].Schema,
 				Name: destTables[i].Name}}
 	}
 	close(donec)
@@ -70,11 +70,11 @@ func fillTablePairChan(srcTables,
 }
 
 func doPostDataTask(dbname, timestamp string) {
-	if !option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY), utils.MustGetFlagBool(options.DATA_ONLY)) {
+	if !config.ContainsMetadata(utils.MustGetFlagBool(option.METADATA_ONLY), utils.MustGetFlagBool(option.DATA_ONLY)) {
 		return
 	}
 
-	if len(option.GetDestTables()) > 0 {
+	if len(config.GetDestTables()) > 0 {
 		return
 	}
 
@@ -86,7 +86,7 @@ func doPostDataTask(dbname, timestamp string) {
 // Returns two slices:
 // - A list of table names (including parent partition tables instead of child tables)
 // - A list of unique schema names
-func CollectTablesAndSchemas(tables []options.Table, partNameMap map[string][]string) ([]string, []string) {
+func CollectTablesAndSchemas(tables []option.Table, partNameMap map[string][]string) ([]string, []string) {
 	// Build leaf table to parent table mapping
 	leafTableMap := make(map[string]string)
 	for parentTable, leafTables := range partNameMap {

@@ -43,7 +43,7 @@ func SplitTablesByPartitionType(connectionPool *dbconn.DBConn, tables []Table, i
 	metadataTables := make([]Table, 0)
 	dataTables := make([]Table, 0)
 
-	//tempVarLeafPartitionData := utils.MustGetFlagBool(options.LEAF_PARTITION_DATA)
+	//tempVarLeafPartitionData := utils.MustGetFlagBool(option.LEAF_PARTITION_DATA)
 	tempVarLeafPartitionData := true
 	if tempVarLeafPartitionData || len(includeList) > 0 {
 		includeSet := utils.NewSet(includeList)
@@ -88,7 +88,7 @@ func SplitTablesByPartitionType(connectionPool *dbconn.DBConn, tables []Table, i
 func SplitTablesByPartitionType(tables []Table, includeList []string) ([]Table, []Table) {
 	metadataTables := make([]Table, 0)
 	dataTables := make([]Table, 0)
-	if MustGetFlagBool(options.LEAF_PARTITION_DATA) || len(includeList) > 0 {
+	if MustGetFlagBool(option.LEAF_PARTITION_DATA) || len(includeList) > 0 {
 		includeSet := utils.NewSet(includeList)
 		for _, table := range tables {
 
@@ -108,7 +108,7 @@ func SplitTablesByPartitionType(tables []Table, includeList []string) ([]Table, 
 			} else if partType != "l" && partType != "i" {
 				metadataTables = append(metadataTables, table)
 			}
-			if MustGetFlagBool(options.LEAF_PARTITION_DATA) {
+			if MustGetFlagBool(option.LEAF_PARTITION_DATA) {
 				if partType != "p" && partType != "i" {
 					dataTables = append(dataTables, table)
 				}
@@ -125,7 +125,7 @@ func SplitTablesByPartitionType(tables []Table, includeList []string) ([]Table, 
 	} else {
 		var excludeList *utils.FilterSet
 		if connectionPool.Version.AtLeast("7") {
-			excludeList = utils.NewExcludeSet(MustGetFlagStringArray(options.EXCLUDE_RELATION))
+			excludeList = utils.NewExcludeSet(MustGetFlagStringArray(option.EXCLUDE_RELATION))
 		} else {
 			excludeList = utils.NewExcludeSet([]string{})
 		}

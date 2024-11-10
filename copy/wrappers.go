@@ -25,11 +25,11 @@ import (
  */
 
 func SetLoggerVerbosity() {
-	if utils.MustGetFlagBool(options.QUIET) {
+	if utils.MustGetFlagBool(option.QUIET) {
 		gplog.SetVerbosity(gplog.LOGERROR)
-	} else if utils.MustGetFlagBool(options.DEBUG) {
+	} else if utils.MustGetFlagBool(option.DEBUG) {
 		gplog.SetVerbosity(gplog.LOGDEBUG)
-	} else if utils.MustGetFlagBool(options.VERBOSE) {
+	} else if utils.MustGetFlagBool(option.VERBOSE) {
 		gplog.SetVerbosity(gplog.LOGVERBOSE)
 	}
 }
@@ -107,7 +107,7 @@ func GetAllDatabases(conn *dbconn.DBConn) []string {
 	return results
 }
 
-func getUserTables(conn *dbconn.DBConn) (map[string]options.TableStatistics, error) {
+func getUserTables(conn *dbconn.DBConn) (map[string]option.TableStatistics, error) {
 	var query string
 	// todo: cast(c.reltuples as bigint) AS relTuples ==> not cast, change struct to use RelTuples float64 as gpbackup
 	/*
@@ -161,16 +161,16 @@ func getUserTables(conn *dbconn.DBConn) (map[string]options.TableStatistics, err
 	}
 
 	gplog.Debug("getUserTables, query is %v", query)
-	tables := make([]options.Table, 0)
+	tables := make([]option.Table, 0)
 	err := conn.Select(&tables, query)
 	if err != nil {
 		return nil, err
 	}
 
-	results := make(map[string]options.TableStatistics)
+	results := make(map[string]option.TableStatistics)
 	for _, t := range tables {
 		k := t.Schema + "." + t.Name
-		results[k] = options.TableStatistics{Partition: t.Partition, RelTuples: t.RelTuples}
+		results[k] = option.TableStatistics{Partition: t.Partition, RelTuples: t.RelTuples}
 	}
 
 	return results, nil
@@ -186,15 +186,15 @@ func getRootPartTables(conn *dbconn.DBConn, isDest bool) map[string]bool {
 	return nameMap
 }
 
-func excludeTables(includeTables, excludeTables map[string]options.TableStatistics) []options.Table {
-	results := make([]options.Table, 0)
+func excludeTables(includeTables, excludeTables map[string]option.TableStatistics) []option.Table {
+	results := make([]option.Table, 0)
 
 	for k, v := range includeTables {
 		_, exists := excludeTables[k]
 
 		if !exists {
 			sl := strings.Split(k, ".")
-			results = append(results, options.Table{Schema: sl[0], Name: sl[1],
+			results = append(results, option.Table{Schema: sl[0], Name: sl[1],
 				Partition: v.Partition, RelTuples: v.RelTuples})
 		}
 	}
@@ -202,13 +202,13 @@ func excludeTables(includeTables, excludeTables map[string]options.TableStatisti
 	return results
 }
 
-func redirectSchemaTables(tables []options.Table) []options.Table {
-	if len(option.GetDestSchemas()) == 0 {
+func redirectSchemaTables(tables []option.Table) []option.Table {
+	if len(config.GetDestSchemas()) == 0 {
 		return tables
 	}
 
-	results := make([]options.Table, 0)
-	schemaMap := option.GetSchemaMap()
+	results := make([]option.Table, 0)
+	schemaMap := config.GetSchemaMap()
 
 	for _, v := range tables {
 		ds, exists := schemaMap[v.Schema]
@@ -216,41 +216,41 @@ func redirectSchemaTables(tables []options.Table) []options.Table {
 			ds = v.Schema
 		}
 
-		results = append(results, options.Table{Schema: ds, Name: v.Name,
+		results = append(results, option.Table{Schema: ds, Name: v.Name,
 			Partition: v.Partition, RelTuples: v.RelTuples})
 	}
 
 	return results
 }
 
-func redirectIncludeTables(tables []options.Table) []options.Table {
-	if len(option.GetDestSchemas()) == 0 {
+func redirectIncludeTables(tables []option.Table) []option.Table {
+	if len(config.GetDestSchemas()) == 0 {
 		return tables
 	}
 
-	results := make([]options.Table, 0)
-	ds := option.GetDestSchemas()[0].Schema
+	results := make([]option.Table, 0)
+	ds := config.GetDestSchemas()[0].Schema
 
 	for _, v := range tables {
-		results = append(results, options.Table{Schema: ds, Name: v.Name,
+		results = append(results, option.Table{Schema: ds, Name: v.Name,
 			Partition: v.Partition, RelTuples: v.RelTuples})
 	}
 
 	return results
 }
 
-func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options.Table, map[string][]string) {
-	if utils.MustGetFlagBool(options.GLOBAL_METADATA_ONLY) {
+func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]option.Table, []option.Table, map[string][]string) {
+	if utils.MustGetFlagBool(option.GLOBAL_METADATA_ONLY) {
 		sl := strings.Split(CbcopyTestTable, ".")
 
-		inclTabs := make([]options.Table, 0)
-		inclTabs = append(inclTabs, options.Table{Schema: sl[0], Name: sl[1]})
+		inclTabs := make([]option.Table, 0)
+		inclTabs = append(inclTabs, option.Table{Schema: sl[0], Name: sl[1]})
 
 		partNameMap := make(map[string][]string)
 		return inclTabs, inclTabs, partNameMap
 	}
 
-	copyMode := option.GetCopyMode()
+	copyMode := config.GetCopyMode()
 
 	gplog.Info("Retrieving user tables on \"%v\" database of srcConn...", srcConn.DBName)
 	srcTables, err := getUserTables(srcConn)
@@ -261,18 +261,18 @@ func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options
 	srcDbPartTables := getRootPartTables(srcConn, false)
 	gplog.Info("Finished retrieving partition table map")
 
-	option.MarkExcludeTables(srcConn.DBName, srcTables, srcDbPartTables)
+	config.MarkExcludeTables(srcConn.DBName, srcTables, srcDbPartTables)
 
-	exlTabs, _ := ExpandPartTables(srcConn, srcTables, option.GetExclTablesByDb(srcConn.DBName), false)
-	if copyMode != options.CopyModeTable {
+	exlTabs, _ := ExpandPartTables(srcConn, srcTables, config.GetExclTablesByDb(srcConn.DBName), false)
+	if copyMode != option.CopyModeTable {
 		srcTables = handleSchemaTable(srcConn, srcTables)
 		results := excludeTables(srcTables, exlTabs)
 		return results, redirectSchemaTables(results), GetPartTableMap(srcConn, destConn, false)
 	}
 
-	option.MarkIncludeTables(srcConn.DBName, srcTables, srcDbPartTables)
-	if destConn == nil || len(option.GetDestTablesByDb(destConn.DBName)) == 0 {
-		inclTabs, _ := ExpandPartTables(srcConn, srcTables, option.GetIncludeTablesByDb(srcConn.DBName), false)
+	config.MarkIncludeTables(srcConn.DBName, srcTables, srcDbPartTables)
+	if destConn == nil || len(config.GetDestTablesByDb(destConn.DBName)) == 0 {
+		inclTabs, _ := ExpandPartTables(srcConn, srcTables, config.GetIncludeTablesByDb(srcConn.DBName), false)
 		results := excludeTables(inclTabs, exlTabs)
 
 		return results, redirectIncludeTables(results), GetPartTableMap(srcConn, destConn, false)
@@ -287,15 +287,15 @@ func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options
 	destDbPartTables := getRootPartTables(destConn, true)
 	gplog.Info("Finished retrieving partition table map")
 
-	option.MarkDestTables(destConn.DBName, destTables, destDbPartTables)
+	config.MarkDestTables(destConn.DBName, destTables, destDbPartTables)
 
-	option.ValidateIncludeTables(srcTables, srcConn.DBName)
-	option.ValidateExcludeTables(srcTables, srcConn.DBName)
-	option.ValidateDestTables(destTables, destConn.DBName)
+	config.ValidateIncludeTables(srcTables, srcConn.DBName)
+	config.ValidateExcludeTables(srcTables, srcConn.DBName)
+	config.ValidateDestTables(destTables, destConn.DBName)
 
-	excludedSrcTabs, excludedDstTabs := excludeTablePair(option.GetIncludeTablesByDb(srcConn.DBName),
-		option.GetDestTablesByDb(destConn.DBName),
-		option.GetExclTablesByDb(srcConn.DBName),
+	excludedSrcTabs, excludedDstTabs := excludeTablePair(config.GetIncludeTablesByDb(srcConn.DBName),
+		config.GetDestTablesByDb(destConn.DBName),
+		config.GetExclTablesByDb(srcConn.DBName),
 		srcTables,
 		srcConn.DBName)
 
@@ -304,14 +304,14 @@ func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options
 		GetPartTableMap(srcConn, destConn, false)
 }
 
-func handleSchemaTable(srcConn *dbconn.DBConn, tables map[string]options.TableStatistics) map[string]options.TableStatistics {
-	if option.GetCopyMode() != options.CopyModeSchema {
+func handleSchemaTable(srcConn *dbconn.DBConn, tables map[string]option.TableStatistics) map[string]option.TableStatistics {
+	if config.GetCopyMode() != option.CopyModeSchema {
 		return tables
 	}
 
 	schemaMap := make(map[string]bool)
 
-	sourceSchemas := option.GetSourceSchemas()
+	sourceSchemas := config.GetSourceSchemas()
 	for _, schema := range sourceSchemas {
 		if !SchemaExists(srcConn, schema.Schema) {
 			gplog.Fatal(errors.Errorf("Schema \"%v\" does not exists on the source database \"%v\"", schema.Schema, srcConn.DBName), "")
@@ -333,42 +333,42 @@ func handleSchemaTable(srcConn *dbconn.DBConn, tables map[string]options.TableSt
 
 func GetDbNameMap() map[string]string {
 	dbMap := make(map[string]string)
-	copyMode := option.GetCopyMode()
+	copyMode := config.GetCopyMode()
 
 	sourceDbnames := make([]string, 0)
 	destDbnames := make([]string, 0)
 
-	if copyMode == options.CopyModeFull {
+	if copyMode == option.CopyModeFull {
 		sourceDbnames = GetUserDatabases(srcManageConn)
 		destDbnames = sourceDbnames
-	} else if copyMode == options.CopyModeDb {
-		sourceDbnames = option.GetSourceDbnames()
+	} else if copyMode == option.CopyModeDb {
+		sourceDbnames = config.GetSourceDbnames()
 		destDbnames = sourceDbnames
-		if len(option.GetDestDbnames()) > 0 {
-			destDbnames = option.GetDestDbnames()
+		if len(config.GetDestDbnames()) > 0 {
+			destDbnames = config.GetDestDbnames()
 		}
-	} else if copyMode == options.CopyModeSchema {
-		ss := option.GetSourceSchemas()
+	} else if copyMode == option.CopyModeSchema {
+		ss := config.GetSourceSchemas()
 		sourceDbnames = append(sourceDbnames, ss[0].Database)
 		destDbnames = sourceDbnames
 
-		if len(option.GetDestSchemas()) > 0 {
+		if len(config.GetDestSchemas()) > 0 {
 			destDbnames = make([]string, 0)
-			destDbnames = append(destDbnames, option.GetDestSchemas()[0].Database)
+			destDbnames = append(destDbnames, config.GetDestSchemas()[0].Database)
 		}
 	} else {
-		sourceDbnames = option.GetTblSourceDbnames()
+		sourceDbnames = config.GetTblSourceDbnames()
 		destDbnames = sourceDbnames
 
-		if len(option.GetDestSchemas()) > 0 {
+		if len(config.GetDestSchemas()) > 0 {
 			destDbnames = make([]string, 0)
-			destDbnames = append(destDbnames, option.GetDestSchemas()[0].Database)
+			destDbnames = append(destDbnames, config.GetDestSchemas()[0].Database)
 		}
-		if len(option.GetDestDbnames()) > 0 {
-			destDbnames = option.GetDestDbnames()
+		if len(config.GetDestDbnames()) > 0 {
+			destDbnames = config.GetDestDbnames()
 		}
-		if len(option.GetTblDestDbnames()) > 0 {
-			destDbnames = option.GetTblDestDbnames()
+		if len(config.GetTblDestDbnames()) > 0 {
+			destDbnames = config.GetTblDestDbnames()
 		}
 	}
 
@@ -491,7 +491,7 @@ func SchemaExists(conn *dbconn.DBConn, schema string) bool {
 	return counts == 1
 }
 
-func formUserTableMap(srcTables, destTables []options.Table) map[string]string {
+func formUserTableMap(srcTables, destTables []option.Table) map[string]string {
 	result := make(map[string]string)
 
 	for i, t := range srcTables {
@@ -526,13 +526,13 @@ func redirectPartitionTables(schemaMap map[string]string, schema string, tableNa
 
 func getPartTableMap(conn *dbconn.DBConn, isDest bool, force bool) map[string][]string {
 	var schemaMap map[string]string
-	if option.GetCopyMode() == options.CopyModeSchema && len(option.GetDestSchemas()) > 0 {
-		schemaMap = option.GetSchemaMap()
+	if config.GetCopyMode() == option.CopyModeSchema && len(config.GetDestSchemas()) > 0 {
+		schemaMap = config.GetSchemaMap()
 	}
 
 	schema := ""
-	if option.GetCopyMode() == options.CopyModeTable && len(option.GetDestSchemas()) > 0 {
-		schema = option.GetDestSchemas()[0].Schema
+	if config.GetCopyMode() == option.CopyModeTable && len(config.GetDestSchemas()) > 0 {
+		schema = config.GetDestSchemas()[0].Schema
 	}
 
 	leafTables := getPartLeafTables(conn, isDest)
@@ -628,27 +628,27 @@ func getPartLeafTables(conn *dbconn.DBConn, isDest bool) []PartLeafTable {
 }
 
 func GetPartTableMap(srcConn, destConn *dbconn.DBConn, force bool) map[string][]string {
-	if option.GetCopyMode() == options.CopyModeTable && len(option.GetDestTables()) > 0 {
+	if config.GetCopyMode() == option.CopyModeTable && len(config.GetDestTables()) > 0 {
 		return getPartTableMap(destConn, true, force)
 	}
 
 	return getPartTableMap(srcConn, false, force)
 }
 
-func ExpandPartTables(conn *dbconn.DBConn, userTables map[string]options.TableStatistics, tables []options.Table, isDest bool) (map[string]options.TableStatistics, []options.Table) {
-	skippedRels := make([]options.Table, 0)
+func ExpandPartTables(conn *dbconn.DBConn, userTables map[string]option.TableStatistics, tables []option.Table, isDest bool) (map[string]option.TableStatistics, []option.Table) {
+	skippedRels := make([]option.Table, 0)
 
-	expandMap := make(map[string]options.TableStatistics)
+	expandMap := make(map[string]option.TableStatistics)
 
-	tabMap := make(map[string][]options.Table)
+	tabMap := make(map[string][]option.Table)
 	leafTables := getPartLeafTables(conn, isDest)
 	for _, t := range leafTables {
 		sl := strings.Split(t.LeafName, ".")
 		children, exists := tabMap[t.RootName]
 		if !exists {
-			children = make([]options.Table, 0)
+			children = make([]option.Table, 0)
 		}
-		children = append(children, options.Table{Schema: sl[0], Name: sl[1], Partition: 0, RelTuples: t.RelTuples})
+		children = append(children, option.Table{Schema: sl[0], Name: sl[1], Partition: 0, RelTuples: t.RelTuples})
 		tabMap[t.RootName] = children
 	}
 
@@ -659,7 +659,7 @@ func ExpandPartTables(conn *dbconn.DBConn, userTables map[string]options.TableSt
 			if exists {
 				for _, m := range children {
 					k := m.Schema + "." + m.Name
-					expandMap[k] = options.TableStatistics{Partition: 0, RelTuples: m.RelTuples}
+					expandMap[k] = option.TableStatistics{Partition: 0, RelTuples: m.RelTuples}
 				}
 				continue
 			}
@@ -670,7 +670,7 @@ func ExpandPartTables(conn *dbconn.DBConn, userTables map[string]options.TableSt
 
 		stat, exists := userTables[fqn]
 		if exists {
-			expandMap[fqn] = options.TableStatistics{Partition: 0, RelTuples: stat.RelTuples}
+			expandMap[fqn] = option.TableStatistics{Partition: 0, RelTuples: stat.RelTuples}
 			continue
 		}
 
@@ -719,13 +719,13 @@ func CreateTestTable(conn *dbconn.DBConn, tabName string) {
 	}
 }
 
-func excludeTablePair(srcTables, destTables, exclTables []options.Table, userTables map[string]options.TableStatistics, dbname string) ([]options.Table, []options.Table) {
+func excludeTablePair(srcTables, destTables, exclTables []option.Table, userTables map[string]option.TableStatistics, dbname string) ([]option.Table, []option.Table) {
 	if len(srcTables) != len(destTables) {
 		gplog.Fatal(errors.Errorf("The number of include table should be equal to dest table"), "")
 	}
 
-	excludedSrcTabs := make([]options.Table, 0)
-	excludedDstTabs := make([]options.Table, 0)
+	excludedSrcTabs := make([]option.Table, 0)
+	excludedDstTabs := make([]option.Table, 0)
 
 	tabMap := make(map[string]string)
 
@@ -753,9 +753,9 @@ func excludeTablePair(srcTables, destTables, exclTables []options.Table, userTab
 		sls := strings.Split(k, ".")
 		sld := strings.Split(v, ".")
 
-		excludedSrcTabs = append(excludedSrcTabs, options.Table{Schema: sls[0], Name: sls[1],
+		excludedSrcTabs = append(excludedSrcTabs, option.Table{Schema: sls[0], Name: sls[1],
 			Partition: u.Partition, RelTuples: u.RelTuples})
-		excludedDstTabs = append(excludedDstTabs, options.Table{Schema: sld[0], Name: sld[1],
+		excludedDstTabs = append(excludedDstTabs, option.Table{Schema: sld[0], Name: sld[1],
 			Partition: u.Partition, RelTuples: u.RelTuples})
 
 		gplog.Debug("mapping table from \"%v\" to \"%v\"", k, v)
@@ -767,7 +767,7 @@ func excludeTablePair(srcTables, destTables, exclTables []options.Table, userTab
 // ValidateSchemaExists checks if all required schemas exist in the destination database.
 // It collects all unique schemas from the table list and verifies their existence.
 // If any schema is missing, it will terminate the program with an error message.
-func ValidateSchemaExists(destConn *dbconn.DBConn, tables []options.Table) {
+func ValidateSchemaExists(destConn *dbconn.DBConn, tables []option.Table) {
 	// Collect all unique schemas
 	schemaMap := make(map[string]bool)
 	for _, t := range tables {

@@ -1,4 +1,4 @@
-package options
+package option
 
 import (
 	"fmt"
@@ -627,5 +627,5 @@ func MakeIncludeOptions(initialFlags *pflag.FlagSet, testTableName string) {
 }
 
 // note:
-// options/options.go has getUserTableRelationsWithIncludeFiltering which was changed for GP7 support (https://github.com/greenplum-db/gpbackup/commit/e00d2a1f6c027b2f634177d4b022fe3b70404619)
+// options/option.go has getUserTableRelationsWithIncludeFiltering which was changed for GP7 support (https://github.com/greenplum-db/gpbackup/commit/e00d2a1f6c027b2f634177d4b022fe3b70404619)
 // cbcopy don't have that function

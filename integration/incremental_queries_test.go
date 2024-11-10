@@ -269,8 +269,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			Context("During a table-filtered backup", func() {
 				It("only retrieves ao metadata for specific tables", func() {
 
-					//_ = backupCmdFlags.Set(options.INCLUDE_RELATION, aoTableFQN)
-					builtin.SetRelationFilter(options.INCLUDE_TABLE, aoTableFQN)
+					//_ = backupCmdFlags.Set(option.INCLUDE_RELATION, aoTableFQN)
+					builtin.SetRelationFilter(option.INCLUDE_TABLE, aoTableFQN)
 
 					aoIncrementalMetadata = builtin.GetAOIncrementalMetadata(connectionPool)
 					Expect(aoIncrementalMetadata).To(HaveLen(1))
@@ -282,8 +282,8 @@ var _ = Describe("cbcopy integration tests", func() {
 					defer testhelper.AssertQueryRuns(connectionPool, "DROP SCHEMA testschema CASCADE")
 					testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE testschema.ao_foo (i int) WITH (appendonly=true)")
 
-					// _ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-					builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+					// _ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+					builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 					aoIncrementalMetadata = builtin.GetAOIncrementalMetadata(connectionPool)
 					Expect(aoIncrementalMetadata).To(HaveLen(1))

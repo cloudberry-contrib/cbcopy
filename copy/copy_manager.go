@@ -13,14 +13,14 @@ import (
 type TableCopier struct {
 	srcConn     *dbconn.DBConn
 	destConn    *dbconn.DBConn
-	srcTable    options.Table
-	destTable   options.Table
+	srcTable    option.Table
+	destTable   option.Table
 	workerID    int
 	progressBar utils.ProgressBar
 	copiedMap   map[string]int
 }
 
-func NewTableCopier(src, dest *dbconn.DBConn, srcTable, destTable options.Table, workerID int, progressBar utils.ProgressBar, copiedMap map[string]int) *TableCopier {
+func NewTableCopier(src, dest *dbconn.DBConn, srcTable, destTable option.Table, workerID int, progressBar utils.ProgressBar, copiedMap map[string]int) *TableCopier {
 	return &TableCopier{
 		srcConn:     src,
 		destConn:    dest,
@@ -75,7 +75,7 @@ func (tc *TableCopier) prepareForCopy() (bool, error) {
 		return true, err
 	}
 
-	if option.GetTableMode() == options.TableModeTruncate {
+	if config.GetTableMode() == option.TableModeTruncate {
 		gplog.Debug("[Worker %v] Truncating table \"%v.%v\"", tc.workerID, tc.destTable.Schema, tc.destTable.Name)
 		_, err := tc.destConn.Exec("TRUNCATE TABLE "+tc.destTable.Schema+"."+tc.destTable.Name, tc.workerID)
 		if err != nil {
@@ -170,7 +170,7 @@ func NewCopyManager(src, dest *dbconn.DBConn, progressBar utils.ProgressBar) *Co
 	return manager
 }
 
-func (m *CopyManager) Copy(tables chan options.TablePair) {
+func (m *CopyManager) Copy(tables chan option.TablePair) {
 	var wg sync.WaitGroup
 
 	gplog.Debug("Copying selected tables from database \"%v => %v\"",
@@ -184,8 +184,8 @@ func (m *CopyManager) Copy(tables chan options.TablePair) {
 		}(i)
 	}
 
-	if !option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY), utils.MustGetFlagBool(options.DATA_ONLY)) ||
-		len(option.GetDestTables()) > 0 {
+	if !config.ContainsMetadata(utils.MustGetFlagBool(option.METADATA_ONLY), utils.MustGetFlagBool(option.DATA_ONLY)) ||
+		len(config.GetDestTables()) > 0 {
 		close(tables)
 	}
 
@@ -194,7 +194,7 @@ func (m *CopyManager) Copy(tables chan options.TablePair) {
 	m.generateReport()
 }
 
-func (m *CopyManager) worker(workerID int, tables chan options.TablePair) {
+func (m *CopyManager) worker(workerID int, tables chan option.TablePair) {
 	for table := range tables {
 		if utils.WasTerminated {
 			return

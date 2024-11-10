@@ -41,8 +41,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE SCHEMA bar")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP SCHEMA bar")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "bar")
-			builtin.SetSchemaFilter(options.SCHEMA, "bar")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "bar")
+			builtin.SetSchemaFilter(option.SCHEMA, "bar")
 
 			schemas := builtin.GetAllUserSchemas(connectionPool, partitionAlteredSchemas)
 
@@ -57,10 +57,10 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE SCHEMA bar")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP SCHEMA bar")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "bar")
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "public")
-			builtin.SetSchemaFilter(options.SCHEMA, "bar")
-			builtin.SetSchemaFilter(options.SCHEMA, "public")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "bar")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "public")
+			builtin.SetSchemaFilter(option.SCHEMA, "bar")
+			builtin.SetSchemaFilter(option.SCHEMA, "public")
 
 			schemas := builtin.GetAllUserSchemas(connectionPool, partitionAlteredSchemas)
 
@@ -77,8 +77,8 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE SCHEMA bar")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP SCHEMA bar")
 
-			//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "public")
-			builtin.SetSchemaFilter(options.SCHEMA, "public")
+			//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "public")
+			builtin.SetSchemaFilter(option.SCHEMA, "public")
 
 			partitionAlteredSchemas["bar"] = true
 			schemas := builtin.GetAllUserSchemas(connectionPool, partitionAlteredSchemas)
@@ -253,8 +253,8 @@ PARTITION BY RANGE (date)
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE testschema.constraints_table")
 				testhelper.AssertQueryRuns(connectionPool, "ALTER TABLE ONLY testschema.constraints_table ADD CONSTRAINT uniq2 UNIQUE (a, b)")
 
-				//_ = backupCmdFlags.Set(options.INCLUDE_SCHEMA, "testschema")
-				builtin.SetSchemaFilter(options.SCHEMA, "testschema")
+				//_ = backupCmdFlags.Set(option.INCLUDE_SCHEMA, "testschema")
+				builtin.SetSchemaFilter(option.SCHEMA, "testschema")
 
 				constraints := builtin.GetConstraints(connectionPool)
 
@@ -290,17 +290,17 @@ PARTITION BY RANGE (date)
 				testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE public.other_table(d bool, e float)")
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP TABLE public.other_table")
 
-				//_ = backupCmdFlags.Set(options.EXCLUDE_RELATION, "public.other_table")
-				//defer backupCmdFlags.Set(options.EXCLUDE_RELATION, "")
-				builtin.SetRelationFilter(options.EXCLUDE_TABLE, "public.other_table")
-				defer builtin.SetRelationFilter(options.EXCLUDE_TABLE, "")
+				//_ = backupCmdFlags.Set(option.EXCLUDE_RELATION, "public.other_table")
+				//defer backupCmdFlags.Set(option.EXCLUDE_RELATION, "")
+				builtin.SetRelationFilter(option.EXCLUDE_TABLE, "public.other_table")
+				defer builtin.SetRelationFilter(option.EXCLUDE_TABLE, "")
 
 				constraints := builtin.GetConstraints(connectionPool)
 				Expect(constraints).To(HaveLen(1))
 				structmatcher.ExpectStructsToMatchExcluding(&constraints[0], &uniqueConstraint, "Oid")
 
-				//_ = backupCmdFlags.Set(options.EXCLUDE_RELATION, "public.constraints_table")
-				builtin.SetRelationFilter(options.EXCLUDE_TABLE, "public.constraints_table")
+				//_ = backupCmdFlags.Set(option.EXCLUDE_RELATION, "public.constraints_table")
+				builtin.SetRelationFilter(option.EXCLUDE_TABLE, "public.constraints_table")
 
 				builtin.SetFilterRelationClause("")
 				constraints = builtin.GetConstraints(connectionPool)

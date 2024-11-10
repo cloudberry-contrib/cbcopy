@@ -9,12 +9,12 @@ import (
 
 type MetaOperator interface {
 	Open(srcConn, destConn *dbconn.DBConn)
-	CopyDatabaseMetaData(tablec chan options.TablePair, donec chan struct{}) utils.ProgressBar
-	CopySchemaMetaData(sschemas, dschemas []*options.DbSchema, tablec chan options.TablePair, donec chan struct{}) utils.ProgressBar
-	CopyTableMetaData(dschemas []*options.DbSchema,
+	CopyDatabaseMetaData(tablec chan option.TablePair, donec chan struct{}) utils.ProgressBar
+	CopySchemaMetaData(sschemas, dschemas []*option.DbSchema, tablec chan option.TablePair, donec chan struct{}) utils.ProgressBar
+	CopyTableMetaData(dschemas []*option.DbSchema,
 		sschemas []string,
 		tables []string,
-		tablec chan options.TablePair,
+		tablec chan option.TablePair,
 		donec chan struct{}) utils.ProgressBar
 	CopyPostData()
 	GetErrorTableMetaData() map[string]builtin.Empty

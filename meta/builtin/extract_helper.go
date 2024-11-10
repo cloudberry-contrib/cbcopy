@@ -14,7 +14,7 @@ import (
  */
 
 func RetrieveAndProcessTables(conn *dbconn.DBConn, includeTables []string) ([]Table, []Table) {
-	quotedIncludeRelations, err := options.QuoteTableNames(conn, includeTables)
+	quotedIncludeRelations, err := option.QuoteTableNames(conn, includeTables)
 	gplog.FatalOnError(err)
 
 	tableRelations := GetIncludedUserTableRelations(conn, quotedIncludeRelations)

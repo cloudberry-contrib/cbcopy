@@ -38,7 +38,7 @@ var (
 	destManageConn *dbconn.DBConn
 
 	objectCounts        map[string]int
-	option              *options.Option
+	config              *option.Option
 	destSegmentsIpInfo  []utils.SegmentIpInfo
 	srcSegmentsHostInfo []utils.SegmentHostInfo
 	timestamp           string

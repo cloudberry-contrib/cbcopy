@@ -21,7 +21,7 @@ import (
 
 /**
 note: this test has some
-	_ = cmdFlags.Set(options.LEAF_PARTITION_DATA, "false")
+	_ = cmdFlags.Set(option.LEAF_PARTITION_DATA, "false")
 for them, we ignore, since cbcopy don't have that option, cbcopy behavior is as if it's true
 */
 
@@ -414,7 +414,7 @@ GRANT ALL ON shamwow.shazam TO testrole;`}
 		Context("leafPartitionData and includeTables", func() {
 			It("gets only parent partitions of included tables for metadata and only child partitions for data", func() {
 				includeList = []string{"public.part_parent1", "public.part_parent2_child1", "public.part_parent2_child2", "public.test_table"}
-				//_ = cmdFlags.Set(options.LEAF_PARTITION_DATA, "true")
+				//_ = cmdFlags.Set(option.LEAF_PARTITION_DATA, "true")
 
 				metadataTables, dataTables := builtin.SplitTablesByPartitionType(connectionPool, tables, includeList)
 
@@ -437,7 +437,7 @@ GRANT ALL ON shamwow.shazam TO testrole;`}
 		})
 		Context("leafPartitionData only", func() {
 			It("gets only parent partitions for metadata and only child partitions in data", func() {
-				//_ = cmdFlags.Set(options.LEAF_PARTITION_DATA, "true")
+				//_ = cmdFlags.Set(option.LEAF_PARTITION_DATA, "true")
 				includeList = []string{}
 				metadataTables, dataTables := builtin.SplitTablesByPartitionType(connectionPool, tables, includeList)
 
@@ -460,7 +460,7 @@ GRANT ALL ON shamwow.shazam TO testrole;`}
 		})
 		/*Context("includeTables only", func() {
 			It("gets only parent partitions of included tables for metadata and only included tables for data", func() {
-				_ = cmdFlags.Set(options.LEAF_PARTITION_DATA, "false")
+				_ = cmdFlags.Set(option.LEAF_PARTITION_DATA, "false")
 				includeList = []string{"public.part_parent1", "public.part_parent2_child1", "public.part_parent2_child2", "public.test_table"}
 				metadataTables, dataTables := builtin.SplitTablesByPartitionType(connectionPool, tables, includeList)
 
@@ -498,8 +498,8 @@ GRANT ALL ON shamwow.shazam TO testrole;`}
 						TableDefinition: builtin.TableDefinition{PartitionLevelInfo: builtin.PartitionLevelInfo{Level: "n"}},
 					},
 				}
-				_ = cmdFlags.Set(options.LEAF_PARTITION_DATA, "false")
-				_ = cmdFlags.Set(options.INCLUDE_RELATION, "")
+				_ = cmdFlags.Set(option.LEAF_PARTITION_DATA, "false")
+				_ = cmdFlags.Set(option.INCLUDE_RELATION, "")
 				metadataTables, dataTables := builtin.SplitTablesByPartitionType(connectionPool, tables, includeList)
 
 				Expect(metadataTables).To(Equal(expectedMetadataTables))
@@ -539,8 +539,8 @@ GRANT ALL ON shamwow.shazam TO testrole;`}
 						TableDefinition: builtin.TableDefinition{PartitionLevelInfo: builtin.PartitionLevelInfo{Level: "l"}, IsExternal: true},
 					},
 				}
-				_ = cmdFlags.Set(options.LEAF_PARTITION_DATA, "false")
-				_ = cmdFlags.Set(options.INCLUDE_RELATION, "")
+				_ = cmdFlags.Set(option.LEAF_PARTITION_DATA, "false")
+				_ = cmdFlags.Set(option.INCLUDE_RELATION, "")
 				metadataTables, _ := builtin.SplitTablesByPartitionType(connectionPool, tables, includeList)
 
 				expectedTables := []builtin.Table{

@@ -30,9 +30,9 @@ var (
 	runningTasks map[int]RunningInfo
 )
 
-func lookupSourceTables(schema, name string, partNameMap map[string][]string, tabMap map[string]string) []options.TablePair {
+func lookupSourceTables(schema, name string, partNameMap map[string][]string, tabMap map[string]string) []option.TablePair {
 	// gplog.Debug("-- debug, lookupSourceTables, schema: %v, name: %v, partNameMap: %v, tabMap: %v", schema, name, partNameMap, tabMap)
-	result := make([]options.TablePair, 0)
+	result := make([]option.TablePair, 0)
 	destFqn := schema + "." + name
 	leafTables, found := partNameMap[destFqn]
 
@@ -87,14 +87,14 @@ func lookupSourceTables(schema, name string, partNameMap map[string][]string, ta
 	return result
 }
 
-func formTablePair(schema, name string, tabMap map[string]string) (bool, options.TablePair) {
+func formTablePair(schema, name string, tabMap map[string]string) (bool, option.TablePair) {
 	destFqn := schema + "." + name
 
 	tabMapMutex.Lock()
 	defer tabMapMutex.Unlock()
 
 	if _, exist := tabMap[destFqn]; !exist {
-		return false, options.TablePair{}
+		return false, option.TablePair{}
 	}
 
 	srcFqn := tabMap[destFqn]
@@ -103,10 +103,10 @@ func formTablePair(schema, name string, tabMap map[string]string) (bool, options
 
 	delete(tabMap, destFqn)
 
-	return true, options.TablePair{SrcTable: options.Table{Schema: sl[0], Name: sl[1], RelTuples: relTuples}, DestTable: options.Table{Schema: schema, Name: name}}
+	return true, option.TablePair{SrcTable: option.Table{Schema: sl[0], Name: sl[1], RelTuples: relTuples}, DestTable: option.Table{Schema: schema, Name: name}}
 }
 
-func executeStatementsForDependentObject(conn *dbconn.DBConn, runningInfos chan RunningInfo, numErrors *int32, progressBar utils.ProgressBar, whichConn int, partNameMap map[string][]string, tabMap map[string]string, tablec chan options.TablePair) {
+func executeStatementsForDependentObject(conn *dbconn.DBConn, runningInfos chan RunningInfo, numErrors *int32, progressBar utils.ProgressBar, whichConn int, partNameMap map[string][]string, tabMap map[string]string, tablec chan option.TablePair) {
 	// gplog.Debug("-- debug, executeStatementsForDependentObject, partNameMap: %v, tabMap: %v", partNameMap, tabMap)
 	for info := range runningInfos {
 		gplog.Debug("executeStatementsForDependentObject, query is %v", info.statement.Statement)
@@ -189,7 +189,7 @@ func scheduleStatements(tasks chan RunningInfo, statements []toc.StatementWithTy
 	close(tasks)
 }
 
-func ExecuteDependentStatements(conn *dbconn.DBConn, statements []toc.StatementWithType, progressBar utils.ProgressBar, partNameMap map[string][]string, tabMap map[string]string, tablec chan options.TablePair) {
+func ExecuteDependentStatements(conn *dbconn.DBConn, statements []toc.StatementWithType, progressBar utils.ProgressBar, partNameMap map[string][]string, tabMap map[string]string, tablec chan option.TablePair) {
 	var numErrors int32
 	workerPool := sync.WaitGroup{}
 	tasks := make(chan RunningInfo, len(statements))
@@ -240,16 +240,16 @@ func getRunningTasks() map[int]RunningInfo {
 	return result
 }
 
-func RestoreCleanup(tabMap map[string]string, tablec chan options.TablePair) {
+func RestoreCleanup(tabMap map[string]string, tablec chan option.TablePair) {
 	for k, v := range tabMap {
 		ssl := strings.Split(v, ".")
 		dsl := strings.Split(k, ".")
 		relTuples, _ := strconv.ParseInt(ssl[2], 10, 64)
 
-		tp := options.TablePair{SrcTable: options.Table{Schema: ssl[0],
+		tp := option.TablePair{SrcTable: option.Table{Schema: ssl[0],
 			Name:      ssl[1],
 			RelTuples: relTuples},
-			DestTable: options.Table{Schema: dsl[0],
+			DestTable: option.Table{Schema: dsl[0],
 				Name: dsl[1]}}
 		tablec <- tp
 	}

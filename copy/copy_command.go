@@ -17,8 +17,8 @@ import (
 )
 
 type CopyCommand interface {
-	CopyTo(conn *dbconn.DBConn, table options.Table, ports []HelperPortInfo, cmdId string) (int64, error)
-	CopyFrom(conn *dbconn.DBConn, ctx context.Context, table options.Table, cmdId string) (int64, error)
+	CopyTo(conn *dbconn.DBConn, table option.Table, ports []HelperPortInfo, cmdId string) (int64, error)
+	CopyFrom(conn *dbconn.DBConn, ctx context.Context, table option.Table, cmdId string) (int64, error)
 	IsCopyFromStarted(rows int64) bool
 	IsMasterCopy() bool
 }
@@ -31,7 +31,7 @@ type CopyCommon struct {
 }
 
 func (cc *CopyCommon) FormMasterHelperAddress(ports []HelperPortInfo) (string, string) {
-	ip := utils.MustGetFlagString(options.DEST_HOST)
+	ip := utils.MustGetFlagString(option.DEST_HOST)
 	port := strconv.Itoa(int(ports[0].Port))
 
 	return port, ip
@@ -107,7 +107,7 @@ type CopyOnMaster struct {
 	CopyCommon
 }
 
-func (com *CopyOnMaster) CopyTo(conn *dbconn.DBConn, table options.Table, ports []HelperPortInfo, cmdId string) (int64, error) {
+func (com *CopyOnMaster) CopyTo(conn *dbconn.DBConn, table option.Table, ports []HelperPortInfo, cmdId string) (int64, error) {
 	port, ip := com.FormMasterHelperAddress(ports)
 	query := fmt.Sprintf(`COPY %v.%v TO PROGRAM 'cbcopy_helper %v --seg-id -1 --host %v --port %v' CSV IGNORE EXTERNAL PARTITIONS`,
 		table.Schema, table.Name, com.CompArg, ip, port)
@@ -123,8 +123,8 @@ func (com *CopyOnMaster) CopyTo(conn *dbconn.DBConn, table options.Table, ports 
 	return rows, nil
 }
 
-func (com *CopyOnMaster) CopyFrom(conn *dbconn.DBConn, ctx context.Context, table options.Table, cmdId string) (int64, error) {
-	dataPortRange := utils.MustGetFlagString(options.DATA_PORT_RANGE)
+func (com *CopyOnMaster) CopyFrom(conn *dbconn.DBConn, ctx context.Context, table option.Table, cmdId string) (int64, error) {
+	dataPortRange := utils.MustGetFlagString(option.DATA_PORT_RANGE)
 
 	query := fmt.Sprintf(`COPY %v.%v FROM PROGRAM 'cbcopy_helper %v --listen --seg-id -1 --cmd-id %v --data-port-range %v' CSV`,
 		table.Schema, table.Name, com.CompArg, cmdId, dataPortRange)
@@ -153,7 +153,7 @@ type CopyOnSegment struct {
 	CopyCommon
 }
 
-func (cos *CopyOnSegment) CopyTo(conn *dbconn.DBConn, table options.Table, ports []HelperPortInfo, cmdId string) (int64, error) {
+func (cos *CopyOnSegment) CopyTo(conn *dbconn.DBConn, table option.Table, ports []HelperPortInfo, cmdId string) (int64, error) {
 	port, ip := cos.FormAllSegsHelperAddress(ports)
 	query := fmt.Sprintf(`COPY %v.%v TO PROGRAM 'cbcopy_helper %v --seg-id <SEGID> --host %v --port %v' ON SEGMENT CSV IGNORE EXTERNAL PARTITIONS`,
 		table.Schema, table.Name, cos.CompArg, ip, port)
@@ -169,8 +169,8 @@ func (cos *CopyOnSegment) CopyTo(conn *dbconn.DBConn, table options.Table, ports
 	return rows, nil
 }
 
-func (cos *CopyOnSegment) CopyFrom(conn *dbconn.DBConn, ctx context.Context, table options.Table, cmdId string) (int64, error) {
-	dataPortRange := utils.MustGetFlagString(options.DATA_PORT_RANGE)
+func (cos *CopyOnSegment) CopyFrom(conn *dbconn.DBConn, ctx context.Context, table option.Table, cmdId string) (int64, error) {
+	dataPortRange := utils.MustGetFlagString(option.DATA_PORT_RANGE)
 
 	query := fmt.Sprintf(`COPY %v.%v FROM PROGRAM 'cbcopy_helper %v --listen --seg-id <SEGID> --cmd-id %v --data-port-range %v' ON SEGMENT CSV`,
 		table.Schema, table.Name, cos.CompArg, cmdId, dataPortRange)
@@ -199,7 +199,7 @@ type ExtDestGeCopy struct {
 	CopyCommon
 }
 
-func (edgc *ExtDestGeCopy) CopyTo(conn *dbconn.DBConn, table options.Table, ports []HelperPortInfo, cmdId string) (int64, error) {
+func (edgc *ExtDestGeCopy) CopyTo(conn *dbconn.DBConn, table option.Table, ports []HelperPortInfo, cmdId string) (int64, error) {
 	port, ip := edgc.FormAllSegsHelperAddress(ports)
 	query := fmt.Sprintf(`COPY %v.%v TO PROGRAM 'cbcopy_helper %v --seg-id <SEGID> --host %v --port %v' ON SEGMENT CSV IGNORE EXTERNAL PARTITIONS`,
 		table.Schema, table.Name, edgc.CompArg, ip, port)
@@ -215,8 +215,8 @@ func (edgc *ExtDestGeCopy) CopyTo(conn *dbconn.DBConn, table options.Table, port
 	return rows, nil
 }
 
-func (edgc *ExtDestGeCopy) CopyFrom(conn *dbconn.DBConn, ctx context.Context, table options.Table, cmdId string) (int64, error) {
-	dataPortRange := utils.MustGetFlagString(options.DATA_PORT_RANGE)
+func (edgc *ExtDestGeCopy) CopyFrom(conn *dbconn.DBConn, ctx context.Context, table option.Table, cmdId string) (int64, error) {
+	dataPortRange := utils.MustGetFlagString(option.DATA_PORT_RANGE)
 
 	extTabName := "cbcopy_ext_" + strings.Replace(uuid.NewV4().String(), "-", "", -1)
 	ids := edgc.FormAllSegsIds()
@@ -317,7 +317,7 @@ func (edlc *ExtDestLtCopy) formClientNumbers() string {
 	return strings.Join(cs, ",")
 }
 
-func (edlc *ExtDestLtCopy) CopyTo(conn *dbconn.DBConn, table options.Table, ports []HelperPortInfo, cmdId string) (int64, error) {
+func (edlc *ExtDestLtCopy) CopyTo(conn *dbconn.DBConn, table option.Table, ports []HelperPortInfo, cmdId string) (int64, error) {
 	if len(ports) != len(edlc.DestSegmentsIpInfo) {
 		return 0, errors.Errorf("The number of helper ports should be equal to the number of dest segments: [%v %v]", len(ports), len(edlc.DestSegmentsIpInfo))
 	}
@@ -337,8 +337,8 @@ func (edlc *ExtDestLtCopy) CopyTo(conn *dbconn.DBConn, table options.Table, port
 	return rows, nil
 }
 
-func (edlc *ExtDestLtCopy) CopyFrom(conn *dbconn.DBConn, ctx context.Context, table options.Table, cmdId string) (int64, error) {
-	dataPortRange := utils.MustGetFlagString(options.DATA_PORT_RANGE)
+func (edlc *ExtDestLtCopy) CopyFrom(conn *dbconn.DBConn, ctx context.Context, table option.Table, cmdId string) (int64, error) {
+	dataPortRange := utils.MustGetFlagString(option.DATA_PORT_RANGE)
 
 	extTabName := "cbcopy_ext_" + strings.Replace(uuid.NewV4().String(), "-", "", -1)
 	clientNumbers := edlc.formClientNumbers()
@@ -434,8 +434,8 @@ func CreateCopyStrategy(numTuples int64, workerId int, srcSegs []utils.SegmentHo
 	}
 
 	compArg := "--compress-type snappy"
-	if numTuples <= int64(utils.MustGetFlagInt(options.ON_SEGMENT_THRESHOLD)) {
-		if !utils.MustGetFlagBool(options.COMPRESSION) {
+	if numTuples <= int64(utils.MustGetFlagInt(option.ON_SEGMENT_THRESHOLD)) {
+		if !utils.MustGetFlagBool(option.COMPRESSION) {
 			compArg = "--no-compression"
 		}
 		return &CopyOnMaster{CopyCommon: CopyCommon{WorkerId: workerId, SrcSegmentsHostInfo: srcSegs, DestSegmentsIpInfo: destSegs, CompArg: compArg}}
@@ -455,7 +455,7 @@ func CreateCopyStrategy(numTuples int64, workerId int, srcSegs []utils.SegmentHo
 	}
 
 	compArg = "--compress-type gzip"
-	if !utils.MustGetFlagBool(options.COMPRESSION) {
+	if !utils.MustGetFlagBool(option.COMPRESSION) {
 		compArg = "--no-compression"
 	}
 

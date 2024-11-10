@@ -17,8 +17,8 @@ type CopyOperation struct {
 	command   CopyCommand
 	srcConn   *dbconn.DBConn
 	destConn  *dbconn.DBConn
-	srcTable  options.Table
-	destTable options.Table
+	srcTable  option.Table
+	destTable option.Table
 	connNum   int
 	cmdID     string
 	ctx       context.Context
@@ -27,7 +27,7 @@ type CopyOperation struct {
 
 // NewCopyOperation creates a new CopyOperation instance
 func NewCopyOperation(command CopyCommand, srcConn, destConn *dbconn.DBConn,
-	srcTable, destTable options.Table, connNum int) *CopyOperation {
+	srcTable, destTable option.Table, connNum int) *CopyOperation {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	return &CopyOperation{
@@ -87,7 +87,7 @@ func (op *CopyOperation) waitForHelperPorts(timestamp string, donec chan struct{
 
 // validateRowCounts validates that source and destination row counts match
 func (op *CopyOperation) validateRowCounts(totalFromRows, totalToRows int64) error {
-	if !utils.MustGetFlagBool(options.VALIDATE) {
+	if !utils.MustGetFlagBool(option.VALIDATE) {
 		return nil
 	}
 
