@@ -281,7 +281,7 @@ func redirectIncludeTables(tables []options.Table) []options.Table {
 	return results
 }
 
-func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options.Table, map[string][]string, []options.Table, map[string][]string) {
+func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options.Table, map[string][]string, map[string][]string) {
 	if utils.MustGetFlagBool(options.GLOBAL_METADATA_ONLY) {
 		sl := strings.Split(CbcopyTestTable, ".")
 
@@ -289,8 +289,7 @@ func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options
 		inclTabs = append(inclTabs, options.Table{Schema: sl[0], Name: sl[1]})
 
 		partNameMap := make(map[string][]string)
-		otherRels := make([]options.Table, 0)
-		return inclTabs, inclTabs, partNameMap, otherRels, nil
+		return inclTabs, inclTabs, partNameMap, nil
 	}
 
 	copyMode := option.GetCopyMode()
@@ -310,19 +309,15 @@ func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options
 	if copyMode != options.CopyModeTable {
 		srcTables = handleSchemaTable(srcConn, srcTables)
 		results := excludeTables(srcTables, exlTabs)
-		return results, redirectSchemaTables(results), GetPartTableMap(srcConn, destConn, false), nil, nil
+		return results, redirectSchemaTables(results), GetPartTableMap(srcConn, destConn, false), nil
 	}
 
 	option.MarkIncludeTables(srcConn.DBName, srcTables, srcDbPartTables)
 	if destConn == nil || len(option.GetDestTablesByDb(destConn.DBName)) == 0 {
-		inclTabs, skippedRels := ExpandPartTables(srcConn, srcTables, option.GetIncludeTablesByDb(srcConn.DBName), false)
+		inclTabs, _ := ExpandPartTables(srcConn, srcTables, option.GetIncludeTablesByDb(srcConn.DBName), false)
 		results := excludeTables(inclTabs, exlTabs)
 
-		gplog.Info("Retrieving view, mat-view, sequence, foreigntable \"%v\" database of srcConn...", srcConn.DBName)
-		otherRels := GetOtherRelations(srcConn, skippedRels)
-		gplog.Info("Finished retrieving view, mat-view, sequence, foreigntable")
-
-		return results, redirectIncludeTables(results), GetPartTableMap(srcConn, destConn, false), otherRels, GetPartTableMap(srcConn, destConn, true)
+		return results, redirectIncludeTables(results), GetPartTableMap(srcConn, destConn, false), GetPartTableMap(srcConn, destConn, true)
 	}
 
 	gplog.Info("Retrieving user tables on \"%v\" database of destConn...", destConn.DBName)
@@ -348,7 +343,7 @@ func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options
 
 	return excludedSrcTabs,
 		excludedDstTabs,
-		GetPartTableMap(srcConn, destConn, false), nil, nil
+		GetPartTableMap(srcConn, destConn, false), nil
 }
 
 func handleSchemaTable(srcConn *dbconn.DBConn, tables map[string]options.TableStatistics) map[string]options.TableStatistics {

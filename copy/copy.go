@@ -226,6 +226,8 @@ func createResources() {
 
 		fCopySucced = utils.OpenDataFile(fmt.Sprintf("%s/gpAdminLogs/%v_%v",
 			currentUser.HomeDir, CopySuccedFileName, timestamp))
+		fSkipped = utils.OpenDataFile(fmt.Sprintf("%s/gpAdminLogs/%v_%v",
+			currentUser.HomeDir, SkippedFileName, timestamp))
 		return
 	}
 
@@ -241,6 +243,7 @@ func destroyResources() {
 	utils.CloseDataFile(fFailed)
 	if !utils.MustGetFlagBool(options.STATISTICS_ONLY) {
 		utils.CloseDataFile(fCopySucced)
+		utils.CloseDataFile(fSkipped)
 		return
 	}
 
@@ -250,8 +253,6 @@ func destroyResources() {
 }
 
 func DoCopy() {
-	var report []map[string]int
-
 	start := time.Now()
 
 	createResources()
@@ -261,7 +262,7 @@ func DoCopy() {
 	dbMap := GetDbNameMap()
 	for srcDbName, destDbName := range dbMap {
 		srcMetaConn, destMetaConn, srcConn, destConn := initializeConn(srcDbName, destDbName)
-		srcTables, destTables, partNameMap, otherRels, oriPartNameMap := GetUserTables(srcConn, destConn)
+		srcTables, destTables, partNameMap, oriPartNameMap := GetUserTables(srcConn, destConn)
 
 		if len(srcTables) == 0 {
 			gplog.Info("db %v, no table, move to next db", srcDbName)
@@ -277,24 +278,21 @@ func DoCopy() {
 			oriPartNameMap)
 		metaOps.Open(srcMetaConn, destMetaConn)
 
-		tablec, donec, pgsd := doPreDataTask(srcMetaConn, destMetaConn, srcTables, destTables, otherRels)
+		tablec, donec, pgsd := doPreDataTask(srcMetaConn, destMetaConn, srcTables, destTables)
 		if utils.MustGetFlagBool(options.METADATA_ONLY) {
 			<-donec
 		} else if utils.MustGetFlagBool(options.STATISTICS_ONLY) {
 			doStatisticsTasks(srcConn, tablec, pgsd)
 		} else {
-			report = doCopyTasks(srcConn, destConn, tablec, pgsd)
+			copyManager := NewCopyManager(srcConn, destConn, pgsd)
+			copyManager.Copy(tablec)
 		}
 
 		if pgsd != nil {
 			pgsd.Finish()
 		}
 
-		if report != nil {
-			printCopyReport(srcDbName, report)
-		}
-
-		doPostDataTask(srcDbName, timestamp, otherRels)
+		doPostDataTask(srcDbName, timestamp)
 
 		// toc and meta file are removed in Close function.
 		metaOps.Close()

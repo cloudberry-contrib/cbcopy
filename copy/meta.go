@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func doPreDataTask(srcConn, destConn *dbconn.DBConn, srcTables, destTables, otherRels []options.Table) (chan options.TablePair, chan struct{}, utils.ProgressBar) {
+func doPreDataTask(srcConn, destConn *dbconn.DBConn, srcTables, destTables []options.Table) (chan options.TablePair, chan struct{}, utils.ProgressBar) {
 	var pgd utils.ProgressBar
 
 	m := option.GetCopyMode()
@@ -42,17 +42,12 @@ func doPreDataTask(srcConn, destConn *dbconn.DBConn, srcTables, destTables, othe
 				schemaMap[t.Schema] = true
 			}
 
-			for _, t := range otherRels {
-				schemaMap[t.Schema] = true
-			}
-
 			for k, _ := range schemaMap {
 				if !SchemaExists(destConn, k) {
 					gplog.Fatal(errors.Errorf("Please create the schema \"%v\" on the dest database \"%v\" first", k, destConn.DBName), "")
 				}
 			}
 
-			srcTables = append(srcTables, otherRels...)
 			pgd = metaOps.CopyTableMetaData(option.GetDestSchemas(), srcTables, tablec, donec)
 		} else {
 			pgd = fillTablePairChan(srcTables, destTables, tablec, donec)
@@ -89,11 +84,7 @@ func fillTablePairChan(srcTables,
 	return pgd
 }
 
-func doPostDataTask(dbname, timestamp string, otherRels []options.Table) {
-	if len(otherRels) > 0 {
-		writeResultFile(dbname, otherRels, metaOps.GetErrorTableMetaData())
-	}
-
+func doPostDataTask(dbname, timestamp string) {
 	if !option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY),
 		utils.MustGetFlagBool(options.DATA_ONLY),
 		utils.MustGetFlagBool(options.STATISTICS_ONLY)) {
