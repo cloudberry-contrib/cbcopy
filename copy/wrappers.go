@@ -176,48 +176,6 @@ func getUserTables(conn *dbconn.DBConn) (map[string]options.TableStatistics, err
 	return results, nil
 }
 
-func getOtherRelations(conn *dbconn.DBConn) map[string]bool {
-	query := `
-	select n.nspname AS schema,  c.relname as name,  0 as partition,  0 as relTuples
-	from pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid
-	where n.nspname NOT IN ('gpexpand', 'pg_bitmapindex', 'information_schema', 'gp_toolkit', 'pg_catalog', 'pg_aoseg')
-			and n.nspname NOT LIKE 'pg_temp_%'
-			and c.relkind in ('f','S','m','v')`
-
-	gplog.Debug("getOtherRelations, query is %v", query)
-	rels := make([]options.Table, 0)
-	err := conn.Select(&rels, query)
-	gplog.FatalOnError(err, fmt.Sprintf("Query was: %s", query))
-
-	results := make(map[string]bool)
-
-	for _, v := range rels {
-		k := v.Schema + v.Name
-		results[k] = true
-	}
-
-	return results
-}
-
-func GetOtherRelations(conn *dbconn.DBConn, skippedRels []options.Table) []options.Table {
-	results := make([]options.Table, 0)
-
-	otherRels := getOtherRelations(conn)
-
-	for _, t := range skippedRels {
-		k := t.Schema + t.Name
-		_, exists := otherRels[k]
-		if exists {
-			results = append(results, t)
-			continue
-		}
-
-		gplog.Debug("Relation \"%v\" does not exists on database \"%v\"", k, conn.DBName)
-	}
-
-	return results
-}
-
 func getRootPartTables(conn *dbconn.DBConn, isDest bool) map[string]bool {
 	tables := getPartLeafTables(conn, isDest)
 	nameMap := make(map[string]bool)
@@ -730,22 +688,6 @@ func ResetCache() {
 type SegmentTupleCount struct {
 	SegId int
 	Count int64
-}
-
-func getTupleCount(conn *dbconn.DBConn, schema, table string) ([]SegmentTupleCount, error) {
-	query := fmt.Sprintf(`select gp_segment_id as segId,
-						  cast(count(*) as bigint) as count
-						  from %v.%v group by gp_segment_id
-						  order by count`, schema, table)
-
-	gplog.Debug("getTupleCount, query is %v", query)
-	results := make([]SegmentTupleCount, 0)
-	err := conn.Select(&results, query)
-	if err != nil {
-		return nil, err
-	}
-
-	return results, nil
 }
 
 func isEmptyTable(conn *dbconn.DBConn, schema, table string, workerId int) (bool, error) {

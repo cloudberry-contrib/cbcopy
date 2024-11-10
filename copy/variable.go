@@ -24,9 +24,6 @@ const (
 	CopySuccedFileName = "cbcopy_succeed"
 	FailedFileName     = "cbcopy_failed"
 	SkippedFileName    = "cbcopy_skipped"
-	StatCountFileName  = "cbcopy_statcount"
-	StatEmptyFileName  = "cbcopy_statempty"
-	StatSkewFileName   = "cbcopy_statskew"
 )
 
 const (
@@ -51,15 +48,12 @@ var (
 	fCopySucced         *os.File
 	fFailed             *os.File
 	fSkipped            *os.File
-	fStatCount          *os.File
-	fStatEmpty          *os.File
-	fStatSkew           *os.File
-	killed              bool
-	metaOps             meta.MetaOperator
-	encodingGuc         SessionGUCs
-	srcPartLeafTable    []PartLeafTable
-	destPartLeafTable   []PartLeafTable
-	applicationName     string
+
+	metaOps           meta.MetaOperator
+	encodingGuc       SessionGUCs
+	srcPartLeafTable  []PartLeafTable
+	destPartLeafTable []PartLeafTable
+	applicationName   string
 )
 
 func isSameVersion(srcVersion, destVersion dbconn.GPDBVersion) bool {

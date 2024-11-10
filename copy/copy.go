@@ -33,7 +33,6 @@ func initializeFlags(cmd *cobra.Command) {
 }
 
 func SetFlagDefaults(flagSet *pflag.FlagSet) {
-	flagSet.Bool(options.ANALYZE, false, "Analyze tables after copy")
 	flagSet.Bool(options.APPEND, false, "Append destination table if it exists")
 	flagSet.StringSlice(options.DBNAME, []string{}, "The database(s) to be copied, separated by commas")
 	flagSet.Bool(options.DEBUG, false, "Print debug log messages")
@@ -66,9 +65,6 @@ func SetFlagDefaults(flagSet *pflag.FlagSet) {
 	flagSet.StringSlice(options.DEST_SCHEMA, []string{}, "The schema(s) in destination database to copy to, separated by commas")
 	flagSet.Bool(options.VERBOSE, false, "Print verbose log messages")
 	flagSet.Bool(options.VALIDATE, true, "Perform data validation when copy is complete")
-	flagSet.Bool(options.STATISTICS_ONLY, false, "Only collect statistics of source cluster and write to file")
-	flagSet.Int(options.STATISTICS_JOBS, 4, "The maximum number of collecting statistics tasks, valid values are between 1 and 64512")
-	flagSet.String(options.STATISTICS_FILE, "", "Table statistics file")
 	flagSet.String(options.SCHEMA_MAPPING_FILE, "", "Schema mapping file, The line format is \"source_dbname.source_schema,dest_dbname.dest_schema\"")
 	flagSet.String(options.OWNER_MAPPING_FILE, "", "Object owner mapping file, The line format is \"source_role_name,dest_role_name\"")
 	flagSet.String(options.TABLESPACE, "", "Create objects in this tablespace")
@@ -128,66 +124,59 @@ func DoSetup() {
 		CreateTestTable(srcManageConn, CbcopyTestTable)
 	}
 
-	if !utils.MustGetFlagBool(options.STATISTICS_ONLY) {
-		gplog.Info("Establishing %v dest db management connection(s)...",
-			utils.MustGetFlagInt(options.COPY_JOBS))
-		destManageConn = initializeConnectionPool("postgres",
-			utils.MustGetFlagString(options.DEST_USER),
-			utils.MustGetFlagString(options.DEST_HOST),
-			utils.MustGetFlagInt(options.DEST_PORT),
-			utils.MustGetFlagInt(options.COPY_JOBS))
-		gplog.Info("Finished establishing dest db management connection")
+	gplog.Info("Establishing %v dest db management connection(s)...",
+		utils.MustGetFlagInt(options.COPY_JOBS))
+	destManageConn = initializeConnectionPool("postgres",
+		utils.MustGetFlagString(options.DEST_USER),
+		utils.MustGetFlagString(options.DEST_HOST),
+		utils.MustGetFlagInt(options.DEST_PORT),
+		utils.MustGetFlagInt(options.COPY_JOBS))
+	gplog.Info("Finished establishing dest db management connection")
 
-		ValidateDbnames(GetDbNameMap())
-	}
+	ValidateDbnames(GetDbNameMap())
 }
 
 func initializeConn(srcDbName, destDbName string) (*dbconn.DBConn, *dbconn.DBConn, *dbconn.DBConn, *dbconn.DBConn) {
 	var srcMetaConn, destMetaConn, srcConn, destConn *dbconn.DBConn
 
-	numJobs := utils.MustGetFlagInt(options.STATISTICS_JOBS)
+	gplog.Info("Establishing 1 source db (%v) metadata connection(s)...", srcDbName)
+	srcMetaConn = initializeConnectionPool(srcDbName,
+		utils.MustGetFlagString(options.SOURCE_USER),
+		utils.MustGetFlagString(options.SOURCE_HOST),
+		utils.MustGetFlagInt(options.SOURCE_PORT),
+		1)
+	gplog.Info("Finished establishing 1 source db (%v) metadata connection", srcDbName)
 
-	if !utils.MustGetFlagBool(options.STATISTICS_ONLY) {
-		gplog.Info("Establishing 1 source db (%v) metadata connection(s)...", srcDbName)
-		srcMetaConn = initializeConnectionPool(srcDbName,
-			utils.MustGetFlagString(options.SOURCE_USER),
-			utils.MustGetFlagString(options.SOURCE_HOST),
-			utils.MustGetFlagInt(options.SOURCE_PORT),
-			1)
-		gplog.Info("Finished establishing 1 source db (%v) metadata connection", srcDbName)
-
-		if option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY),
-			utils.MustGetFlagBool(options.DATA_ONLY), false) {
-			CreateDbIfNotExist(destManageConn, destDbName)
-		}
-
-		gplog.Info("Establishing %v dest db (%v) metadata connection(s)...",
-			utils.MustGetFlagInt(options.METADATA_JOBS), destDbName)
-		destMetaConn = initializeConnectionPool(destDbName,
-			utils.MustGetFlagString(options.DEST_USER),
-			utils.MustGetFlagString(options.DEST_HOST),
-			utils.MustGetFlagInt(options.DEST_PORT),
-			utils.MustGetFlagInt(options.METADATA_JOBS))
-		gplog.Info("Finished establishing dest db (%v) metadata connection", destDbName)
-
-		gplog.Info("Establishing %v dest db (%v) data connection(s)...",
-			utils.MustGetFlagInt(options.COPY_JOBS), destDbName)
-		destConn = initializeConnectionPool(destDbName,
-			utils.MustGetFlagString(options.DEST_USER),
-			utils.MustGetFlagString(options.DEST_HOST),
-			utils.MustGetFlagInt(options.DEST_PORT),
-			utils.MustGetFlagInt(options.COPY_JOBS))
-		gplog.Info("Finished establishing dest db (%v) data connection", destDbName)
-
-		for i := 0; i < destMetaConn.NumConns; i++ {
-			destMetaConn.MustExec("set gp_ignore_error_table to on", i)
-			if len(utils.MustGetFlagString(options.TABLESPACE)) > 0 {
-				destMetaConn.MustExec("set default_tablespace to "+utils.MustGetFlagString(options.TABLESPACE), i)
-			}
-		}
-
-		numJobs = utils.MustGetFlagInt(options.COPY_JOBS)
+	if option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY), utils.MustGetFlagBool(options.DATA_ONLY)) {
+		CreateDbIfNotExist(destManageConn, destDbName)
 	}
+
+	gplog.Info("Establishing %v dest db (%v) metadata connection(s)...",
+		utils.MustGetFlagInt(options.METADATA_JOBS), destDbName)
+	destMetaConn = initializeConnectionPool(destDbName,
+		utils.MustGetFlagString(options.DEST_USER),
+		utils.MustGetFlagString(options.DEST_HOST),
+		utils.MustGetFlagInt(options.DEST_PORT),
+		utils.MustGetFlagInt(options.METADATA_JOBS))
+	gplog.Info("Finished establishing dest db (%v) metadata connection", destDbName)
+
+	gplog.Info("Establishing %v dest db (%v) data connection(s)...",
+		utils.MustGetFlagInt(options.COPY_JOBS), destDbName)
+	destConn = initializeConnectionPool(destDbName,
+		utils.MustGetFlagString(options.DEST_USER),
+		utils.MustGetFlagString(options.DEST_HOST),
+		utils.MustGetFlagInt(options.DEST_PORT),
+		utils.MustGetFlagInt(options.COPY_JOBS))
+	gplog.Info("Finished establishing dest db (%v) data connection", destDbName)
+
+	for i := 0; i < destMetaConn.NumConns; i++ {
+		destMetaConn.MustExec("set gp_ignore_error_table to on", i)
+		if len(utils.MustGetFlagString(options.TABLESPACE)) > 0 {
+			destMetaConn.MustExec("set default_tablespace to "+utils.MustGetFlagString(options.TABLESPACE), i)
+		}
+	}
+
+	numJobs := utils.MustGetFlagInt(options.COPY_JOBS)
 
 	gplog.Info("Establishing %v source db (%v) data connection(s)...", numJobs, srcDbName)
 	srcConn = initializeConnectionPool(srcDbName,
@@ -210,38 +199,20 @@ func createResources() {
 
 	fFailed = utils.OpenDataFile(fmt.Sprintf("%s/gpAdminLogs/%v_%v",
 		currentUser.HomeDir, FailedFileName, timestamp))
+	destSegmentsIpInfo = utils.GetSegmentsIpAddress(destManageConn, timestamp)
+	srcSegmentsHostInfo = utils.GetSegmentsHost(srcManageConn)
+	CreateHelperPortTable(destManageConn, timestamp)
 
-	if !utils.MustGetFlagBool(options.STATISTICS_ONLY) {
-		destSegmentsIpInfo = utils.GetSegmentsIpAddress(destManageConn, timestamp)
-		srcSegmentsHostInfo = utils.GetSegmentsHost(srcManageConn)
-		CreateHelperPortTable(destManageConn, timestamp)
-
-		fCopySucced = utils.OpenDataFile(fmt.Sprintf("%s/gpAdminLogs/%v_%v",
-			currentUser.HomeDir, CopySuccedFileName, timestamp))
-		fSkipped = utils.OpenDataFile(fmt.Sprintf("%s/gpAdminLogs/%v_%v",
-			currentUser.HomeDir, SkippedFileName, timestamp))
-		return
-	}
-
-	fStatCount = utils.OpenDataFile(fmt.Sprintf("%s/gpAdminLogs/%v_%v",
-		currentUser.HomeDir, StatCountFileName, timestamp))
-	fStatEmpty = utils.OpenDataFile(fmt.Sprintf("%s/gpAdminLogs/%v_%v",
-		currentUser.HomeDir, StatEmptyFileName, timestamp))
-	fStatSkew = utils.OpenDataFile(fmt.Sprintf("%s/gpAdminLogs/%v_%v",
-		currentUser.HomeDir, StatSkewFileName, timestamp))
+	fCopySucced = utils.OpenDataFile(fmt.Sprintf("%s/gpAdminLogs/%v_%v",
+		currentUser.HomeDir, CopySuccedFileName, timestamp))
+	fSkipped = utils.OpenDataFile(fmt.Sprintf("%s/gpAdminLogs/%v_%v",
+		currentUser.HomeDir, SkippedFileName, timestamp))
 }
 
 func destroyResources() {
 	utils.CloseDataFile(fFailed)
-	if !utils.MustGetFlagBool(options.STATISTICS_ONLY) {
-		utils.CloseDataFile(fCopySucced)
-		utils.CloseDataFile(fSkipped)
-		return
-	}
-
-	utils.CloseDataFile(fStatCount)
-	utils.CloseDataFile(fStatEmpty)
-	utils.CloseDataFile(fStatSkew)
+	utils.CloseDataFile(fCopySucced)
+	utils.CloseDataFile(fSkipped)
 }
 
 func DoCopy() {
@@ -272,8 +243,6 @@ func DoCopy() {
 		tablec, donec, pgsd := doPreDataTask(srcMetaConn, destMetaConn, srcTables, destTables)
 		if utils.MustGetFlagBool(options.METADATA_ONLY) {
 			<-donec
-		} else if utils.MustGetFlagBool(options.STATISTICS_ONLY) {
-			doStatisticsTasks(srcConn, tablec, pgsd)
 		} else {
 			copyManager := NewCopyManager(srcConn, destConn, pgsd)
 			copyManager.Copy(tablec)
@@ -287,12 +256,6 @@ func DoCopy() {
 
 		// toc and meta file are removed in Close function.
 		metaOps.Close()
-
-		if !utils.MustGetFlagBool(options.METADATA_ONLY) &&
-			!utils.MustGetFlagBool(options.STATISTICS_ONLY) &&
-			utils.MustGetFlagBool(options.ANALYZE) {
-			doAnalyzeTasks(destConn, destTables)
-		}
 
 		ResetCache()
 		if srcConn != nil {
@@ -336,19 +299,17 @@ func showDbVersion() {
 
 	gplog.Info("Source cluster version %v %v", srcDb, srcVersion.VersionString)
 
-	if !utils.MustGetFlagBool(options.STATISTICS_ONLY) {
-		destVersion := destManageConn.Version
-		if destManageConn.HdwVersion.AtLeast("2") {
-			destVersion = destManageConn.HdwVersion
-			destDb = "HDW"
+	destVersion := destManageConn.Version
+	if destManageConn.HdwVersion.AtLeast("2") {
+		destVersion = destManageConn.HdwVersion
+		destDb = "HDW"
 
-			if destVersion.Is("3") {
-				gplog.Info("Converting DDL in %v", destVersion.VersionString)
-				convertDDL = true
-			}
+		if destVersion.Is("3") {
+			gplog.Info("Converting DDL in %v", destVersion.VersionString)
+			convertDDL = true
 		}
-		gplog.Info("Destination cluster version %v %v", destDb, destVersion.VersionString)
 	}
+	gplog.Info("Destination cluster version %v %v", destDb, destVersion.VersionString)
 }
 
 func DoTeardown() {

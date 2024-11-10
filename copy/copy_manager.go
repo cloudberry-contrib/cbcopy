@@ -60,13 +60,6 @@ func (tc *TableCopier) Copy() {
 }
 
 func (tc *TableCopier) prepareForCopy() (bool, error) {
-	found, reltuples := option.GetTableStatistics(tc.srcConn.DBName, tc.srcTable.Schema, tc.srcTable.Name)
-	if found {
-		gplog.Debug("[Worker %v] Found table \"%v.%v\" in statistics file, overwrite reltuples %v->%v",
-			tc.workerID, tc.srcTable.Schema, tc.srcTable.Name, tc.srcTable.RelTuples, reltuples)
-		tc.srcTable.RelTuples = reltuples
-	}
-
 	gplog.Debug("[Worker %v] There are %v rows in the source table \"%v.%v\"",
 		tc.workerID, tc.srcTable.RelTuples, tc.srcTable.Schema, tc.srcTable.Name)
 
@@ -191,8 +184,7 @@ func (m *CopyManager) Copy(tables chan options.TablePair) {
 		}(i)
 	}
 
-	if !option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY),
-		utils.MustGetFlagBool(options.DATA_ONLY), false) ||
+	if !option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY), utils.MustGetFlagBool(options.DATA_ONLY)) ||
 		len(option.GetDestTables()) > 0 {
 		close(tables)
 	}

@@ -39,8 +39,7 @@ func validateCopyMode(flags *pflag.FlagSet) {
 }
 
 func validateTableMode(flags *pflag.FlagSet) {
-	if !utils.MustGetFlagBool(options.STATISTICS_ONLY) &&
-		!utils.MustGetFlagBool(options.METADATA_ONLY) &&
+	if !utils.MustGetFlagBool(options.METADATA_ONLY) &&
 		!utils.MustGetFlagBool(options.GLOBAL_METADATA_ONLY) &&
 		!utils.MustGetFlagBool(options.TRUNCATE) &&
 		!utils.MustGetFlagBool(options.APPEND) {
@@ -117,53 +116,38 @@ func validateTable(flags *pflag.FlagSet) {
 }
 
 func validateDestHost(flags *pflag.FlagSet) {
-	if !utils.MustGetFlagBool(options.STATISTICS_ONLY) &&
-		len(utils.MustGetFlagString(options.DEST_HOST)) == 0 {
+	if len(utils.MustGetFlagString(options.DEST_HOST)) == 0 {
 		gplog.Fatal(errors.Errorf("missing option \"--dest-host\""), "")
-	}
-}
-
-func validateStatisticsFile(flags *pflag.FlagSet) {
-	if len(utils.MustGetFlagString(options.STATISTICS_FILE)) > 0 {
-		_, err := utils.ReadTableFile(utils.MustGetFlagString(options.STATISTICS_FILE))
-
-		if err != nil {
-			gplog.Fatal(errors.Errorf("failed to read file \"%v\": %v ", utils.MustGetFlagString(options.STATISTICS_FILE), err), "")
-		}
 	}
 }
 
 func validateFlagCombinations(flags *pflag.FlagSet) {
 	options.CheckExclusiveFlags(flags, options.DEBUG, options.QUIET)
 	options.CheckExclusiveFlags(flags, options.FULL, options.DBNAME, options.SCHEMA, options.INCLUDE_TABLE, options.INCLUDE_TABLE_FILE, options.GLOBAL_METADATA_ONLY, options.SCHEMA_MAPPING_FILE)
-	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY, options.STATISTICS_ONLY, options.TRUNCATE, options.APPEND)
-	options.CheckExclusiveFlags(flags, options.COPY_JOBS, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY, options.STATISTICS_ONLY)
-	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY, options.STATISTICS_ONLY, options.DEST_TABLE, options.DEST_TABLE_FILE)
+	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY, options.TRUNCATE, options.APPEND)
+	options.CheckExclusiveFlags(flags, options.COPY_JOBS, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY)
+	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY, options.DEST_TABLE, options.DEST_TABLE_FILE)
 	options.CheckExclusiveFlags(flags, options.EXCLUDE_TABLE, options.EXCLUDE_TABLE_FILE)
 	options.CheckExclusiveFlags(flags, options.DEST_TABLE, options.DEST_TABLE_FILE)
 	options.CheckExclusiveFlags(flags, options.INCLUDE_TABLE, options.INCLUDE_TABLE_FILE)
 	options.CheckExclusiveFlags(flags, options.FULL, options.WITH_GLOBALMETA)
-	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY, options.DATA_ONLY, options.STATISTICS_ONLY)
-	options.CheckExclusiveFlags(flags, options.DATA_ONLY, options.STATISTICS_ONLY, options.WITH_GLOBALMETA, options.GLOBAL_METADATA_ONLY)
-	options.CheckExclusiveFlags(flags, options.DATA_ONLY, options.STATISTICS_ONLY, options.METADATA_JOBS, options.GLOBAL_METADATA_ONLY)
-	options.CheckExclusiveFlags(flags, options.DEST_TABLE, options.STATISTICS_ONLY, options.DEST_TABLE_FILE, options.METADATA_JOBS, options.GLOBAL_METADATA_ONLY)
-	options.CheckExclusiveFlags(flags, options.DEST_TABLE, options.STATISTICS_ONLY, options.DEST_TABLE_FILE, options.WITH_GLOBALMETA, options.GLOBAL_METADATA_ONLY)
-	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY, options.STATISTICS_ONLY)
+	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY, options.DATA_ONLY)
+	options.CheckExclusiveFlags(flags, options.DATA_ONLY, options.WITH_GLOBALMETA, options.GLOBAL_METADATA_ONLY)
+	options.CheckExclusiveFlags(flags, options.DATA_ONLY, options.METADATA_JOBS, options.GLOBAL_METADATA_ONLY)
+	options.CheckExclusiveFlags(flags, options.DEST_TABLE, options.DEST_TABLE_FILE, options.METADATA_JOBS, options.GLOBAL_METADATA_ONLY)
+	options.CheckExclusiveFlags(flags, options.DEST_TABLE, options.DEST_TABLE_FILE, options.WITH_GLOBALMETA, options.GLOBAL_METADATA_ONLY)
+	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY)
 	options.CheckExclusiveFlags(flags, options.INCLUDE_TABLE_FILE, options.DEST_TABLE)
-	options.CheckExclusiveFlags(flags, options.STATISTICS_ONLY, options.DEST_DBNAME, options.DEST_SCHEMA)
-	options.CheckExclusiveFlags(flags, options.STATISTICS_ONLY, options.DEST_HOST)
-	options.CheckExclusiveFlags(flags, options.STATISTICS_ONLY, options.DEST_PORT)
-	options.CheckExclusiveFlags(flags, options.STATISTICS_ONLY, options.DEST_USER)
-	options.CheckExclusiveFlags(flags, options.STATISTICS_JOBS, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY, options.DATA_ONLY)
-	options.CheckExclusiveFlags(flags, options.STATISTICS_JOBS, options.TRUNCATE, options.APPEND)
-	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY, options.STATISTICS_ONLY, options.STATISTICS_FILE)
-	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY, options.STATISTICS_ONLY, options.ANALYZE)
+	options.CheckExclusiveFlags(flags, options.DEST_DBNAME, options.DEST_SCHEMA)
+	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY, options.DATA_ONLY)
+	options.CheckExclusiveFlags(flags, options.TRUNCATE, options.APPEND)
+	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY)
+	options.CheckExclusiveFlags(flags, options.METADATA_ONLY, options.GLOBAL_METADATA_ONLY)
 	options.CheckExclusiveFlags(flags, options.GLOBAL_METADATA_ONLY, options.EXCLUDE_TABLE_FILE)
-	options.CheckExclusiveFlags(flags, options.GLOBAL_METADATA_ONLY, options.ON_SEGMENT_THRESHOLD, options.STATISTICS_ONLY, options.METADATA_ONLY)
+	options.CheckExclusiveFlags(flags, options.GLOBAL_METADATA_ONLY, options.ON_SEGMENT_THRESHOLD, options.METADATA_ONLY)
 	options.CheckExclusiveFlags(flags, options.DEST_TABLE_FILE, options.DEST_DBNAME, options.DEST_SCHEMA, options.SCHEMA_MAPPING_FILE)
 	options.CheckExclusiveFlags(flags, options.OWNER_MAPPING_FILE, options.DATA_ONLY)
 	options.CheckExclusiveFlags(flags, options.TABLESPACE, options.DATA_ONLY, options.GLOBAL_METADATA_ONLY)
-	options.CheckExclusiveFlags(flags, options.TABLESPACE, options.STATISTICS_ONLY)
 	options.CheckExclusiveFlags(flags, options.TABLESPACE, options.DEST_TABLE, options.DEST_TABLE_FILE)
 
 	validateCopyMode(flags)
@@ -172,7 +156,6 @@ func validateFlagCombinations(flags *pflag.FlagSet) {
 	validateSchema(flags)
 	validateTable(flags)
 	validateDestHost(flags)
-	validateStatisticsFile(flags)
 	validateOwnerMappingFile(flags)
 	validateDataPortRange(flags)
 }

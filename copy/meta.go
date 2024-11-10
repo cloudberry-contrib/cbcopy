@@ -17,9 +17,7 @@ func doPreDataTask(srcConn, destConn *dbconn.DBConn, srcTables, destTables []opt
 
 	gplog.Info("doPreDataTask, mode: \"%v\"", m)
 
-	if !option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY),
-		utils.MustGetFlagBool(options.DATA_ONLY),
-		utils.MustGetFlagBool(options.STATISTICS_ONLY)) {
+	if !option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY), utils.MustGetFlagBool(options.DATA_ONLY)) {
 		pgd = fillTablePairChan(srcTables, destTables, tablec, donec)
 
 		gplog.Info("doPreDataTask, no metadata to copy")
@@ -57,10 +55,6 @@ func fillTablePairChan(srcTables,
 	}
 
 	title := "Table copied: "
-	if utils.MustGetFlagBool(options.STATISTICS_ONLY) {
-		title = "Table collected: "
-	}
-
 	pgd := utils.NewProgressBar(len(destTables), title, utils.PB_VERBOSE)
 
 	for i, t := range srcTables {
@@ -76,9 +70,7 @@ func fillTablePairChan(srcTables,
 }
 
 func doPostDataTask(dbname, timestamp string) {
-	if !option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY),
-		utils.MustGetFlagBool(options.DATA_ONLY),
-		utils.MustGetFlagBool(options.STATISTICS_ONLY)) {
+	if !option.ContainsMetadata(utils.MustGetFlagBool(options.METADATA_ONLY), utils.MustGetFlagBool(options.DATA_ONLY)) {
 		return
 	}
 

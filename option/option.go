@@ -3,7 +3,6 @@ package options
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/cloudberrydb/cbcopy/internal/dbconn"
@@ -15,7 +14,6 @@ import (
 )
 
 const (
-	ANALYZE              = "analyze"
 	APPEND               = "append"
 	DBNAME               = "dbname"
 	DEBUG                = "debug"
@@ -47,9 +45,6 @@ const (
 	SCHEMA               = "schema"
 	EXCLUDE_SCHEMA       = "exclude-schema" // test purpose, to reuse gpbackup integration test case
 	DEST_SCHEMA          = "dest-schema"
-	STATISTICS_ONLY      = "statistics-only"
-	STATISTICS_JOBS      = "statistics-jobs"
-	STATISTICS_FILE      = "statistics-file"
 	SCHEMA_MAPPING_FILE  = "schema-mapping-file"
 	OWNER_MAPPING_FILE   = "owner-mapping-file"
 	TABLESPACE           = "tablespace"
@@ -111,8 +106,6 @@ type Option struct {
 	destSchemas   []*DbSchema
 
 	ownerMap map[string]string
-
-	statistics map[string]map[string]int64
 }
 
 func NewOption(initialFlags *pflag.FlagSet) (*Option, error) {
@@ -234,14 +227,7 @@ func NewOption(initialFlags *pflag.FlagSet) (*Option, error) {
 		tableMode = TableModeAppend
 	}
 
-	lines, err := readTableFileByFlag(initialFlags, STATISTICS_FILE)
-	if err != nil {
-		return nil, err
-	}
-
-	statistics := parseStatisticsInfo(lines)
-
-	lines, err = readTableFileByFlag(initialFlags, OWNER_MAPPING_FILE)
+	lines, err := readTableFileByFlag(initialFlags, OWNER_MAPPING_FILE)
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +244,6 @@ func NewOption(initialFlags *pflag.FlagSet) (*Option, error) {
 		destTables:     destTables,
 		sourceSchemas:  sourceSchemas,
 		destSchemas:    destSchemas,
-		statistics:     statistics,
 		ownerMap:       ownerMap,
 	}, nil
 
@@ -453,26 +438,12 @@ func (o Option) IsBaseTableMode() bool {
 	return o.copyMode == CopyModeTable && len(o.GetDestTables()) == 0
 }
 
-func (o Option) ContainsMetadata(metadataOnly, dataOnly, statisticsOnly bool) bool {
-	if metadataOnly ||
-		(!metadataOnly && !dataOnly && !statisticsOnly) {
+func (o Option) ContainsMetadata(metadataOnly, dataOnly bool) bool {
+	if metadataOnly || (!metadataOnly && !dataOnly) {
 		return true
 	}
+
 	return false
-}
-
-func (o Option) GetTableStatistics(dbname, schema, table string) (bool, int64) {
-	tableStat, exist := o.statistics[dbname]
-	if !exist {
-		return false, 0
-	}
-
-	tableName := schema + "." + table
-	count, exist := tableStat[tableName]
-	if !exist {
-		return false, 0
-	}
-	return true, count
 }
 
 func (o Option) GetOwnerMap() map[string]string {
@@ -600,44 +571,6 @@ func CheckExclusiveFlags(flags *pflag.FlagSet, flagNames ...string) {
 	if numSet > 1 {
 		gplog.Fatal(errors.Errorf("The following flags may not be specified together: %s", strings.Join(flagNames, ", ")), "")
 	}
-}
-
-func parseStatisticsInfo(lines []string) map[string]map[string]int64 {
-	statistics := make(map[string]map[string]int64)
-
-	for _, l := range lines {
-		items := strings.Split(l, "\t")
-		if len(items) != 2 {
-			gplog.Fatal(errors.Errorf(`invalid statistics file content [%s]: every line
-			should have two fields, seperated by tab. the first field is table name,
-			the second field is the number of table records`, l), "")
-		}
-
-		sl := strings.Split(items[0], ".")
-		if len(sl) != 3 {
-			gplog.Fatal(errors.Errorf(`invalid statistics file content [%s]: please
-			ensure table name is in the format "database.schema.table"`, l), "")
-		}
-
-		dbname := sl[0]
-		table := sl[1] + "." + sl[2]
-
-		tableStat, exist := statistics[dbname]
-		if !exist {
-			tableStat = make(map[string]int64)
-		}
-
-		count, err := strconv.ParseInt(items[1], 10, 64)
-		if err != nil {
-			gplog.Fatal(errors.Errorf(`invalid statistics file content [%s]: please
-			ensure the number of table records is an integer`, l), "")
-		}
-		tableStat[table] = count
-
-		statistics[dbname] = tableStat
-	}
-
-	return statistics
 }
 
 func parseOwnerMappingFile(lines []string) map[string]string {
