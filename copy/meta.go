@@ -5,7 +5,6 @@ import (
 	"github.com/cloudberrydb/cbcopy/options"
 	"github.com/cloudberrydb/cbcopy/utils"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
-	"github.com/pkg/errors"
 )
 
 func doPreDataTask(srcConn, destConn *dbconn.DBConn, srcTables, destTables []options.Table) (chan options.TablePair, chan struct{}, utils.ProgressBar) {
@@ -37,18 +36,10 @@ func doPreDataTask(srcConn, destConn *dbconn.DBConn, srcTables, destTables []opt
 		pgd = metaOps.CopySchemaMetaData(option.GetSourceSchemas(), option.GetDestSchemas(), tablec, donec)
 	case options.CopyModeTable:
 		if len(option.GetDestTables()) == 0 {
-			schemaMap := make(map[string]bool)
-			for _, t := range destTables {
-				schemaMap[t.Schema] = true
-			}
+			ValidateSchemaExists(destConn, destTables)
+			includeSchemas, includeTables := CollectTablesAndSchemas(srcTables, GetPartTableMap(srcConn, destConn, true))
 
-			for k, _ := range schemaMap {
-				if !SchemaExists(destConn, k) {
-					gplog.Fatal(errors.Errorf("Please create the schema \"%v\" on the dest database \"%v\" first", k, destConn.DBName), "")
-				}
-			}
-
-			pgd = metaOps.CopyTableMetaData(option.GetDestSchemas(), srcTables, tablec, donec)
+			pgd = metaOps.CopyTableMetaData(option.GetDestSchemas(), includeSchemas, includeTables, tablec, donec)
 		} else {
 			pgd = fillTablePairChan(srcTables, destTables, tablec, donec)
 		}
@@ -96,4 +87,48 @@ func doPostDataTask(dbname, timestamp string) {
 	}
 
 	metaOps.CopyPostData()
+}
+
+// CollectTablesAndSchemas collects unique tables and schemas for metadata processing.
+// It handles partition tables by mapping child tables to their parent tables.
+// Returns two slices:
+// - A list of table names (including parent partition tables instead of child tables)
+// - A list of unique schema names
+func CollectTablesAndSchemas(tables []options.Table, partNameMap map[string][]string) ([]string, []string) {
+	// Build leaf table to parent table mapping
+	leafTableMap := make(map[string]string)
+	for parentTable, leafTables := range partNameMap {
+		for _, leafTable := range leafTables {
+			leafTableMap[leafTable] = parentTable
+		}
+	}
+
+	// Collect unique tables and schemas
+	schemaMap := make(map[string]bool)
+	tableMap := make(map[string]bool)
+
+	for _, t := range tables {
+		child := t.Schema + "." + t.Name
+		if parent, exists := leafTableMap[child]; exists {
+			// Use parent table instead of child table
+			tableMap[parent] = true
+		} else {
+			tableMap[child] = true
+		}
+		schemaMap[t.Schema] = true
+	}
+
+	// Convert maps to sorted slices
+	includeTables := make([]string, 0, len(tableMap))
+	includeSchemas := make([]string, 0, len(schemaMap))
+
+	for tableName := range tableMap {
+		includeTables = append(includeTables, tableName)
+	}
+
+	for schemaName := range schemaMap {
+		includeSchemas = append(includeSchemas, schemaName)
+	}
+
+	return includeSchemas, includeTables
 }

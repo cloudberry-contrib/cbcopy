@@ -262,7 +262,7 @@ func DoCopy() {
 	dbMap := GetDbNameMap()
 	for srcDbName, destDbName := range dbMap {
 		srcMetaConn, destMetaConn, srcConn, destConn := initializeConn(srcDbName, destDbName)
-		srcTables, destTables, partNameMap, oriPartNameMap := GetUserTables(srcConn, destConn)
+		srcTables, destTables, partNameMap := GetUserTables(srcConn, destConn)
 
 		if len(srcTables) == 0 {
 			gplog.Info("db %v, no table, move to next db", srcDbName)
@@ -274,8 +274,7 @@ func DoCopy() {
 			timestamp,
 			partNameMap,
 			formUserTableMap(srcTables, destTables),
-			option.GetOwnerMap(),
-			oriPartNameMap)
+			option.GetOwnerMap())
 		metaOps.Open(srcMetaConn, destMetaConn)
 
 		tablec, donec, pgsd := doPreDataTask(srcMetaConn, destMetaConn, srcTables, destTables)

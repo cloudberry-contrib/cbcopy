@@ -281,7 +281,7 @@ func redirectIncludeTables(tables []options.Table) []options.Table {
 	return results
 }
 
-func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options.Table, map[string][]string, map[string][]string) {
+func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options.Table, map[string][]string) {
 	if utils.MustGetFlagBool(options.GLOBAL_METADATA_ONLY) {
 		sl := strings.Split(CbcopyTestTable, ".")
 
@@ -289,7 +289,7 @@ func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options
 		inclTabs = append(inclTabs, options.Table{Schema: sl[0], Name: sl[1]})
 
 		partNameMap := make(map[string][]string)
-		return inclTabs, inclTabs, partNameMap, nil
+		return inclTabs, inclTabs, partNameMap
 	}
 
 	copyMode := option.GetCopyMode()
@@ -309,7 +309,7 @@ func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options
 	if copyMode != options.CopyModeTable {
 		srcTables = handleSchemaTable(srcConn, srcTables)
 		results := excludeTables(srcTables, exlTabs)
-		return results, redirectSchemaTables(results), GetPartTableMap(srcConn, destConn, false), nil
+		return results, redirectSchemaTables(results), GetPartTableMap(srcConn, destConn, false)
 	}
 
 	option.MarkIncludeTables(srcConn.DBName, srcTables, srcDbPartTables)
@@ -317,7 +317,7 @@ func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options
 		inclTabs, _ := ExpandPartTables(srcConn, srcTables, option.GetIncludeTablesByDb(srcConn.DBName), false)
 		results := excludeTables(inclTabs, exlTabs)
 
-		return results, redirectIncludeTables(results), GetPartTableMap(srcConn, destConn, false), GetPartTableMap(srcConn, destConn, true)
+		return results, redirectIncludeTables(results), GetPartTableMap(srcConn, destConn, false)
 	}
 
 	gplog.Info("Retrieving user tables on \"%v\" database of destConn...", destConn.DBName)
@@ -343,7 +343,7 @@ func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]options.Table, []options
 
 	return excludedSrcTabs,
 		excludedDstTabs,
-		GetPartTableMap(srcConn, destConn, false), nil
+		GetPartTableMap(srcConn, destConn, false)
 }
 
 func handleSchemaTable(srcConn *dbconn.DBConn, tables map[string]options.TableStatistics) map[string]options.TableStatistics {
@@ -820,4 +820,23 @@ func excludeTablePair(srcTables, destTables, exclTables []options.Table, userTab
 	}
 
 	return excludedSrcTabs, excludedDstTabs
+}
+
+// ValidateSchemaExists checks if all required schemas exist in the destination database.
+// It collects all unique schemas from the table list and verifies their existence.
+// If any schema is missing, it will terminate the program with an error message.
+func ValidateSchemaExists(destConn *dbconn.DBConn, tables []options.Table) {
+	// Collect all unique schemas
+	schemaMap := make(map[string]bool)
+	for _, t := range tables {
+		schemaMap[t.Schema] = true
+	}
+
+	// Verify each schema exists in the destination database
+	for schema := range schemaMap {
+		if !SchemaExists(destConn, schema) {
+			gplog.Fatal(errors.Errorf("Please create the schema \"%v\" on the dest database \"%v\" first",
+				schema, destConn.DBName), "")
+		}
+	}
 }

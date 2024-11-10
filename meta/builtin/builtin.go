@@ -28,8 +28,7 @@ func NewBuiltinMeta(convert, withGlobal, metaOnly bool,
 	timestamp string,
 	partNameMap map[string][]string,
 	tableMap map[string]string,
-	ownerMap map[string]string,
-	oriPartNameMap map[string][]string) *BuiltinMeta {
+	ownerMap map[string]string) *BuiltinMeta {
 	b := &BuiltinMeta{}
 
 	b.ConvertDdl = convert
@@ -39,8 +38,6 @@ func NewBuiltinMeta(convert, withGlobal, metaOnly bool,
 	b.PartNameMap = partNameMap
 	b.TableMap = tableMap
 	b.OwnerMap = ownerMap
-	b.OriPartNameMap = oriPartNameMap
-
 	return b
 }
 
@@ -108,39 +105,15 @@ func (b *BuiltinMeta) CopySchemaMetaData(sschemas, dschemas []*options.DbSchema,
 	return b.executeDDL(tablec, donec)
 }
 
-func (b *BuiltinMeta) CopyTableMetaData(dschemas []*options.DbSchema, tables []options.Table, tablec chan options.TablePair, donec chan struct{}) utils.ProgressBar {
+func (b *BuiltinMeta) CopyTableMetaData(dschemas []*options.DbSchema,
+	sschemas []string,
+	tables []string,
+	tablec chan options.TablePair,
+	donec chan struct{}) utils.ProgressBar {
 	gplog.Info("Copying table metadata")
-	schemaMap := make(map[string]bool)
-	for _, t := range tables {
-		schemaMap[t.Schema] = true
-	}
 
-	for k, _ := range schemaMap {
-		includeSchemas = append(includeSchemas, k)
-	}
-
-	leafTableMap := make(map[string]string)
-	for k, v := range b.OriPartNameMap {
-		for _, leafTable := range v {
-			leafTableMap[leafTable] = k
-		}
-	}
-
-	parentTabMap := make(map[string]bool)
-
-	for _, t := range tables {
-		child := t.Schema + "." + t.Name
-		parent, exists := leafTableMap[child]
-		if exists {
-			parentTabMap[parent] = true
-		} else {
-			parentTabMap[child] = true
-		}
-	}
-
-	for k, _ := range parentTabMap {
-		includeRelations = append(includeRelations, k)
-	}
+	includeSchemas = append(includeSchemas, sschemas...)
+	includeRelations = append(includeRelations, tables...)
 
 	if len(dschemas) > 0 {
 		inclDestSchema = dschemas[0].Schema
