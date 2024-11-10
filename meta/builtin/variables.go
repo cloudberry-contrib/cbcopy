@@ -5,7 +5,7 @@ import (
 
 	"github.com/cloudberrydb/cbcopy/internal/dbconn"
 	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
-	"github.com/cloudberrydb/cbcopy/options"
+	"github.com/cloudberrydb/cbcopy/option"
 	"github.com/spf13/pflag"
 )
 

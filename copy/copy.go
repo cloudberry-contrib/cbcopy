@@ -10,7 +10,7 @@ import (
 
 	"github.com/cloudberrydb/cbcopy/internal/dbconn"
 	"github.com/cloudberrydb/cbcopy/meta"
-	"github.com/cloudberrydb/cbcopy/options"
+	"github.com/cloudberrydb/cbcopy/option"
 	"github.com/cloudberrydb/cbcopy/utils"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"github.com/greenplum-db/gp-common-go-libs/operating"
@@ -113,7 +113,7 @@ func DoSetup() {
 	gplog.Info("Starting copy...")
 	gplog.Info("Copy Timestamp = %s", timestamp)
 
-	option, err = options.NewOptions(utils.CmdFlags)
+	option, err = options.NewOption(utils.CmdFlags)
 	gplog.FatalOnError(err)
 
 	gplog.Info("Establishing 1 source db management connection(s)...")

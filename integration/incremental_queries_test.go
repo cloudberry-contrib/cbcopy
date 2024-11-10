@@ -3,7 +3,7 @@ package integration
 import (
 	"fmt"
 
-	"github.com/cloudberrydb/cbcopy/options"
+	"github.com/cloudberrydb/cbcopy/option"
 
 	// "github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/cloudberrydb/cbcopy/internal/testhelper"

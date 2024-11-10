@@ -96,7 +96,7 @@ type TableStatistics struct {
 	RelTuples int64
 }
 
-type Options struct {
+type Option struct {
 	copyMode  string
 	tableMode string
 
@@ -115,7 +115,7 @@ type Options struct {
 	statistics map[string]map[string]int64
 }
 
-func NewOptions(initialFlags *pflag.FlagSet) (*Options, error) {
+func NewOption(initialFlags *pflag.FlagSet) (*Option, error) {
 	copyMode := CopyModeFull
 	tableMode := TableModeTruncate
 
@@ -248,7 +248,7 @@ func NewOptions(initialFlags *pflag.FlagSet) (*Options, error) {
 
 	ownerMap := parseOwnerMappingFile(lines)
 
-	return &Options{
+	return &Option{
 		copyMode:       copyMode,
 		tableMode:      tableMode,
 		sourceDbnames:  sourceDbnames,
@@ -315,31 +315,31 @@ func validateSchemas(schemas []string) ([]*DbSchema, error) {
 	return result, nil
 }
 
-func (o Options) GetCopyMode() string {
+func (o Option) GetCopyMode() string {
 	return o.copyMode
 }
 
-func (o Options) GetTableMode() string {
+func (o Option) GetTableMode() string {
 	return o.tableMode
 }
 
-func (o Options) GetSourceDbnames() []string {
+func (o Option) GetSourceDbnames() []string {
 	return o.sourceDbnames
 }
 
-func (o Options) GetDestDbnames() []string {
+func (o Option) GetDestDbnames() []string {
 	return o.destDbnames
 }
 
-func (o Options) GetSourceSchemas() []*DbSchema {
+func (o Option) GetSourceSchemas() []*DbSchema {
 	return o.sourceSchemas
 }
 
-func (o Options) GetDestSchemas() []*DbSchema {
+func (o Option) GetDestSchemas() []*DbSchema {
 	return o.destSchemas
 }
 
-func (o Options) GetSchemaMap() map[string]string {
+func (o Option) GetSchemaMap() map[string]string {
 	results := make(map[string]string)
 
 	i := 0
@@ -351,19 +351,19 @@ func (o Options) GetSchemaMap() map[string]string {
 	return results
 }
 
-func (o Options) GetIncludeTablesByDb(dbname string) []Table {
+func (o Option) GetIncludeTablesByDb(dbname string) []Table {
 	return o.getTablesByDb(dbname, o.includedTables)
 }
 
-func (o Options) GetDestTablesByDb(dbname string) []Table {
+func (o Option) GetDestTablesByDb(dbname string) []Table {
 	return o.getTablesByDb(dbname, o.destTables)
 }
 
-func (o Options) GetExclTablesByDb(dbname string) []Table {
+func (o Option) GetExclTablesByDb(dbname string) []Table {
 	return o.getTablesByDb(dbname, o.excludedTables)
 }
 
-func (o Options) GetIncludePartTablesByDb(dbname string) []Table {
+func (o Option) GetIncludePartTablesByDb(dbname string) []Table {
 	tables := o.getTablesByDb(dbname, o.includedTables)
 
 	results := make([]Table, 0)
@@ -375,7 +375,7 @@ func (o Options) GetIncludePartTablesByDb(dbname string) []Table {
 	return results
 }
 
-func (o Options) GetTblSourceDbnames() []string {
+func (o Option) GetTblSourceDbnames() []string {
 	results := make([]string, 0)
 
 	results = append(results, o.includedTables[0].Database)
@@ -383,7 +383,7 @@ func (o Options) GetTblSourceDbnames() []string {
 	return results
 }
 
-func (o Options) GetTblDestDbnames() []string {
+func (o Option) GetTblDestDbnames() []string {
 	results := make([]string, 0)
 
 	dbMap := make(map[string]bool)
@@ -399,7 +399,7 @@ func (o Options) GetTblDestDbnames() []string {
 	return results
 }
 
-func (o Options) getTablesByDb(dbname string, tables []*DbTable) []Table {
+func (o Option) getTablesByDb(dbname string, tables []*DbTable) []Table {
 	results := make([]Table, 0)
 
 	for i := 0; i < len(tables); i++ {
@@ -412,19 +412,19 @@ func (o Options) getTablesByDb(dbname string, tables []*DbTable) []Table {
 	return results
 }
 
-func (o Options) MarkIncludeTables(dbname string, userTables map[string]TableStatistics, partTables map[string]bool) {
+func (o Option) MarkIncludeTables(dbname string, userTables map[string]TableStatistics, partTables map[string]bool) {
 	o.markTables(dbname, o.includedTables, userTables, partTables)
 }
 
-func (o Options) MarkDestTables(dbname string, userTables map[string]TableStatistics, partTables map[string]bool) {
+func (o Option) MarkDestTables(dbname string, userTables map[string]TableStatistics, partTables map[string]bool) {
 	o.markTables(dbname, o.destTables, userTables, partTables)
 }
 
-func (o Options) MarkExcludeTables(dbname string, userTables map[string]TableStatistics, partTables map[string]bool) {
+func (o Option) MarkExcludeTables(dbname string, userTables map[string]TableStatistics, partTables map[string]bool) {
 	o.markTables(dbname, o.excludedTables, userTables, partTables)
 }
 
-func (o Options) markTables(dbname string, tables []*DbTable, userTables map[string]TableStatistics, partTables map[string]bool) {
+func (o Option) markTables(dbname string, tables []*DbTable, userTables map[string]TableStatistics, partTables map[string]bool) {
 	for i := 0; i < len(tables); i++ {
 		if dbname != tables[i].Database {
 			continue
@@ -445,15 +445,15 @@ func (o Options) markTables(dbname string, tables []*DbTable, userTables map[str
 	}
 }
 
-func (o Options) GetDestTables() []*DbTable {
+func (o Option) GetDestTables() []*DbTable {
 	return o.destTables
 }
 
-func (o Options) IsBaseTableMode() bool {
+func (o Option) IsBaseTableMode() bool {
 	return o.copyMode == CopyModeTable && len(o.GetDestTables()) == 0
 }
 
-func (o Options) ContainsMetadata(metadataOnly, dataOnly, statisticsOnly bool) bool {
+func (o Option) ContainsMetadata(metadataOnly, dataOnly, statisticsOnly bool) bool {
 	if metadataOnly ||
 		(!metadataOnly && !dataOnly && !statisticsOnly) {
 		return true
@@ -461,7 +461,7 @@ func (o Options) ContainsMetadata(metadataOnly, dataOnly, statisticsOnly bool) b
 	return false
 }
 
-func (o Options) GetTableStatistics(dbname, schema, table string) (bool, int64) {
+func (o Option) GetTableStatistics(dbname, schema, table string) (bool, int64) {
 	tableStat, exist := o.statistics[dbname]
 	if !exist {
 		return false, 0
@@ -475,11 +475,11 @@ func (o Options) GetTableStatistics(dbname, schema, table string) (bool, int64) 
 	return true, count
 }
 
-func (o Options) GetOwnerMap() map[string]string {
+func (o Option) GetOwnerMap() map[string]string {
 	return o.ownerMap
 }
 
-func (o Options) validatePartTables(title string, tables []*DbTable, userTables map[string]TableStatistics, dbname string) {
+func (o Option) validatePartTables(title string, tables []*DbTable, userTables map[string]TableStatistics, dbname string) {
 	for _, t := range tables {
 		if t.Partition == 1 {
 			gplog.Fatal(errors.Errorf("Found partition root table: %s.%s.%s in %s list", dbname, t.Schema, t.Name, title), "")
@@ -494,15 +494,15 @@ func (o Options) validatePartTables(title string, tables []*DbTable, userTables 
 	}
 }
 
-func (o Options) ValidateIncludeTables(userTables map[string]TableStatistics, dbname string) {
+func (o Option) ValidateIncludeTables(userTables map[string]TableStatistics, dbname string) {
 	o.validatePartTables("include table", o.includedTables, userTables, dbname)
 }
 
-func (o Options) ValidateExcludeTables(userTables map[string]TableStatistics, dbname string) {
+func (o Option) ValidateExcludeTables(userTables map[string]TableStatistics, dbname string) {
 	o.validatePartTables("exclude table", o.excludedTables, userTables, dbname)
 }
 
-func (o Options) ValidateDestTables(userTables map[string]TableStatistics, dbname string) {
+func (o Option) ValidateDestTables(userTables map[string]TableStatistics, dbname string) {
 	o.validatePartTables("dest table", o.destTables, userTables, dbname)
 }
 

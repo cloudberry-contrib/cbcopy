@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cloudberrydb/cbcopy/options"
+	"github.com/cloudberrydb/cbcopy/option"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 
 	// "github.com/greenplum-db/gp-common-go-libs/cluster"

@@ -5,7 +5,7 @@ import (
 
 	"github.com/cloudberrydb/cbcopy/internal/dbconn"
 	"github.com/cloudberrydb/cbcopy/meta"
-	"github.com/cloudberrydb/cbcopy/options"
+	"github.com/cloudberrydb/cbcopy/option"
 	"github.com/cloudberrydb/cbcopy/utils"
 )
 
@@ -41,7 +41,7 @@ var (
 	destManageConn *dbconn.DBConn
 
 	objectCounts        map[string]int
-	option              *options.Options
+	option              *options.Option
 	destSegmentsIpInfo  []utils.SegmentIpInfo
 	srcSegmentsHostInfo []utils.SegmentHostInfo
 	timestamp           string
