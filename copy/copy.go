@@ -74,7 +74,6 @@ func SetFlagDefaults(flagSet *pflag.FlagSet) {
 	flagSet.String(options.TABLESPACE, "", "Create objects in this tablespace")
 	flagSet.Bool("version", false, "Print version number and exit")
 	flagSet.String(options.DATA_PORT_RANGE, "1024-65535", "The range of listening port number to choose for receiving data on dest cluster")
-	flagSet.String(options.IP_MAPPING_FILE, "", "ip mapping file (format, ip1:ip2)")
 }
 
 // This function handles setup that can be done before parsing flags.
@@ -214,13 +213,6 @@ func createResources() {
 
 	if !utils.MustGetFlagBool(options.STATISTICS_ONLY) {
 		destSegmentsIpInfo = utils.GetSegmentsIpAddress(destManageConn, timestamp)
-
-		utils.MapSegmentsIpAddress(destSegmentsIpInfo, utils.MustGetFlagString(options.IP_MAPPING_FILE), ":")
-		gplog.Debug("destSegmentsIpInfo")
-		for _, seg := range destSegmentsIpInfo {
-			gplog.Debug("%v, %v", seg.Content, seg.Ip)
-		}
-
 		srcSegmentsHostInfo = utils.GetSegmentsHost(srcManageConn)
 		CreateHelperPortTable(destManageConn, timestamp)
 

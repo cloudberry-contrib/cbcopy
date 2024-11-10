@@ -175,7 +175,6 @@ func validateFlagCombinations(flags *pflag.FlagSet) {
 	validateStatisticsFile(flags)
 	validateOwnerMappingFile(flags)
 	validateDataPortRange(flags)
-	validateIpMappingFile(flags)
 }
 
 func validateTableCombination(optSrcName, optDestName string, srcTables, destTables []string) {
@@ -223,14 +222,4 @@ func validateDataPortRange(flags *pflag.FlagSet) {
 	if err != nil {
 		gplog.Fatal(errors.Errorf("invalid integer format, %v", second), "")
 	}
-}
-
-func validateIpMappingFile(flags *pflag.FlagSet) {
-	fileName := utils.MustGetFlagString(options.IP_MAPPING_FILE)
-	ipMaps, _ := utils.ReadMapFile(fileName, ":")
-	gplog.Info("== ip-mapping-file content, start ==")
-	for ip1, ip2 := range ipMaps {
-		gplog.Info("IP mapping, IP1: %v, IP2: %v", ip1, ip2)
-	}
-	gplog.Info("== ip-mapping-file content, end ==")
 }

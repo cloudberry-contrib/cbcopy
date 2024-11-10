@@ -55,7 +55,6 @@ const (
 	TABLESPACE           = "tablespace"
 	VERBOSE              = "verbose"
 	DATA_PORT_RANGE      = "data-port-range"
-	IP_MAPPING_FILE      = "ip-mapping-file"
 )
 
 const (

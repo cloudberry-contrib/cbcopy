@@ -64,20 +64,6 @@ func GetSegmentsIpAddress(conn *dbconn.DBConn, timestamp string) []SegmentIpInfo
 	return results
 }
 
-func MapSegmentsIpAddress(ipInfo []SegmentIpInfo, mapFileName string, mapFileContentSeparator string) {
-	ipMaps, _ := ReadMapFile(mapFileName, mapFileContentSeparator)
-
-	if ipMaps != nil {
-		for i := range ipInfo {
-			mappedIp, exists := ipMaps[ipInfo[i].Ip]
-			if exists {
-				gplog.Debug("dest segment content %v, ip address %v, mapped ip address %v", ipInfo[i].Content, ipInfo[i].Ip, mappedIp)
-				ipInfo[i].Ip = mappedIp
-			}
-		}
-	}
-}
-
 func hdw3GetSegmentsIpAddress(conn *dbconn.DBConn, timestamp string) []SegmentIpInfo {
 	results := make([]SegmentIpInfo, 0)
 	query := fmt.Sprintf(`
