@@ -43,8 +43,7 @@ var (
 	srcSegmentsHostInfo []utils.SegmentHostInfo
 	timestamp           string
 	convertDDL          bool
-	excludedDestDb      = []string{"postgres", "template0", "template1"}
-	excludedSourceDb    = []string{"template0", "template1"}
+	excludedDb          = []string{"template0", "template1"}
 	fCopySucced         *os.File
 	fFailed             *os.File
 	fSkipped            *os.File

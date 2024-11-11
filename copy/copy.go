@@ -37,7 +37,7 @@ func SetFlagDefaults(flagSet *pflag.FlagSet) {
 	flagSet.StringSlice(option.DBNAME, []string{}, "The database(s) to be copied, separated by commas")
 	flagSet.Bool(option.DEBUG, false, "Print debug log messages")
 	flagSet.StringSlice(option.DEST_DBNAME, []string{}, "The database(s) in destination cluster to copy to, separated by commas")
-	flagSet.String(option.DEST_HOST, "", "The host of destination cluster")
+	flagSet.String(option.DEST_HOST, "127.0.0.1", "The host of destination cluster")
 	flagSet.Int(option.DEST_PORT, 5432, "The port of destination cluster")
 	flagSet.StringSlice(option.DEST_TABLE, []string{}, "The renamed dest table(s) for include-table, separated by commas")
 	flagSet.String(option.DEST_TABLE_FILE, "", "The renamed dest table(s) for include-table-file, The line format is \"dbname.schema.table\"")
@@ -92,7 +92,9 @@ func logFileName(program, logdir string) string {
 }
 
 func DoFlagValidation(cmd *cobra.Command) {
-	validateFlagCombinations(cmd.Flags())
+	vm := NewValidatorManager(cmd.Flags())
+	err := vm.ValidateAll()
+	gplog.FatalOnError(err)
 }
 
 // This function handles setup that must be done after parsing flags.
@@ -132,8 +134,6 @@ func DoSetup() {
 		utils.MustGetFlagInt(option.DEST_PORT),
 		utils.MustGetFlagInt(option.COPY_JOBS))
 	gplog.Info("Finished establishing dest db management connection")
-
-	ValidateDbnames(GetDbNameMap())
 }
 
 func initializeConn(srcDbName, destDbName string) (*dbconn.DBConn, *dbconn.DBConn, *dbconn.DBConn, *dbconn.DBConn) {

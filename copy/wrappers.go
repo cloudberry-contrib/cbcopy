@@ -85,7 +85,7 @@ func GetUserDatabases(conn *dbconn.DBConn) []string {
 
 	results := make([]string, 0)
 	for _, db := range dbnames {
-		if !utils.Exists(excludedDestDb, db) {
+		if !utils.Exists(excludedDb, db) {
 			results = append(results, db)
 		}
 	}
