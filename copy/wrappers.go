@@ -299,9 +299,7 @@ func GetUserTables(srcConn, destConn *dbconn.DBConn) ([]option.Table, []option.T
 		srcTables,
 		srcConn.DBName)
 
-	return excludedSrcTabs,
-		excludedDstTabs,
-		GetPartTableMap(srcConn, destConn, false)
+	return excludedSrcTabs, excludedDstTabs, GetPartTableMap(srcConn, destConn, false)
 }
 
 func handleSchemaTable(srcConn *dbconn.DBConn, tables map[string]option.TableStatistics) map[string]option.TableStatistics {
@@ -762,23 +760,4 @@ func excludeTablePair(srcTables, destTables, exclTables []option.Table, userTabl
 	}
 
 	return excludedSrcTabs, excludedDstTabs
-}
-
-// ValidateSchemaExists checks if all required schemas exist in the destination database.
-// It collects all unique schemas from the table list and verifies their existence.
-// If any schema is missing, it will terminate the program with an error message.
-func ValidateSchemaExists(destConn *dbconn.DBConn, tables []option.Table) {
-	// Collect all unique schemas
-	schemaMap := make(map[string]bool)
-	for _, t := range tables {
-		schemaMap[t.Schema] = true
-	}
-
-	// Verify each schema exists in the destination database
-	for schema := range schemaMap {
-		if !SchemaExists(destConn, schema) {
-			gplog.Fatal(errors.Errorf("Please create the schema \"%v\" on the dest database \"%v\" first",
-				schema, destConn.DBName), "")
-		}
-	}
 }

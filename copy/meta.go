@@ -5,71 +5,59 @@ import (
 	"github.com/cloudberrydb/cbcopy/option"
 	"github.com/cloudberrydb/cbcopy/utils"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/pkg/errors"
 )
 
-func doPreDataTask(srcConn, destConn *dbconn.DBConn, srcTables, destTables []option.Table) (chan option.TablePair, chan struct{}, utils.ProgressBar) {
+// MetadataManager handles all metadata related operations during copy process
+type MetadataManager struct {
+	srcConn  *dbconn.DBConn
+	destConn *dbconn.DBConn
+	donec    chan struct{}
+}
+
+// NewMetadataManager creates a new MetadataManager instance
+func NewMetadataManager(srcConn, destConn *dbconn.DBConn) *MetadataManager {
+	return &MetadataManager{
+		srcConn:  srcConn,
+		destConn: destConn,
+		donec:    make(chan struct{}),
+	}
+}
+
+// MigrateMetadata manages all pre-data operations
+func (m *MetadataManager) MigrateMetadata(srcTables, destTables []option.Table) (chan option.TablePair, utils.ProgressBar) {
 	var pgd utils.ProgressBar
 
-	m := config.GetCopyMode()
-
-	donec := make(chan struct{})
+	mode := config.GetCopyMode()
 	tablec := make(chan option.TablePair, len(destTables))
 
-	gplog.Info("doPreDataTask, mode: \"%v\"", m)
-
 	if !config.ContainsMetadata(utils.MustGetFlagBool(option.METADATA_ONLY), utils.MustGetFlagBool(option.DATA_ONLY)) {
-		pgd = fillTablePairChan(srcTables, destTables, tablec, donec)
-
-		gplog.Info("doPreDataTask, no metadata to copy")
-
-		return tablec, donec, pgd
+		pgd = m.fillTablePairChan(srcTables, destTables, tablec)
+		return tablec, pgd
 	}
 
-	switch m {
+	switch mode {
 	case option.CopyModeFull:
 		fallthrough
 	case option.CopyModeDb:
-		pgd = metaOps.CopyDatabaseMetaData(tablec, donec)
+		pgd = metaOps.CopyDatabaseMetaData(tablec, m.donec)
 	case option.CopyModeSchema:
-		pgd = metaOps.CopySchemaMetaData(config.GetSourceSchemas(), config.GetDestSchemas(), tablec, donec)
+		pgd = metaOps.CopySchemaMetaData(config.GetSourceSchemas(), config.GetDestSchemas(), tablec, m.donec)
 	case option.CopyModeTable:
 		if len(config.GetDestTables()) == 0 {
-			ValidateSchemaExists(destConn, destTables)
-			includeSchemas, includeTables := CollectTablesAndSchemas(srcTables, GetPartTableMap(srcConn, destConn, true))
-
-			pgd = metaOps.CopyTableMetaData(config.GetDestSchemas(), includeSchemas, includeTables, tablec, donec)
+			m.validateSchemaExists(m.destConn, destTables)
+			includeSchemas, includeTables := m.collectTablesAndSchemas(srcTables, GetPartTableMap(m.srcConn, m.destConn, true))
+			pgd = metaOps.CopyTableMetaData(config.GetDestSchemas(), includeSchemas, includeTables, tablec, m.donec)
 		} else {
-			pgd = fillTablePairChan(srcTables, destTables, tablec, donec)
+			pgd = m.fillTablePairChan(srcTables, destTables, tablec)
 		}
 	}
 
-	return tablec, donec, pgd
+	return tablec, pgd
 }
 
-func fillTablePairChan(srcTables,
-	destTables []option.Table,
-	tablec chan option.TablePair,
-	donec chan struct{}) utils.ProgressBar {
-	if len(destTables) == 0 {
-		return nil
-	}
-
-	title := "Table copied: "
-	pgd := utils.NewProgressBar(len(destTables), title, utils.PB_VERBOSE)
-
-	for i, t := range srcTables {
-		tablec <- option.TablePair{SrcTable: option.Table{Schema: t.Schema,
-			Name:      t.Name,
-			RelTuples: t.RelTuples},
-			DestTable: option.Table{Schema: destTables[i].Schema,
-				Name: destTables[i].Name}}
-	}
-	close(donec)
-
-	return pgd
-}
-
-func doPostDataTask(dbname, timestamp string) {
+// HandlePostDataTask manages all post-data operations
+func (m *MetadataManager) RestorePostMetadata(dbname, timestamp string) {
 	if !config.ContainsMetadata(utils.MustGetFlagBool(option.METADATA_ONLY), utils.MustGetFlagBool(option.DATA_ONLY)) {
 		return
 	}
@@ -81,12 +69,45 @@ func doPostDataTask(dbname, timestamp string) {
 	metaOps.CopyPostData()
 }
 
+// Wait blocks until metadata migration is complete
+func (m *MetadataManager) Wait() {
+	<-m.donec
+}
+
+// fillTablePairChan fills the table pair channel with source and destination tables
+func (m *MetadataManager) fillTablePairChan(srcTables, destTables []option.Table, tablec chan option.TablePair) utils.ProgressBar {
+	if len(destTables) == 0 {
+		close(m.donec)
+		return nil
+	}
+
+	title := "Table copied: "
+	pgd := utils.NewProgressBar(len(destTables), title, utils.PB_VERBOSE)
+
+	for i, t := range srcTables {
+		tablec <- option.TablePair{
+			SrcTable: option.Table{
+				Schema:    t.Schema,
+				Name:      t.Name,
+				RelTuples: t.RelTuples,
+			},
+			DestTable: option.Table{
+				Schema: destTables[i].Schema,
+				Name:   destTables[i].Name,
+			},
+		}
+	}
+
+	close(m.donec)
+	return pgd
+}
+
 // CollectTablesAndSchemas collects unique tables and schemas for metadata processing.
 // It handles partition tables by mapping child tables to their parent tables.
 // Returns two slices:
 // - A list of table names (including parent partition tables instead of child tables)
 // - A list of unique schema names
-func CollectTablesAndSchemas(tables []option.Table, partNameMap map[string][]string) ([]string, []string) {
+func (m *MetadataManager) collectTablesAndSchemas(tables []option.Table, partNameMap map[string][]string) ([]string, []string) {
 	// Build leaf table to parent table mapping
 	leafTableMap := make(map[string]string)
 	for parentTable, leafTables := range partNameMap {
@@ -123,4 +144,23 @@ func CollectTablesAndSchemas(tables []option.Table, partNameMap map[string][]str
 	}
 
 	return includeSchemas, includeTables
+}
+
+// ValidateSchemaExists checks if all required schemas exist in the destination database.
+// It collects all unique schemas from the table list and verifies their existence.
+// If any schema is missing, it will terminate the program with an error message.
+func (m *MetadataManager) validateSchemaExists(destConn *dbconn.DBConn, tables []option.Table) {
+	// Collect all unique schemas
+	schemaMap := make(map[string]bool)
+	for _, t := range tables {
+		schemaMap[t.Schema] = true
+	}
+
+	// Verify each schema exists in the destination database
+	for schema := range schemaMap {
+		if !SchemaExists(destConn, schema) {
+			gplog.Fatal(errors.Errorf("Please create the schema \"%v\" on the dest database \"%v\" first",
+				schema, destConn.DBName), "")
+		}
+	}
 }

@@ -228,9 +228,9 @@ func DoCopy() {
 		srcTables, destTables, partNameMap := GetUserTables(srcConn, destConn)
 
 		if len(srcTables) == 0 {
-			gplog.Info("db %v, no table, move to next db", srcDbName)
 			continue
 		}
+
 		metaOps = meta.CreateMetaImpl(convertDDL,
 			needGlobalMetaData(i == 0),
 			utils.MustGetFlagBool(option.METADATA_ONLY),
@@ -240,9 +240,10 @@ func DoCopy() {
 			config.GetOwnerMap())
 		metaOps.Open(srcMetaConn, destMetaConn)
 
-		tablec, donec, pgsd := doPreDataTask(srcMetaConn, destMetaConn, srcTables, destTables)
+		metaManager := NewMetadataManager(srcConn, destConn)
+		tablec, pgsd := metaManager.MigrateMetadata(srcTables, destTables)
 		if utils.MustGetFlagBool(option.METADATA_ONLY) {
-			<-donec
+			metaManager.Wait()
 		} else {
 			copyManager := NewCopyManager(srcConn, destConn, pgsd)
 			copyManager.Copy(tablec)
@@ -252,7 +253,7 @@ func DoCopy() {
 			pgsd.Finish()
 		}
 
-		doPostDataTask(srcDbName, timestamp)
+		metaManager.RestorePostMetadata(srcDbName, timestamp)
 
 		// toc and meta file are removed in Close function.
 		metaOps.Close()
