@@ -292,3 +292,7 @@ func RedirectStream(reader io.Reader, writeCloser io.WriteCloser) error {
 
 	return nil
 }
+
+func GetVersion() string {
+	return Version
+}

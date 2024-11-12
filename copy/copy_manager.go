@@ -11,24 +11,26 @@ import (
 )
 
 type TableCopier struct {
-	srcConn     *dbconn.DBConn
-	destConn    *dbconn.DBConn
-	srcTable    option.Table
-	destTable   option.Table
-	workerID    int
-	progressBar utils.ProgressBar
-	copiedMap   map[string]int
+	srcConn      *dbconn.DBConn
+	destConn     *dbconn.DBConn
+	srcTable     option.Table
+	destTable    option.Table
+	workerID     int
+	progressBar  utils.ProgressBar
+	copiedMap    map[string]int
+	queryManager *QueryManager
 }
 
 func NewTableCopier(src, dest *dbconn.DBConn, srcTable, destTable option.Table, workerID int, progressBar utils.ProgressBar, copiedMap map[string]int) *TableCopier {
 	return &TableCopier{
-		srcConn:     src,
-		destConn:    dest,
-		srcTable:    srcTable,
-		destTable:   destTable,
-		workerID:    workerID,
-		progressBar: progressBar,
-		copiedMap:   copiedMap,
+		srcConn:      src,
+		destConn:     dest,
+		srcTable:     srcTable,
+		destTable:    destTable,
+		workerID:     workerID,
+		progressBar:  progressBar,
+		copiedMap:    copiedMap,
+		queryManager: NewQueryManager(),
 	}
 }
 
@@ -63,7 +65,8 @@ func (tc *TableCopier) prepareForCopy() (bool, error) {
 	gplog.Debug("[Worker %v] There are %v rows in the source table \"%v.%v\"",
 		tc.workerID, tc.srcTable.RelTuples, tc.srcTable.Schema, tc.srcTable.Name)
 
-	query := fmt.Sprintf("%v\nSET client_encoding = '%s';", GetSetupQuery(tc.destConn), encodingGuc.ClientEncoding)
+	query := fmt.Sprintf("%v\nSET client_encoding = '%s';", tc.queryManager.GetSessionSetupQuery(tc.destConn),
+		encodingGuc.ClientEncoding)
 	gplog.Debug("[Worker %v] Executing setup query: %v", tc.workerID, query)
 
 	if _, err := tc.destConn.Exec(query, tc.workerID); err != nil {
@@ -92,7 +95,7 @@ func (tc *TableCopier) shouldSkipCopy() bool {
 	gplog.Debug("[Worker %v] Executing isEmptyTable \"%v.%v\" on source database",
 		tc.workerID, tc.srcTable.Schema, tc.srcTable.Name)
 
-	isEmpty, err := isEmptyTable(tc.srcConn, tc.srcTable.Schema, tc.srcTable.Name, tc.workerID)
+	isEmpty, err := tc.queryManager.IsEmptyTable(tc.srcConn, tc.srcTable.Schema, tc.srcTable.Name, tc.workerID)
 	if err != nil {
 		gplog.Error("[Worker %v] Failed to execute isEmptyTable(): %v", tc.workerID, err)
 		return false

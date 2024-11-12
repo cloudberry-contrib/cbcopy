@@ -103,6 +103,8 @@ func DoSetup() {
 
 	SetLoggerVerbosity()
 
+	qm := NewQueryManager()
+
 	if utils.MustGetFlagBool(option.GLOBAL_METADATA_ONLY) {
 		option.MakeIncludeOptions(utils.CmdFlags, CbcopyTestTable)
 	}
@@ -123,7 +125,8 @@ func DoSetup() {
 	gplog.Info("Finished establishing source db management connection")
 
 	if utils.MustGetFlagBool(option.GLOBAL_METADATA_ONLY) {
-		CreateTestTable(srcManageConn, CbcopyTestTable)
+		err = qm.CreateTestTable(srcManageConn, CbcopyTestTable)
+		gplog.FatalOnError(err)
 	}
 
 	gplog.Info("Establishing %v dest db management connection(s)...",
@@ -139,6 +142,7 @@ func DoSetup() {
 func initializeConn(srcDbName, destDbName string) (*dbconn.DBConn, *dbconn.DBConn, *dbconn.DBConn, *dbconn.DBConn) {
 	var srcMetaConn, destMetaConn, srcConn, destConn *dbconn.DBConn
 
+	qm := NewQueryManager()
 	gplog.Info("Establishing 1 source db (%v) metadata connection(s)...", srcDbName)
 	srcMetaConn = initializeConnectionPool(srcDbName,
 		utils.MustGetFlagString(option.SOURCE_USER),
@@ -148,7 +152,7 @@ func initializeConn(srcDbName, destDbName string) (*dbconn.DBConn, *dbconn.DBCon
 	gplog.Info("Finished establishing 1 source db (%v) metadata connection", srcDbName)
 
 	if config.ContainsMetadata(utils.MustGetFlagBool(option.METADATA_ONLY), utils.MustGetFlagBool(option.DATA_ONLY)) {
-		CreateDbIfNotExist(destManageConn, destDbName)
+		qm.CreateDatabaseIfNotExists(destManageConn, destDbName)
 	}
 
 	gplog.Info("Establishing %v dest db (%v) metadata connection(s)...",
@@ -201,7 +205,10 @@ func createResources() {
 		currentUser.HomeDir, FailedFileName, timestamp))
 	destSegmentsIpInfo = utils.GetSegmentsIpAddress(destManageConn, timestamp)
 	srcSegmentsHostInfo = utils.GetSegmentsHost(srcManageConn)
-	CreateHelperPortTable(destManageConn, timestamp)
+
+	ph := NewPortHelper(destManageConn)
+	err := ph.CreateHelperPortTable(timestamp)
+	gplog.FatalOnError(err)
 
 	fCopySucced = utils.OpenDataFile(fmt.Sprintf("%s/gpAdminLogs/%v_%v",
 		currentUser.HomeDir, CopySuccedFileName, timestamp))
@@ -222,10 +229,11 @@ func DoCopy() {
 	defer destroyResources()
 
 	i := 0
-	dbMap := GetDbNameMap()
+	qw := NewQueryWrapper(NewQueryManager())
+	dbMap := qw.GetDbNameMap()
 	for srcDbName, destDbName := range dbMap {
 		srcMetaConn, destMetaConn, srcConn, destConn := initializeConn(srcDbName, destDbName)
-		srcTables, destTables, partNameMap := GetUserTables(srcConn, destConn)
+		srcTables, destTables, partNameMap := qw.GetUserTables(srcConn, destConn)
 
 		if len(srcTables) == 0 {
 			continue
@@ -236,7 +244,7 @@ func DoCopy() {
 			utils.MustGetFlagBool(option.METADATA_ONLY),
 			timestamp,
 			partNameMap,
-			formUserTableMap(srcTables, destTables),
+			qw.FormUserTableMap(srcTables, destTables),
 			config.GetOwnerMap())
 		metaOps.Open(srcMetaConn, destMetaConn)
 
@@ -258,7 +266,7 @@ func DoCopy() {
 		// toc and meta file are removed in Close function.
 		metaOps.Close()
 
-		ResetCache()
+		qw.ResetCache()
 		if srcConn != nil {
 			srcConn.Close()
 		}
@@ -380,4 +388,27 @@ func DoCleanup(failed bool) {
 	if destManageConn != nil {
 		destManageConn.Close()
 	}
+}
+
+func SetLoggerVerbosity() {
+	if utils.MustGetFlagBool(option.QUIET) {
+		gplog.SetVerbosity(gplog.LOGERROR)
+	} else if utils.MustGetFlagBool(option.DEBUG) {
+		gplog.SetVerbosity(gplog.LOGDEBUG)
+	} else if utils.MustGetFlagBool(option.VERBOSE) {
+		gplog.SetVerbosity(gplog.LOGVERBOSE)
+	}
+}
+
+func initializeConnectionPool(dbname, username, host string, port, numConns int) *dbconn.DBConn {
+	dbConn := dbconn.NewDBConn(dbname, username, host, port)
+	dbConn.MustConnect(numConns)
+	utils.ValidateGPDBVersionCompatibility(dbConn)
+
+	qm := NewQueryManager()
+	for connNum := 0; connNum < dbConn.NumConns; connNum++ {
+		dbConn.MustExec(qm.GetSessionSetupQuery(dbConn), connNum)
+	}
+
+	return dbConn
 }

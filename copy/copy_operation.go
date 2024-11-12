@@ -60,6 +60,8 @@ func (op *CopyOperation) waitForHelperPorts(timestamp string, donec chan struct{
 	const maxRetries = 1000
 	const retryInterval = 500 * time.Millisecond
 
+	ph := NewPortHelper(destManageConn)
+
 	for i := 0; i < maxRetries; i++ {
 		time.Sleep(retryInterval)
 		if *copyErr != nil {
@@ -67,8 +69,7 @@ func (op *CopyOperation) waitForHelperPorts(timestamp string, donec chan struct{
 			return nil, *copyErr
 		}
 
-		helperPorts, err := getHelperPortList(destManageConn, timestamp, op.cmdID,
-			op.connNum, op.command.IsMasterCopy())
+		helperPorts, err := ph.GetHelperPortList(timestamp, op.cmdID, op.connNum, op.command.IsMasterCopy())
 		if err != nil {
 			gplog.Debug("[Worker %v] Failed to retrieve dest segments port info: %v",
 				op.connNum, err)

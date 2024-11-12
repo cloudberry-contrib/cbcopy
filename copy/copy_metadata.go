@@ -10,17 +10,23 @@ import (
 
 // MetadataManager handles all metadata related operations during copy process
 type MetadataManager struct {
-	srcConn  *dbconn.DBConn
-	destConn *dbconn.DBConn
-	donec    chan struct{}
+	srcConn      *dbconn.DBConn
+	destConn     *dbconn.DBConn
+	donec        chan struct{}
+	queryManager *QueryManager
+	queryWrapper *QueryWrapper
 }
 
 // NewMetadataManager creates a new MetadataManager instance
 func NewMetadataManager(srcConn, destConn *dbconn.DBConn) *MetadataManager {
+	qm := NewQueryManager()
+
 	return &MetadataManager{
-		srcConn:  srcConn,
-		destConn: destConn,
-		donec:    make(chan struct{}),
+		srcConn:      srcConn,
+		destConn:     destConn,
+		donec:        make(chan struct{}),
+		queryManager: qm,
+		queryWrapper: NewQueryWrapper(qm),
 	}
 }
 
@@ -46,7 +52,8 @@ func (m *MetadataManager) MigrateMetadata(srcTables, destTables []option.Table) 
 	case option.CopyModeTable:
 		if len(config.GetDestTables()) == 0 {
 			m.validateSchemaExists(m.destConn, destTables)
-			includeSchemas, includeTables := m.collectTablesAndSchemas(srcTables, GetPartTableMap(m.srcConn, m.destConn, true))
+			includeSchemas, includeTables := m.collectTablesAndSchemas(srcTables,
+				m.queryWrapper.getPartitionTableMapping(m.srcConn, m.destConn, true))
 			pgd = metaOps.CopyTableMetaData(config.GetDestSchemas(), includeSchemas, includeTables, tablec, m.donec)
 		} else {
 			pgd = m.fillTablePairChan(srcTables, destTables, tablec)
@@ -158,8 +165,13 @@ func (m *MetadataManager) validateSchemaExists(destConn *dbconn.DBConn, tables [
 
 	// Verify each schema exists in the destination database
 	for schema := range schemaMap {
-		if !SchemaExists(destConn, schema) {
-			gplog.Fatal(errors.Errorf("Please create the schema \"%v\" on the dest database \"%v\" first",
+		exists, err := m.queryManager.SchemaExists(destConn, schema)
+		if err != nil {
+			gplog.Fatal(errors.Errorf("failed to check schema existence: %v", err), "")
+		}
+
+		if !exists {
+			gplog.Fatal(errors.Errorf("Please create the schema \"%v\" on the destination database \"%v\" first",
 				schema, destConn.DBName), "")
 		}
 	}
