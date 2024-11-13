@@ -1,12 +1,8 @@
 package copy
 
 import (
-	"os"
-
 	"github.com/cloudberrydb/cbcopy/internal/dbconn"
-	"github.com/cloudberrydb/cbcopy/meta"
 	"github.com/cloudberrydb/cbcopy/option"
-	"github.com/cloudberrydb/cbcopy/utils"
 )
 
 /*
@@ -34,25 +30,10 @@ const (
  * Non-flag variables
  */
 var (
-	srcManageConn  *dbconn.DBConn
-	destManageConn *dbconn.DBConn
+	objectCounts map[string]int
 
-	objectCounts        map[string]int
-	config              *option.Option
-	destSegmentsIpInfo  []utils.SegmentIpInfo
-	srcSegmentsHostInfo []utils.SegmentHostInfo
-	timestamp           string
-	convertDDL          bool
-	excludedDb          = []string{"template0", "template1"}
-	fCopySucced         *os.File
-	fFailed             *os.File
-	fSkipped            *os.File
-
-	metaOps           meta.MetaOperator
-	encodingGuc       SessionGUCs
-	srcPartLeafTable  []PartLeafTable
-	destPartLeafTable []PartLeafTable
-	applicationName   string
+	config     *option.Option
+	excludedDb = []string{"template0", "template1"}
 )
 
 func isSameVersion(srcVersion, destVersion dbconn.GPDBVersion) bool {

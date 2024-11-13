@@ -19,7 +19,7 @@ func NewQueryManager() *QueryManager {
 }
 
 // GetSessionSetupQuery returns the SQL query for setting up database session parameters
-func (qm *QueryManager) GetSessionSetupQuery(conn *dbconn.DBConn) string {
+func (qm *QueryManager) GetSessionSetupQuery(conn *dbconn.DBConn, applicationName string) string {
 	setupQuery := fmt.Sprintf(`
 SET application_name TO '%v';
 SET search_path TO pg_catalog;

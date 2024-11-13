@@ -2,6 +2,7 @@ package copy
 
 import (
 	"github.com/cloudberrydb/cbcopy/internal/dbconn"
+	"github.com/cloudberrydb/cbcopy/meta"
 	"github.com/cloudberrydb/cbcopy/option"
 	"github.com/cloudberrydb/cbcopy/utils"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
@@ -15,19 +16,37 @@ type MetadataManager struct {
 	donec        chan struct{}
 	queryManager *QueryManager
 	queryWrapper *QueryWrapper
+	metaOps      meta.MetaOperator
 }
 
 // NewMetadataManager creates a new MetadataManager instance
-func NewMetadataManager(srcConn, destConn *dbconn.DBConn) *MetadataManager {
-	qm := NewQueryManager()
+func NewMetadataManager(srcConn, destConn *dbconn.DBConn,
+	qm *QueryManager,
+	qw *QueryWrapper,
+	convert, withGlobal, metaOnly bool,
+	timestamp string,
+	partNameMap map[string][]string,
+	tableMap map[string]string,
+	ownerMap map[string]string) *MetadataManager {
+
+	metaOps := meta.CreateMetaImpl(convert, withGlobal, metaOnly, timestamp, partNameMap, tableMap, ownerMap)
 
 	return &MetadataManager{
 		srcConn:      srcConn,
 		destConn:     destConn,
 		donec:        make(chan struct{}),
 		queryManager: qm,
-		queryWrapper: NewQueryWrapper(qm),
+		queryWrapper: qw,
+		metaOps:      metaOps,
 	}
+}
+
+func (m *MetadataManager) Open() {
+	m.metaOps.Open(m.srcConn, m.destConn)
+}
+
+func (m *MetadataManager) Close() {
+	m.metaOps.Close()
 }
 
 // MigrateMetadata manages all pre-data operations
@@ -46,15 +65,15 @@ func (m *MetadataManager) MigrateMetadata(srcTables, destTables []option.Table) 
 	case option.CopyModeFull:
 		fallthrough
 	case option.CopyModeDb:
-		pgd = metaOps.CopyDatabaseMetaData(tablec, m.donec)
+		pgd = m.metaOps.CopyDatabaseMetaData(tablec, m.donec)
 	case option.CopyModeSchema:
-		pgd = metaOps.CopySchemaMetaData(config.GetSourceSchemas(), config.GetDestSchemas(), tablec, m.donec)
+		pgd = m.metaOps.CopySchemaMetaData(config.GetSourceSchemas(), config.GetDestSchemas(), tablec, m.donec)
 	case option.CopyModeTable:
 		if len(config.GetDestTables()) == 0 {
 			m.validateSchemaExists(m.destConn, destTables)
 			includeSchemas, includeTables := m.collectTablesAndSchemas(srcTables,
 				m.queryWrapper.getPartitionTableMapping(m.srcConn, m.destConn, true))
-			pgd = metaOps.CopyTableMetaData(config.GetDestSchemas(), includeSchemas, includeTables, tablec, m.donec)
+			pgd = m.metaOps.CopyTableMetaData(config.GetDestSchemas(), includeSchemas, includeTables, tablec, m.donec)
 		} else {
 			pgd = m.fillTablePairChan(srcTables, destTables, tablec)
 		}
@@ -73,7 +92,7 @@ func (m *MetadataManager) RestorePostMetadata(dbname, timestamp string) {
 		return
 	}
 
-	metaOps.CopyPostData()
+	m.metaOps.CopyPostData()
 }
 
 // Wait blocks until metadata migration is complete

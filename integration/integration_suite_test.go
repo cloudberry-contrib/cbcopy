@@ -62,6 +62,11 @@ var (
 	includeSecurityLabels = false
 )
 
+func testSetupFlags(flagSet *pflag.FlagSet) {
+	app := &copy.Application{}
+	app.SetFlagDefaults(flagSet)
+}
+
 func TestQueries(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "database query tests")
@@ -174,7 +179,7 @@ var _ = BeforeEach(func() {
 	builtin.SetFilterRelationClause("")
 
 	// terry note: previous builtin.SetCmdFlags does not take effect, maybe it's because gpbackup code structure is not same as cbcopy, below code is adaptive change with respect to cbcopy code
-	copy.SetFlagDefaults(backupCmdFlags)
+	testSetupFlags(backupCmdFlags)
 	utils.CmdFlags = backupCmdFlags
 
 	// reset configuration in testcase, otherwise one testcase config setting might impact other testcase execution

@@ -13,7 +13,9 @@ import (
 
 // QueryWrapper wraps QueryManager and provides additional data transformation functionality
 type QueryWrapper struct {
-	queryManager *QueryManager
+	queryManager      *QueryManager
+	srcPartLeafTable  []PartLeafTable
+	destPartLeafTable []PartLeafTable
 }
 
 // NewQueryWrapper creates a new QueryWrapper instance
@@ -229,7 +231,7 @@ func (qw *QueryWrapper) filterTablesBySchema(conn *dbconn.DBConn, tables map[str
 }
 
 // GetDbNameMap returns a map of database names based on copy mode
-func (qw *QueryWrapper) GetDbNameMap() map[string]string {
+func (qw *QueryWrapper) GetDbNameMap(conn *dbconn.DBConn) map[string]string {
 	dbMap := make(map[string]string)
 	copyMode := config.GetCopyMode()
 
@@ -238,7 +240,7 @@ func (qw *QueryWrapper) GetDbNameMap() map[string]string {
 
 	if copyMode == option.CopyModeFull {
 		var err error
-		sourceDbnames, err = qw.GetUserDatabases(srcManageConn)
+		sourceDbnames, err = qw.GetUserDatabases(conn)
 		gplog.FatalOnError(err)
 		destDbnames = sourceDbnames
 	} else if copyMode == option.CopyModeDb {
@@ -421,8 +423,8 @@ func (qw *QueryWrapper) expandPartTables(conn *dbconn.DBConn, userTables map[str
 
 // ResetCache resets the partition leaf table cache
 func (qw *QueryWrapper) ResetCache() {
-	srcPartLeafTable = nil
-	destPartLeafTable = nil
+	qw.srcPartLeafTable = nil
+	qw.destPartLeafTable = nil
 }
 
 // GetPartitionLeafTables retrieves partition leaf tables with caching support
@@ -430,11 +432,11 @@ func (qw *QueryWrapper) ResetCache() {
 // [{"RootName":"public.t1","LeafName":"public.t1","RelTuples":1000},{"RootName":"public.t2","LeafName":"public.t2","RelTuples":2000}]
 func (qw *QueryWrapper) GetPartitionLeafTables(conn *dbconn.DBConn, isDest bool) ([]PartLeafTable, error) {
 	// Check cache first
-	if isDest && destPartLeafTable != nil {
-		return destPartLeafTable, nil
+	if isDest && qw.destPartLeafTable != nil {
+		return qw.destPartLeafTable, nil
 	}
-	if !isDest && srcPartLeafTable != nil {
-		return srcPartLeafTable, nil
+	if !isDest && qw.srcPartLeafTable != nil {
+		return qw.srcPartLeafTable, nil
 	}
 
 	// Query database if cache is empty
@@ -445,9 +447,9 @@ func (qw *QueryWrapper) GetPartitionLeafTables(conn *dbconn.DBConn, isDest bool)
 
 	// Update cache
 	if isDest {
-		destPartLeafTable = tables
+		qw.destPartLeafTable = tables
 	} else {
-		srcPartLeafTable = tables
+		qw.srcPartLeafTable = tables
 	}
 
 	return tables, nil
@@ -475,9 +477,7 @@ func (qw *QueryWrapper) excludeTablePair(srcTables, destTables, exclTables []opt
 	// Remove excluded tables
 	for _, e := range exclTables {
 		k := e.Schema + "." + e.Name
-		if _, exists := tabMap[k]; exists {
-			delete(tabMap, k)
-		}
+		delete(tabMap, k)
 	}
 
 	// Process remaining tables

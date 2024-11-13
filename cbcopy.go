@@ -11,19 +11,19 @@ import (
 )
 
 func main() {
+	app := copy.NewApplication()
+
 	var rootCmd = &cobra.Command{
 		Use:     "cbcopy",
 		Short:   "cbcopy utility for migrating data from Greenplum Database (GPDB) to Cloudberry Database (CBDB)",
 		Args:    cobra.NoArgs,
 		Version: utils.GetVersion(),
 		Run: func(cmd *cobra.Command, args []string) {
-			defer copy.DoTeardown()
-			copy.DoFlagValidation(cmd)
-			copy.DoSetup()
-			copy.DoCopy()
+			app.Run(cmd)
 		}}
 	rootCmd.SetArgs(utils.HandleSingleDashes(os.Args[1:]))
-	copy.DoInit(rootCmd)
+
+	app.Initialize(rootCmd)
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(2)
 	}

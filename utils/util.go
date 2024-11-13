@@ -131,7 +131,7 @@ func InitializeSignalHandler(cleanupFunc func(bool), procDesc string, termFlag *
 	}()
 }
 
-func TerminateHangingCopySessions(dbconn *dbconn.DBConn, copyFileName string, appName string) {
+func TerminateHangingCopySessions(dbconn *dbconn.DBConn, appName string) {
 	cname := "procpid"
 	version := dbconn.Version
 	if dbconn.HdwVersion.AtLeast("2") {
@@ -248,9 +248,8 @@ func ReadMapFile(filename string, separator string) (map[string]string, error) {
 }
 
 func OpenDataFile(filename string) *os.File {
-	f, err := os.Create(filename)
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	gplog.FatalOnError(err)
-
 	return f
 }
 

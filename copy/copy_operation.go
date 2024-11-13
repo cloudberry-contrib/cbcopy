@@ -14,32 +14,34 @@ import (
 
 // CopyOperation encapsulates the state for a copy operation
 type CopyOperation struct {
-	command   CopyCommand
-	srcConn   *dbconn.DBConn
-	destConn  *dbconn.DBConn
-	srcTable  option.Table
-	destTable option.Table
-	connNum   int
-	cmdID     string
-	ctx       context.Context
-	cancel    context.CancelFunc
+	command        CopyCommand
+	srcConn        *dbconn.DBConn
+	destConn       *dbconn.DBConn
+	destManageConn *dbconn.DBConn
+	srcTable       option.Table
+	destTable      option.Table
+	connNum        int
+	cmdID          string
+	ctx            context.Context
+	cancel         context.CancelFunc
 }
 
 // NewCopyOperation creates a new CopyOperation instance
-func NewCopyOperation(command CopyCommand, srcConn, destConn *dbconn.DBConn,
+func NewCopyOperation(command CopyCommand, srcConn, destConn, destManageConn *dbconn.DBConn,
 	srcTable, destTable option.Table, connNum int) *CopyOperation {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	return &CopyOperation{
-		command:   command,
-		srcConn:   srcConn,
-		destConn:  destConn,
-		srcTable:  srcTable,
-		destTable: destTable,
-		connNum:   connNum,
-		cmdID:     uuid.NewV4().String(),
-		ctx:       ctx,
-		cancel:    cancel,
+		command:        command,
+		srcConn:        srcConn,
+		destConn:       destConn,
+		destManageConn: destManageConn,
+		srcTable:       srcTable,
+		destTable:      destTable,
+		connNum:        connNum,
+		cmdID:          uuid.NewV4().String(),
+		ctx:            ctx,
+		cancel:         cancel,
 	}
 }
 
@@ -60,7 +62,7 @@ func (op *CopyOperation) waitForHelperPorts(timestamp string, donec chan struct{
 	const maxRetries = 1000
 	const retryInterval = 500 * time.Millisecond
 
-	ph := NewPortHelper(destManageConn)
+	ph := NewPortHelper(op.destManageConn)
 
 	for i := 0; i < maxRetries; i++ {
 		time.Sleep(retryInterval)
