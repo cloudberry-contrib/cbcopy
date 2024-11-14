@@ -101,7 +101,7 @@ PARTITION BY RANGE (year)
 			tableAtts := builtin.GetColumnDefinitions(connectionPool)[oid]
 
 			var encoding string
-			if connectionPool.Version.IsCBDB {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				encoding = "compresstype=none,compresslevel=0,blocksize=32768"
 			} else {
 				encoding = "compresstype=none,blocksize=32768,compresslevel=0"

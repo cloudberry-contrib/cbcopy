@@ -131,16 +131,22 @@ func InitializeSignalHandler(cleanupFunc func(bool), procDesc string, termFlag *
 	}()
 }
 
-func TerminateHangingCopySessions(dbconn *dbconn.DBConn, appName string) {
+func TerminateHangingCopySessions(conn *dbconn.DBConn, appName string) {
 	cname := "procpid"
-	version := dbconn.Version
-	if dbconn.HdwVersion.AtLeast("2") {
-		version = dbconn.HdwVersion
-	}
-
-	/* gpdb6 or hdw3 */
-	if version.Is("6") || version.Is("3") {
+	switch conn.Version.Type {
+	case dbconn.GPDB:
+		if conn.Version.AtLeast("6") {
+			cname = "pid"
+		}
+	case dbconn.HDW:
+		if conn.Version.AtLeast("3") {
+			cname = "pid"
+		}
+	case dbconn.CBDB, dbconn.PGSQL:
 		cname = "pid"
+	default:
+		gplog.Error("Unsupported database type: %s", conn.Version.Type)
+		return
 	}
 
 	query := fmt.Sprintf(`SELECT
@@ -151,7 +157,7 @@ AND %v <> pg_backend_pid()`, cname, appName, cname)
 	// We don't check the error as the connection may have finished or been previously terminated
 
 	gplog.Debug("TerminateHangingCopySessions, query is: %v", query)
-	_, _ = dbconn.Exec(query)
+	_, _ = conn.Exec(query)
 }
 
 func ArrayIsDuplicated(elems []string) bool {

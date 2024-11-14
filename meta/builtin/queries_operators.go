@@ -332,7 +332,7 @@ func GetOperatorClassOperators(connectionPool *dbconn.DBConn) map[uint32][]Opera
 		query = before5Query
 	} else if connectionPool.Version.Is("5") {
 		query = version5Query
-	} else if connectionPool.Version.IsCBDB {
+	} else if connectionPool.Version.IsCBDB() {
 		query = atLeastPG14Query
 	} else {
 		query = atLeast6Query

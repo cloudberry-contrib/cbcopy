@@ -17,16 +17,11 @@ import (
 type Empty struct{}
 
 var (
-	gpdbVersion    dbconn.GPDBVersion
-	gpdbVersionDst dbconn.GPDBVersion
-	hdwVersion     dbconn.GPDBVersion
-	hdwVersionDst  dbconn.GPDBVersion
+	gpdbVersion   dbconn.GPDBVersion
+	destDBVersion dbconn.GPDBVersion
 
 	// --> automation test purpose, start
-	// current code many place has connectionPool, which is not very clear how it's used, let's comment it out to see effect.
-	// connectionPool *dbconn.DBConn
-	connectionPoolDst *dbconn.DBConn
-	cmdFlags          *pflag.FlagSet
+	cmdFlags *pflag.FlagSet
 	// <-- automation test purpose, end
 
 	globalTOC            *toc.TOC
@@ -39,7 +34,6 @@ var (
 	objectCounts         map[string]int
 
 	errorTablesMetadata map[string]Empty
-	errorTablesData     map[string]Empty
 	needConvert         bool
 	relevantDeps        DependencyMap
 	redirectSchema      map[string]string

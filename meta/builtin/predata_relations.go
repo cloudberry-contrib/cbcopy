@@ -289,7 +289,7 @@ func PrintRegularTableCreateStatement(metadataFile *utils.FileWithByteCount, toc
 	*/
 
 	if table.StorageOpts != "" {
-		if hdwVersionDst.Is("3") {
+		if destDBVersion.IsHDW() && destDBVersion.Is("3") {
 			metadataFile.MustPrintf("WITH (%s) ", rewriteAppendonly(rewriteCompressAlgorithm(replaceBlocksize(table.StorageOpts))))
 		} else {
 			metadataFile.MustPrintf("WITH (%s) ", table.StorageOpts)
@@ -302,7 +302,7 @@ func PrintRegularTableCreateStatement(metadataFile *utils.FileWithByteCount, toc
 	}
 	metadataFile.MustPrintf("%s", table.DistPolicy)
 	if table.PartDef != "" {
-		if hdwVersionDst.Is("3") {
+		if destDBVersion.IsHDW() && destDBVersion.Is("3") {
 			metadataFile.MustPrintf(" %s", strings.TrimSpace(rewriteAppendonly(rewriteCompressAlgorithm(replaceBlocksize(replaceTableSpace(table.PartDef))))))
 		} else {
 			metadataFile.MustPrintf(" %s", strings.TrimSpace(table.PartDef))
@@ -310,7 +310,7 @@ func PrintRegularTableCreateStatement(metadataFile *utils.FileWithByteCount, toc
 	}
 	metadataFile.MustPrintln(";")
 	if table.PartTemplateDef != "" {
-		if hdwVersionDst.Is("3") {
+		if destDBVersion.IsHDW() && destDBVersion.Is("3") {
 			metadataFile.MustPrintf("%s;\n", strings.TrimSpace(rewriteAppendonly(rewriteCompressAlgorithm(replaceBlocksize(replaceTableSpace(table.PartTemplateDef))))))
 		} else {
 			metadataFile.MustPrintf("%s;\n", strings.TrimSpace(table.PartTemplateDef))

@@ -444,22 +444,12 @@ func CreateCopyStrategy(numTuples int64, workerId int, srcSegs []utils.SegmentHo
 	numSrcSegs := len(srcSegs)
 	numDestSegs := len(destSegs)
 
-	srcVersion := srcConn.Version
-	if srcConn.HdwVersion.AtLeast("2") {
-		srcVersion = srcConn.HdwVersion
-	}
-
-	destVersion := destConn.Version
-	if destConn.HdwVersion.AtLeast("2") {
-		destVersion = destConn.HdwVersion
-	}
-
 	compArg = "--compress-type gzip"
 	if !utils.MustGetFlagBool(option.COMPRESSION) {
 		compArg = "--no-compression"
 	}
 
-	if isSameVersion(srcVersion, destVersion) && numSrcSegs == numDestSegs {
+	if srcConn.Version.Equals(destConn.Version) && numSrcSegs == numDestSegs {
 		return &CopyOnSegment{CopyCommon: CopyCommon{WorkerId: workerId, SrcSegmentsHostInfo: srcSegs, DestSegmentsIpInfo: destSegs, CompArg: compArg}}
 	}
 

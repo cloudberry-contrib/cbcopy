@@ -60,17 +60,16 @@ type DBConn struct {
 
 // DBConn -- changed
 type DBConn struct {
-	ConnPool   []*sqlx.DB
-	NumConns   int
-	Driver     DBDriver
-	User       string
-	Password   string // extra, vs go-common-go-lib DBConn
-	DBName     string
-	Host       string
-	Port       int
-	Tx         []*sqlx.Tx
-	Version    GPDBVersion
-	HdwVersion GPDBVersion // extra, vs go-common-go-lib DBConn
+	ConnPool []*sqlx.DB
+	NumConns int
+	Driver   DBDriver
+	User     string
+	Password string // extra, vs go-common-go-lib DBConn
+	DBName   string
+	Host     string
+	Port     int
+	Tx       []*sqlx.Tx
+	Version  GPDBVersion
 }
 
 /*
@@ -134,17 +133,16 @@ func NewDBConn(dbname, username, host string, port int) *DBConn {
 	}
 
 	return &DBConn{
-		ConnPool:   nil,
-		NumConns:   0,
-		Driver:     GPDBDriver{},
-		User:       username,
-		Password:   "",
-		DBName:     dbname,
-		Host:       host,
-		Port:       port,
-		Tx:         nil,
-		Version:    GPDBVersion{},
-		HdwVersion: GPDBVersion{},
+		ConnPool: nil,
+		NumConns: 0,
+		Driver:   GPDBDriver{},
+		User:     username,
+		Password: "",
+		DBName:   dbname,
+		Host:     host,
+		Port:     port,
+		Tx:       nil,
+		Version:  GPDBVersion{},
 	}
 }
 
@@ -244,12 +242,11 @@ func (dbconn *DBConn) Connect(numConns int) error {
 	}
 	dbconn.Tx = make([]*sqlx.Tx, numConns)
 	dbconn.NumConns = numConns
-	version, hdwversion, err := InitializeVersion(dbconn)
+	version, err := InitializeVersion(dbconn)
 	if err != nil {
 		return errors.Wrap(err, "Failed to determine database version")
 	}
 	dbconn.Version = version
-	dbconn.HdwVersion = hdwversion
 	return nil
 }
 

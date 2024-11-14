@@ -42,23 +42,13 @@ func NewBuiltinMeta(convert, withGlobal, metaOnly bool,
 }
 
 func (b *BuiltinMeta) Open(srcConn, destConn *dbconn.DBConn) {
-	if srcConn == nil {
-		return
-	}
-
 	b.SrcConn = srcConn
 	b.DestConn = destConn
 
 	InitializeMetadataParams(srcConn)
 
 	gpdbVersion = srcConn.Version
-	gpdbVersionDst = destConn.Version
-	hdwVersion = srcConn.HdwVersion
-	hdwVersionDst = destConn.HdwVersion
-
-	// current code many place has connectionPool, which is not very clear how it's used, let's comment it out to see effect.
-	// connectionPool = srcConn
-	connectionPoolDst = destConn
+	destDBVersion = destConn.Version
 
 	globalTOC = &toc.TOC{}
 	globalTOC.InitializeMetadataEntryMap()
@@ -71,7 +61,6 @@ func (b *BuiltinMeta) Open(srcConn, destConn *dbconn.DBConn) {
 	objectCounts = make(map[string]int)
 
 	errorTablesMetadata = make(map[string]Empty)
-	errorTablesData = make(map[string]Empty)
 	redirectSchema = make(map[string]string)
 	inclDestSchema = ""
 	needConvert = b.ConvertDdl
@@ -132,10 +121,6 @@ func (b *BuiltinMeta) GetErrorTableMetaData() map[string]Empty {
 }
 
 func (b *BuiltinMeta) Close() {
-	if b.SrcConn == nil {
-		return
-	}
-
 	// todo, add a flag to control whether keep meta file and toc file for debug purpose
 	metaFileBackupName := b.MetaFile + "." + b.SrcConn.DBName + "." + b.DestConn.DBName + "." + "bk"
 	tocFileBackupName := b.TocFile + "." + b.SrcConn.DBName + "." + b.DestConn.DBName + "." + "bk"

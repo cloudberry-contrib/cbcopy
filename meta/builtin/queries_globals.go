@@ -239,7 +239,7 @@ type ResourceGroupAtLeast7 struct {
 func GetResourceGroups[T ResourceGroupBefore7 | ResourceGroupAtLeast7](connectionPool *dbconn.DBConn) []T {
 	var query string
 
-	if connectionPool.Version.Before("7") || (connectionPool.Version.IsCBDB) {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7")) || connectionPool.Version.IsCBDB() {
 		before7SelectClause := ""
 		// This is when pg_dumpall was changed to use the actual values
 		if connectionPool.Version.AtLeast("5.2.0") {

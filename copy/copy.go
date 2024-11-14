@@ -58,7 +58,6 @@ func (app *Application) Initialize(cmd *cobra.Command) {
 	utils.CmdFlags = cmd.Flags()
 
 	utils.InitializeSignalHandler(app.doCleanup, "cbcopy process", &utils.WasTerminated)
-	objectCounts = make(map[string]int)
 }
 
 func (app *Application) SetFlagDefaults(flagSet *pflag.FlagSet) {
@@ -215,38 +214,11 @@ func (app *Application) initializeConn(srcDbName, destDbName string) (*dbconn.DB
 	return srcMetaConn, destMetaConn, srcConn, destConn
 }
 
-func (app *Application) showDbVersion() {
-	srcDb := "GPDB"
-	destDb := "GPDB"
-	srcVersion := app.srcManageConn.Version
-	if app.srcManageConn.HdwVersion.AtLeast("2") {
-		srcVersion = app.srcManageConn.HdwVersion
-		srcDb = "HDW"
-
-		// existing below code did 'convertDDL = true' for xxx->3x. Let's also do same for 3x --> cbdb
-		if srcVersion.Is("3") {
-			gplog.Info("Converting DDL in %v", srcVersion.VersionString)
-			app.convertDDL = true
-		}
-	}
-
-	gplog.Info("Source cluster version %v %v", srcDb, srcVersion.VersionString)
-
-	destVersion := app.destManageConn.Version
-	if app.destManageConn.HdwVersion.AtLeast("2") {
-		destVersion = app.destManageConn.HdwVersion
-		destDb = "HDW"
-
-		if destVersion.Is("3") {
-			gplog.Info("Converting DDL in %v", destVersion.VersionString)
-			app.convertDDL = true
-		}
-	}
-	gplog.Info("Destination cluster version %v %v", destDb, destVersion.VersionString)
-}
-
 func (app *Application) initializeClusterResources() {
-	app.showDbVersion()
+	if app.destManageConn.Version.IsHDW() && app.destManageConn.Version.AtLeast("3") {
+		app.convertDDL = true
+	}
+
 	app.destSegmentsIpInfo = utils.GetSegmentsIpAddress(app.destManageConn, app.timestamp)
 	app.srcSegmentsHostInfo = utils.GetSegmentsHost(app.srcManageConn)
 

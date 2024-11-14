@@ -114,7 +114,7 @@ func PrintResetResourceGroupStatements(metadataFile *utils.FileWithByteCount, to
 	}
 	defSettings := make([]DefSetting, 0)
 
-	if gpdbVersion.Before("7") || gpdbVersion.IsCBDB {
+	if (gpdbVersion.IsGPDB() && gpdbVersion.Before("7")) || gpdbVersion.IsCBDB() {
 		defSettings = append(defSettings, DefSetting{"admin_group", "SET CPU_RATE_LIMIT 1"})
 		defSettings = append(defSettings, DefSetting{"admin_group", "SET MEMORY_LIMIT 1"})
 		defSettings = append(defSettings, DefSetting{"default_group", "SET CPU_RATE_LIMIT 1"})

@@ -120,12 +120,7 @@ func SetupTestEnvironment() (*dbconn.DBConn, sqlmock.Sqlmock, *Buffer, *Buffer, 
 		Version: dbconn.GPDBVersion{
 			VersionString: connectionPool.Version.VersionString,
 			SemVer:        connectionPool.Version.SemVer,
-			IsCBDB:        true,
-		},
-		HdwVersion: dbconn.GPDBVersion{
-			VersionString: connectionPool.Version.VersionString,
-			SemVer:        connectionPool.Version.SemVer,
-			IsCBDB:        true,
+			Type:          connectionPool.Version.Type,
 		},
 	}
 
@@ -204,8 +199,7 @@ func SetupTestDBConnSegment(dbname string, port int, host string, gpVersion dbco
 	conn.Tx = make([]*sqlx.Tx, 1)
 	conn.NumConns = 1
 
-	//version, err := dbconn.InitializeVersion(conn)
-	version, _, err := dbconn.InitializeVersion(conn)
+	version, err := dbconn.InitializeVersion(conn)
 
 	if err != nil {
 		gplog.FatalOnError(err)

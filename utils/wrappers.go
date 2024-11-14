@@ -8,17 +8,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-/*
- * This file contains wrapper functions that group together functions relating
- * to querying and printing metadata, so that the logic for each object type
- * can all be in one place and copy.go can serve as a high-level look at the
- * overall copy flow.
- */
-
-/*
- * Setup and validation wrapper functions
- */
-
 type SegmentHostInfo struct {
 	Content  int32
 	Hostname string
@@ -29,12 +18,16 @@ type SegmentIpInfo struct {
 	Ip      string
 }
 
+// GetSegmentsHost retrieves the content ID and hostname for each primary segment in the Greenplum database.
+// It queries the gp_segment_configuration table to get the list of primary segments and their corresponding
+// content IDs and hostnames. The function returns a slice of SegmentHostInfo structs containing the content ID
+// and hostname for each primary segment.
 func GetSegmentsHost(conn *dbconn.DBConn) []SegmentHostInfo {
-	query := fmt.Sprintf(`
+	query := `
 	select content,hostname
 	from gp_segment_configuration
 	where role = 'p' and content != -1 order by content
-	`)
+	`
 
 	gplog.Debug("GetSegmentsHost, query is %v", query)
 	hosts := make([]SegmentHostInfo, 0)
@@ -43,11 +36,11 @@ func GetSegmentsHost(conn *dbconn.DBConn) []SegmentHostInfo {
 	return hosts
 }
 
+// GetSegmentsIpAddress resolves the IP address for each primary segment in the Greenplum database.
+// It first retrieves the list of primary segments and their hostnames using the GetSegmentsHost function.
+// Then, for each segment, it calls the getSegmentIpAddress function to resolve the IP address of the segment.
+// The function returns a slice of SegmentIpInfo structs containing the content ID and IP address for each primary segment.
 func GetSegmentsIpAddress(conn *dbconn.DBConn, timestamp string) []SegmentIpInfo {
-	if conn.HdwVersion.AtLeast("3") {
-		return hdw3GetSegmentsIpAddress(conn, timestamp)
-	}
-
 	hosts := GetSegmentsHost(conn)
 	results := make([]SegmentIpInfo, 0)
 
@@ -64,21 +57,10 @@ func GetSegmentsIpAddress(conn *dbconn.DBConn, timestamp string) []SegmentIpInfo
 	return results
 }
 
-func hdw3GetSegmentsIpAddress(conn *dbconn.DBConn, timestamp string) []SegmentIpInfo {
-	results := make([]SegmentIpInfo, 0)
-	query := fmt.Sprintf(`
-	SELECT content, gp_toolkit.gethostip(address) as ip
-	from gp_segment_configuration
-	where role = 'p' and content != -1 order by content
-	`)
-
-	gplog.Debug("hdw3GetSegmentsIpAddress, query is %v", query)
-	err := conn.Select(&results, query)
-	gplog.FatalOnError(err, fmt.Sprintf("Query was: %s", query))
-
-	return results
-}
-
+// getSegmentIpAddress resolves the IP address for a single primary segment in the Greenplum database.
+// It creates a temporary external web table using the provided timestamp and segment ID, and executes a
+// helper function on the master segment to resolve the IP address of the specified segment host.
+// The function then queries the temporary table to retrieve the resolved IP address and returns it as a string.
 func getSegmentIpAddress(conn *dbconn.DBConn, timestamp string, segId int, segHost string) string {
 	query := fmt.Sprintf(`
 	CREATE EXTERNAL WEB TEMP TABLE cbcopy_hosts_temp_%v_%v(id int, content text)
