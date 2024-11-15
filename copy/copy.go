@@ -81,7 +81,7 @@ func (app *Application) SetFlagDefaults(flagSet *pflag.FlagSet) {
 	flagSet.Bool(option.METADATA_ONLY, false, "Only copy metadata, do not copy data")
 	flagSet.Bool(option.GLOBAL_METADATA_ONLY, false, "Only copy global metadata, do not copy data")
 	flagSet.Bool(option.DATA_ONLY, false, "Only copy data, do not copy metadata")
-	flagSet.Bool(option.WITH_GLOBALMETA, false, "Copy global meta objects (default: false)")
+	flagSet.Bool(option.WITH_GLOBAL_METADATA, false, "Copy global metadata objects (default: false)")
 	flagSet.Bool(option.COMPRESSION, false, "Transfer the compression data, instead of the plain data")
 	flagSet.Int(option.ON_SEGMENT_THRESHOLD, 1000000, "Copy between Coordinators directly, if the table has smaller or same number of rows")
 	flagSet.Bool(option.QUIET, false, "Suppress non-warning, non-error log messages")
@@ -228,7 +228,7 @@ func (app *Application) initializeClusterResources() {
 }
 
 func (app *Application) needGlobalMetaData(isFirstDB bool) bool {
-	if utils.MustGetFlagBool(option.WITH_GLOBALMETA) {
+	if utils.MustGetFlagBool(option.WITH_GLOBAL_METADATA) {
 		return true
 	}
 

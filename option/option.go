@@ -33,7 +33,7 @@ const (
 	METADATA_ONLY        = "metadata-only"
 	GLOBAL_METADATA_ONLY = "global-metadata-only"
 	DATA_ONLY            = "data-only"
-	WITH_GLOBALMETA      = "with-globalmeta"
+	WITH_GLOBAL_METADATA = "with-global-metadata"
 	COMPRESSION          = "compression"
 	ON_SEGMENT_THRESHOLD = "on-segment-threshold"
 	QUIET                = "quiet"
@@ -621,7 +621,7 @@ func MakeIncludeOptions(initialFlags *pflag.FlagSet, testTableName string) {
 	initialFlags.Set(COPY_JOBS, "1")
 	initialFlags.Set(METADATA_JOBS, "1")
 	initialFlags.Set(METADATA_ONLY, "true")
-	initialFlags.Set(WITH_GLOBALMETA, "true")
+	initialFlags.Set(WITH_GLOBAL_METADATA, "true")
 	initialFlags.Set(INCLUDE_TABLE, "postgres."+testTableName)
 	initialFlags.Set(TRUNCATE, "true")
 }

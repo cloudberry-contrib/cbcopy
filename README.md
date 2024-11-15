@@ -121,10 +121,10 @@ cbcopy supports two data loading modes.
 
 ### Object dependencies
 
-If the tables you are migrating depend on certain global objects, you need to include the `--with-globalmeta` option (default: false) during the migration; otherwise, the creation of these tables in the target database will fail.
+If the tables you are migrating depend on certain global objects, you need to include the `--with-global-metadata` option (default: false) during the migration; otherwise, the creation of these tables in the target database will fail.
 
 ### Role
-If you want to change the table owner information during migration, which means you do not want to create the same role in the target database (disable the `--with-globalmeta` option), you need to first create the corresponding role in the target database. Then, use the `--owner-mapping-file` to specify the mapping between the source role and the target role; otherwise, the creation of tables in the target database will fail.
+If you want to change the table owner information during migration, which means you do not want to create the same role in the target database (disable the `--with-global-metadata` option), you need to first create the corresponding role in the target database. Then, use the `--owner-mapping-file` to specify the mapping between the source role and the target role; otherwise, the creation of tables in the target database will fail.
 
 ### Tablespace
 - `--tablespace` - We support migrating all source database objects into a single tablespace on the target database(Other modes besides the `--full` mode). If you need to migrate database objects from different schemas into different tablespaces, the best practice might be to migrate one schema at a time from the source database
@@ -167,16 +167,15 @@ Usage:
   cbcopy [flags]
 
 Flags:
-      --analyze                      Analyze tables after copy
       --append                       Append destination table if it exists
       --compression                  Transfer the compression data, instead of the plain data
-      --copy-jobs int                The maximum number of tables that concurrently copies, valid values are between 1 and 64512 (default 4)
+      --copy-jobs int                The maximum number of tables that concurrently copies, valid values are between 1 and 512 (default 4)
       --data-only                    Only copy data, do not copy metadata
       --data-port-range string       The range of listening port number to choose for receiving data on dest cluster (default "1024-65535")
       --dbname strings               The database(s) to be copied, separated by commas
       --debug                        Print debug log messages
       --dest-dbname strings          The database(s) in destination cluster to copy to, separated by commas
-      --dest-host string             The host of destination cluster
+      --dest-host string             The host of destination cluster (default "127.0.0.1")
       --dest-port int                The port of destination cluster (default 5432)
       --dest-schema strings          The schema(s) in destination database to copy to, separated by commas
       --dest-table strings           The renamed dest table(s) for include-table, separated by commas
@@ -190,7 +189,7 @@ Flags:
       --include-table strings        Copy only the specified table(s), separated by commas, in the format database.schema.table
       --include-table-file string    Copy only the specified table(s) listed in the file, The line format is "dbname.schema.table"
       --ip-mapping-file string       ip mapping file (format, ip1:ip2)
-      --metadata-jobs int            The maximum number of metadata restore tasks, valid values are between 1 and 64512 (default 2)
+      --metadata-jobs int            The maximum number of metadata restore tasks, valid values are between 1 and 512 (default 2)
       --metadata-only                Only copy metadata, do not copy data
       --on-segment-threshold int     Copy between coordinators directly, if the table has smaller or same number of rows (default 1000000)
       --owner-mapping-file string    Object owner mapping file, The line format is "source_role_name,dest_role_name"
@@ -208,5 +207,5 @@ Flags:
       --validate                     Perform data validation when copy is complete (default true)
       --verbose                      Print verbose log messages
       --version                      Print version number and exit
-      --with-globalmeta              Copy global meta objects (default: false)
+      --with-global-metadata         Copy global metadata objects (default: false)
 ```
