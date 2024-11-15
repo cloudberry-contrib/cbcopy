@@ -122,15 +122,14 @@ func (b *BuiltinMeta) GetErrorTableMetaData() map[string]Empty {
 
 func (b *BuiltinMeta) Close() {
 	// todo, add a flag to control whether keep meta file and toc file for debug purpose
-	metaFileBackupName := b.MetaFile + "." + b.SrcConn.DBName + "." + b.DestConn.DBName + "." + "bk"
-	tocFileBackupName := b.TocFile + "." + b.SrcConn.DBName + "." + b.DestConn.DBName + "." + "bk"
+	if b.MetaFile != "" && b.TocFile != "" {
+		metaFileBackupName := b.MetaFile + "." + b.SrcConn.DBName + "." + b.DestConn.DBName + "." + "bk"
+		tocFileBackupName := b.TocFile + "." + b.SrcConn.DBName + "." + b.DestConn.DBName + "." + "bk"
 
-	gplog.Info("file rename, MetaFile %v --> %v, TocFile %v --> %v", b.MetaFile, metaFileBackupName, b.TocFile, tocFileBackupName)
-	os.Rename(b.MetaFile, metaFileBackupName)
-	os.Rename(b.TocFile, tocFileBackupName)
-
-	//os.Remove(b.MetaFile)
-	//os.Remove(b.TocFile)
+		gplog.Info("file rename, MetaFile %v --> %v, TocFile %v --> %v", b.MetaFile, metaFileBackupName, b.TocFile, tocFileBackupName)
+		os.Rename(b.MetaFile, metaFileBackupName)
+		os.Rename(b.TocFile, tocFileBackupName)
+	}
 
 	b.SrcConn.Close()
 	b.DestConn.Close()
@@ -373,14 +372,14 @@ func backupPostdata(conn *dbconn.DBConn, convert bool, metadataFile *utils.FileW
 	}
 	backupRules(conn, metadataFile)
 	backupTriggers(conn, metadataFile)
-	if conn.Version.AtLeast("6") {
+	if (conn.Version.IsGPDB() && conn.Version.AtLeast("6")) || conn.Version.IsCBDB() {
 		backupDefaultPrivileges(conn, metadataFile)
 		if len(inSchemas) == 0 {
 			backupEventTriggers(conn, metadataFile)
 		}
 	}
 
-	if conn.Version.AtLeast("7") {
+	if (conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDB() {
 		backupRowLevelSecurityPolicies(conn, metadataFile) // https://github.com/greenplum-db/gpbackup/commit/5051cd4cfecfe7bc396baeeb9b0ac6ea13c21010
 		backupExtendedStatistic(conn, metadataFile)        // https://github.com/greenplum-db/gpbackup/commit/7072d534d48ba32946c4112ad03f52fbef372c8c
 	}

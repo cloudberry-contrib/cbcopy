@@ -180,7 +180,7 @@ func PrintCreateResourceGroupStatementsAtLeast7(metadataFile *utils.FileWithByte
 			if !strings.HasPrefix(resGroup.CpuHardQuotaLimit, "-") {
 				/* cpu rate mode */
 				attributes = append(attributes, fmt.Sprintf("CPU_HARD_QUOTA_LIMIT=%s", resGroup.CpuHardQuotaLimit))
-			} else if gpdbVersion.AtLeast("5.9.0") {
+			} else if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5.9.0")) || gpdbVersion.IsCBDB() {
 				/* cpuset mode */
 				attributes = append(attributes, fmt.Sprintf("CPUSET='%s'", resGroup.Cpuset))
 			}
@@ -200,7 +200,7 @@ func PrintCreateResourceGroupStatementsBefore7(metadataFile *utils.FileWithByteC
 		// temporarily special case for 5x resource groups #temp5xResGroup
 		memorySpillRatio := resGroup.MemorySpillRatio
 
-		if gpdbVersion.Is("5") {
+		if gpdbVersion.IsGPDB() && gpdbVersion.Is("5") {
 			/*
 			 * memory_spill_ratio can be set in absolute value format since 5.20,
 			 * such as '1 MB', it has to be set as a quoted string, otherwise set
@@ -237,7 +237,7 @@ func PrintCreateResourceGroupStatementsBefore7(metadataFile *utils.FileWithByteC
 			if !strings.HasPrefix(resGroup.CPURateLimit, "-") {
 				/* cpu rate mode */
 				metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET CPU_RATE_LIMIT %s;", resGroup.Name, resGroup.CPURateLimit)
-			} else if gpdbVersion.AtLeast("5.9.0") {
+			} else if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5.9.0")) || gpdbVersion.IsCBDB() {
 				/* cpuset mode */
 				metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET CPUSET '%s';", resGroup.Name, resGroup.Cpuset)
 			}
@@ -252,7 +252,7 @@ func PrintCreateResourceGroupStatementsBefore7(metadataFile *utils.FileWithByteC
 			if !strings.HasPrefix(resGroup.CPURateLimit, "-") {
 				/* cpu rate mode */
 				attributes = append(attributes, fmt.Sprintf("CPU_RATE_LIMIT=%s", resGroup.CPURateLimit))
-			} else if gpdbVersion.AtLeast("5.9.0") {
+			} else if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5.9.0")) || gpdbVersion.IsCBDB() {
 				/* cpuset mode */
 				attributes = append(attributes, fmt.Sprintf("CPUSET='%s'", resGroup.Cpuset))
 			}
@@ -264,7 +264,7 @@ func PrintCreateResourceGroupStatementsBefore7(metadataFile *utils.FileWithByteC
 			 */
 			if resGroup.MemoryAuditor == "1" {
 				attributes = append(attributes, "MEMORY_AUDITOR=cgroup")
-			} else if gpdbVersion.AtLeast("5.8.0") {
+			} else if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5.8.0")) || gpdbVersion.IsCBDB() {
 				attributes = append(attributes, "MEMORY_AUDITOR=vmtracker")
 			}
 
@@ -337,7 +337,7 @@ func PrintCreateRoleStatements(metadataFile *utils.FileWithByteCount, toc *toc.T
 
 		attrs = append(attrs, fmt.Sprintf("RESOURCE QUEUE %s", role.ResQueue))
 
-		if gpdbVersion.AtLeast("5") {
+		if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5")) || gpdbVersion.IsCBDB() {
 			attrs = append(attrs, fmt.Sprintf("RESOURCE GROUP %s", role.ResGroup))
 		}
 
@@ -401,7 +401,7 @@ func PrintObjectMetadataEx(file *utils.FileWithByteCount, toc *toc.TOC,
 		statements = append(statements, strings.TrimSpace(comment))
 	}
 	if owner := metadata.GetOwnerStatement(obj.FQN(), entry.ObjectType); owner != "" {
-		if !(gpdbVersion.Before("5") && entry.ObjectType == "LANGUAGE") {
+		if !((gpdbVersion.IsGPDB() && gpdbVersion.Before("5")) && entry.ObjectType == "LANGUAGE") {
 			// Languages have implicit owners in 4.3, but do not support ALTER OWNER
 			statements = append(statements, strings.TrimSpace(owner))
 		}

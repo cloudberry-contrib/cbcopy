@@ -115,7 +115,7 @@ var _ = Describe("backup/postdata tests", func() {
 	Context("PrintCreateEventTriggerStatements", func() {
 		var evTrigExecReplacement string
 		BeforeEach(func() {
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				evTrigExecReplacement = "FUNCTION"
 			} else {
 				evTrigExecReplacement = "PROCEDURE"

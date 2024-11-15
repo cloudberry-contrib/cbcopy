@@ -127,7 +127,7 @@ var _ = BeforeSuite(func() {
 	testhelper.AssertQueryRuns(connectionPool, "DROP PROTOCOL IF EXISTS gphdfs")
 	testhelper.AssertQueryRuns(connectionPool, `SET standard_conforming_strings TO "on"`)
 	testhelper.AssertQueryRuns(connectionPool, `SET search_path=pg_catalog`)
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		testhelper.AssertQueryRuns(connectionPool, "SET allow_system_table_mods = 'DML'")
 		testutils.SetupTestFilespace(connectionPool, testCluster)
 	} else {
@@ -147,7 +147,7 @@ var _ = BeforeSuite(func() {
 	gpbackupHelperPath = buildAndInstallBinaries()
 
 	// Set GUC Defaults and version logic
-	if connectionPool.Version.AtLeast("6") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 		memSharedDefault = "80"
 		memSpillDefault = "0"
 
@@ -202,7 +202,7 @@ var _ = AfterSuite(func() {
 	gplog.Debug("\n\n== suite done ===\n\n")
 
 	CleanupBuildArtifacts()
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		testutils.DestroyTestFilespace(connectionPool)
 	} else {
 		remoteOutput := testCluster.GenerateAndExecuteCommand(

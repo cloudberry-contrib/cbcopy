@@ -180,7 +180,7 @@ LANGUAGE SQL`)
 
 				slabel := ""
 				slabelProvider := ""
-				if connectionPool.Version.AtLeast("6.0.0") {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6.0.0")) || connectionPool.Version.IsCBDB() {
 					slabel = "unclassified"
 					slabelProvider = "dummy"
 				}
@@ -225,7 +225,7 @@ LANGUAGE SQL`)
 				structmatcher.ExpectStructsToMatchExcluding(&expectedMetadata, &resultMetadata, "Oid")
 			})
 			It("returns a slice of default metadata for a materialized view", func() {
-				if connectionPool.Version.Before("6.2") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6.2") {
 					Skip("Test only applicable to GPDB 6.2 and above")
 				}
 				testhelper.AssertQueryRuns(connectionPool, `CREATE MATERIALIZED VIEW public.testmview AS SELECT * FROM pg_class`)
@@ -339,7 +339,7 @@ LANGUAGE SQL`)
 				structmatcher.ExpectStructsToMatchExcluding(&expectedMetadata, &resultMetadata, "Oid")
 			})
 			It("returns a slice of default metadata for a tablespace", func() {
-				if connectionPool.Version.Before("6") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 					testhelper.AssertQueryRuns(connectionPool, "CREATE TABLESPACE test_tablespace FILESPACE test_dir")
 				} else {
 					testhelper.AssertQueryRuns(connectionPool, "CREATE TABLESPACE test_tablespace LOCATION '/tmp/test_dir'")
@@ -387,7 +387,7 @@ LANGUAGE SQL`)
 			})
 			It("returns a slice of default metadata for an operator class", func() {
 				testhelper.AssertQueryRuns(connectionPool, "CREATE OPERATOR CLASS public.testclass FOR TYPE int USING hash AS STORAGE int")
-				if connectionPool.Version.Before("5") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 					defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR CLASS public.testclass USING hash")
 				} else {
 					defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR FAMILY public.testclass USING hash")
@@ -609,7 +609,7 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				structmatcher.ExpectStructsToMatchExcluding(&expectedMetadata, &resultMetadata, "Oid")
 			})
 			It("returns a slice of default metadata for a materialized view in a specific schema", func() {
-				if connectionPool.Version.Before("6.2") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6.2") {
 					Skip("Test only applicable to GPDB 6.2 and above")
 				}
 				testhelper.AssertQueryRuns(connectionPool, `CREATE MATERIALIZED VIEW public.testmview AS SELECT * FROM pg_class`)
@@ -698,7 +698,7 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				uniqueID := testutils.UniqueIDFromObjectName(connectionPool, "testschema", "testtype", builtin.TYPE_TYPE)
 				expectedMetadata := testutils.DefaultMetadata("TYPE", false, true, true, false)
 				resultMetadata := resultMetadataMap[uniqueID]
-				if connectionPool.Version.Before("5") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 					// In 4.3, creating testtype does not generate a "_testtype" entry in pg_type
 					Expect(resultMetadataMap).To(HaveLen(1))
 				} else {
@@ -752,7 +752,7 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 			})
 			It("returns a slice of default metadata for an operator class in a specific schema", func() {
 				testhelper.AssertQueryRuns(connectionPool, "CREATE OPERATOR CLASS public.testclass FOR TYPE int4 USING hash AS STORAGE int4")
-				if connectionPool.Version.Before("5") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 					defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR CLASS public.testclass USING hash CASCADE")
 				} else {
 					defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR FAMILY public.testclass USING hash CASCADE")
@@ -760,7 +760,7 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				testhelper.AssertQueryRuns(connectionPool, "CREATE SCHEMA testschema")
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP SCHEMA testschema")
 				testhelper.AssertQueryRuns(connectionPool, "CREATE OPERATOR CLASS testschema.testclass FOR TYPE int4 USING hash AS STORAGE int4")
-				if connectionPool.Version.Before("5") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 					defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR CLASS testschema.testclass USING hash CASCADE")
 				} else {
 					defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR FAMILY testschema.testclass USING hash CASCADE")
@@ -939,7 +939,7 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				numTriggers := len(resultMetadataMap)
 
 				testhelper.AssertQueryRuns(connectionPool, `CREATE TABLE public.testtable(i int)`)
-				if connectionPool.Version.Before("7") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 					testhelper.AssertQueryRuns(connectionPool, `CREATE TRIGGER sync_testtable AFTER INSERT OR DELETE OR UPDATE ON public.testtable FOR EACH STATEMENT EXECUTE PROCEDURE "RI_FKey_check_ins"()`)
 				} else {
 					testhelper.AssertQueryRuns(connectionPool, `CREATE TRIGGER sync_testtable AFTER INSERT OR DELETE OR UPDATE ON public.testtable FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_ins"()`)
@@ -1056,7 +1056,7 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 				uniqueID := testutils.UniqueIDFromObjectName(connectionPool, "", "plperl", builtin.TYPE_EXTENSION)
 				resultMetadataMap := builtin.GetCommentsForObjectType(connectionPool, builtin.TYPE_EXTENSION)
 
-				if connectionPool.Version.Before("7") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 					Expect(resultMetadataMap).To(HaveLen(1))
 				} else {
 					// gp_toolkit is installed by default as an extension in GPDB7+

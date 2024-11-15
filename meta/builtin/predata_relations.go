@@ -50,7 +50,7 @@ func SplitTablesByPartitionType(connectionPool *dbconn.DBConn, tables []Table, i
 		for _, table := range tables {
 
 			if table.IsExternal && table.PartitionLevelInfo.Level == "l" {
-				if connectionPool.Version.Before("7") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 					// GPDB7+ has different conventions for external partitions
 					// and does not need the suffix added
 					table.Name = AppendExtPartSuffix(table.Name)
@@ -58,7 +58,7 @@ func SplitTablesByPartitionType(connectionPool *dbconn.DBConn, tables []Table, i
 				metadataTables = append(metadataTables, table)
 			}
 			partType := table.PartitionLevelInfo.Level
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				// In GPDB 7+, we need to dump out the leaf partition DDL along with their
 				// ALTER TABLE ATTACH PARTITION commands to construct the partition table
 				metadataTables = append(metadataTables, table)
@@ -69,7 +69,7 @@ func SplitTablesByPartitionType(connectionPool *dbconn.DBConn, tables []Table, i
 				if partType != "p" && partType != "i" {
 					dataTables = append(dataTables, table)
 				}
-			} else if connectionPool.Version.AtLeast("7") &&
+			} else if ((connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB()) &&
 				table.AttachPartitionInfo != (AttachPartitionInfo{}) {
 				// For GPDB 7+ and without --leaf-partition-data, we must exclude the
 				// leaf partitions from dumping data. The COPY will be called on the
@@ -461,7 +461,7 @@ func generateSequenceDefinitionStatement(sequence Sequence) string {
 	minVal := int64(math.MinInt64)
 
 	// Identity columns cannot be defined with `AS smallint/integer`
-	if gpdbVersion.AtLeast("7") && sequence.OwningColumnAttIdentity == "" {
+	if ((gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB()) && sequence.OwningColumnAttIdentity == "" {
 		if definition.Type != "bigint" {
 			statement += fmt.Sprintf("\n\tAS %s", definition.Type)
 		}
@@ -473,7 +473,7 @@ func generateSequenceDefinitionStatement(sequence Sequence) string {
 			minVal = int64(math.MinInt32)
 		}
 	}
-	if gpdbVersion.AtLeast("6") {
+	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("6")) || gpdbVersion.IsCBDB() {
 		statement += fmt.Sprintf("\n\tSTART WITH %d", definition.StartVal)
 	} else if !definition.IsCalled {
 		statement += fmt.Sprintf("\n\tSTART WITH %d", definition.LastVal)
@@ -566,7 +566,7 @@ func PrintPostCreateTableStatements(metadataFile *utils.FileWithByteCount, toc *
 				utils.MakeFQN(alteredPartitionRelation.OldSchema, alteredPartitionRelation.Name), alteredPartitionRelation.NewSchema))
 	}
 
-	if gpdbVersion.AtLeast("7") {
+	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB() {
 
 		attachInfo := table.AttachPartitionInfo
 		// https://github.com/greenplum-db/gpbackup/commit/08fd7c563bdf5510ffd9256632adb56fa43d65ff

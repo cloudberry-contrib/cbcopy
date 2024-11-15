@@ -96,13 +96,13 @@ func GetExternalTableDefinitions(connectionPool *dbconn.DBConn) map[uint32]Exter
 		LEFT JOIN LATERAL unnest(urilocation) ljl_unnest ON urilocation IS NOT NULL`
 
 	var query string
-	if connectionPool.Version.Is("4") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Is("4") {
 		query = version4Query
-	} else if connectionPool.Version.Is("5") {
+	} else if connectionPool.Version.IsGPDB() && connectionPool.Version.Is("5") {
 		query = version5Query
-	} else if connectionPool.Version.Is("6") {
+	} else if connectionPool.Version.IsGPDB() && connectionPool.Version.Is("6") {
 		query = version6Query
-	} else if connectionPool.Version.AtLeast("7") {
+	} else if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 		query = atLeast7Query
 	}
 
@@ -207,7 +207,7 @@ func (pi PartitionInfo) GetMetadataEntry() (string, toc.MetadataEntry) {
 func GetExternalPartitionInfo(connectionPool *dbconn.DBConn) ([]PartitionInfo, map[uint32]PartitionInfo) {
 	// For GPDB 7+, external partitions will have their own ATTACH PARTITION DDL command
 	// instead of a complicated EXCHANGE PARTITION command.
-	if connectionPool.Version.AtLeast("7") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 		return []PartitionInfo{}, make(map[uint32]PartitionInfo, 0)
 	}
 

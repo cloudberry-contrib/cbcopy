@@ -77,7 +77,7 @@ func PrintCreateBaseTypeStatement(metadataFile *utils.FileWithByteCount, toc *to
 	if base.Send != "" {
 		metadataFile.MustPrintf(",\n\tSEND = %s", base.Send)
 	}
-	if gpdbVersion.AtLeast("5") {
+	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5")) || gpdbVersion.IsCBDB() {
 		if base.ModIn != "" {
 			metadataFile.MustPrintf(",\n\tTYPMOD_IN = %s", base.ModIn)
 		}

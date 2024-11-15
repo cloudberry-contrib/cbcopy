@@ -53,7 +53,7 @@ FORMAT 'TEXT'`)
 				ExecLocation: "ALL_SEGMENTS", FormatType: "t", FormatOpts: "delimiter '	' null '\\N' escape '\\'",
 				Command: "hostname", RejectLimit: 0, RejectLimitType: "", ErrTableName: "", ErrTableSchema: "", Encoding: "UTF8",
 				Writable: false, URIs: nil}
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				// The query for GPDB 7+ will have a NULL value instead of ""
 				extTable.Location.Valid = false
 			}
@@ -178,7 +178,7 @@ SEGMENT REJECT LIMIT 10 PERCENT
 	Describe("GetExternalPartitionInfo", func() {
 		BeforeEach(func() {
 			// For GPDB 7+, external partitions will have their own ATTACH PARTITION DDL commands.
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				Skip("Test is not applicable to GPDB 7+")
 			}
 		})

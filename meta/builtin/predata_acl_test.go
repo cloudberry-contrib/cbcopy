@@ -174,7 +174,7 @@ REVOKE ALL ON FUNCTION public.testagg(*) FROM testrole;`)
 
 			It("prints an ALTER TABLE ... OWNER TO statement to set the owner for a sequence", func() {
 				expectedKeyword := `TABLE`
-				if connectionPool.Version.AtLeast("6") {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 					expectedKeyword = `SEQUENCE`
 				}
 
@@ -185,7 +185,7 @@ ALTER %s public.sequencename OWNER TO testrole;`, expectedKeyword))
 			})
 			It("prints an ALTER TABLE ... OWNER TO statement to set the owner for a view", func() {
 				expectedKeyword := `TABLE`
-				if connectionPool.Version.AtLeast("6") {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 					expectedKeyword = `VIEW`
 				}
 

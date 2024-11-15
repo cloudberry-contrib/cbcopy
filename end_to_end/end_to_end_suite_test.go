@@ -214,13 +214,13 @@ var _ = Describe("migration mode tests", func() {
 			"--dest-schema", fmt.Sprintf("%s.target_schema", "target_db"),
 			"--truncate")
 
-		assertTablesRestored(destConn, []string{
-			"schema1.test_table1",
-			"schema2.test_table2",
+		assertTablesRestored(destTestConn, []string{
+			"target_schema.test_table1",
+			"target_schema.test_table2",
 		})
-		assertDataRestored(destConn, map[string]int{
-			"schema1.test_table1": 100,
-			"schema2.test_table2": 200,
+		assertDataRestored(destTestConn, map[string]int{
+			"target_schema.test_table1": 100,
+			"target_schema.test_table2": 200,
 		})
 	})
 
@@ -454,4 +454,5 @@ var _ = Describe("migration mode tests", func() {
 			destTestConn.Close()
 		}
 	})
+
 })

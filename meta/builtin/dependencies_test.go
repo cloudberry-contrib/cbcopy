@@ -115,7 +115,7 @@ var _ = Describe("backup/dependencies tests", func() {
 			plannerSupportValue = ""
 			parallelValue = ""
 			default_parallel = ""
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				plannerSupportValue = "-"
 				parallelValue = "u"
 				default_parallel = " PARALLEL UNSAFE"

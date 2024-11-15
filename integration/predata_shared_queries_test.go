@@ -113,7 +113,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			domainConstraint = builtin.Constraint{Oid: 0, Schema: "public", Name: "check1", ConType: "c", Def: sql.NullString{String: "CHECK (VALUE <> 42)", Valid: true}, OwningObject: "public.constraint_domain", IsDomainConstraint: true, IsPartitionParent: false}
 			constraintInSchema = builtin.Constraint{Oid: 0, Schema: "testschema", Name: "uniq2", ConType: "u", Def: sql.NullString{String: "UNIQUE (a, b)", Valid: true}, OwningObject: "testschema.constraints_table", IsDomainConstraint: false, IsPartitionParent: false}
 
-			if connectionPool.Version.AtLeast("6") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 				uniqueConstraint.ConIsLocal = true
 				fkConstraint.ConIsLocal = true
 				pkConstraint.ConIsLocal = true
@@ -147,7 +147,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			})
 			It("returns a constraint array for a table with one PRIMARY KEY constraint and a comment", func() {
 				// In GPDB 6+, we no longer allow the distributed key to implicitly change when creating a unique index.
-				if connectionPool.Version.Before("6") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 					testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE public.constraints_table(a int, b text, c float)")
 				} else {
 					testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE public.constraints_table(a int, b text, c float) DISTRIBUTED BY (b)")
@@ -163,7 +163,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			})
 			It("returns a constraint array for a table with one FOREIGN KEY constraint", func() {
 				// In GPDB 6+, we no longer allow the distributed key to implicitly change when creating a unique index.
-				if connectionPool.Version.Before("6") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 					testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE public.constraints_table(a int, b text, c float)")
 				} else {
 					testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE public.constraints_table(a int, b text, c float) DISTRIBUTED BY (b)")
@@ -351,13 +351,13 @@ PARTITION BY RANGE (date)
 				structmatcher.ExpectStructsToMatchExcluding(&constraints[0], &checkConstraint, "Oid")
 
 				fkConstraint = builtin.Constraint{Oid: 0, Schema: "public", Name: "fk1", ConType: "f", Def: sql.NullString{String: "FOREIGN KEY (a, b) REFERENCES public.constraints_table(a, b)", Valid: true}, OwningObject: "public.constraints_other_table", IsDomainConstraint: false, IsPartitionParent: false}
-				if connectionPool.Version.AtLeast("6") {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 					fkConstraint.ConIsLocal = true
 				}
 				structmatcher.ExpectStructsToMatchExcluding(&constraints[1], &fkConstraint, "Oid")
 
 				pkConstraint = builtin.Constraint{Oid: 0, Schema: "public", Name: "pk1", ConType: "p", Def: sql.NullString{String: "PRIMARY KEY (a, b)", Valid: true}, OwningObject: "public.constraints_table", IsDomainConstraint: false, IsPartitionParent: false}
-				if connectionPool.Version.AtLeast("6") {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 					pkConstraint.ConIsLocal = true
 				}
 				structmatcher.ExpectStructsToMatchExcluding(&constraints[2], &pkConstraint, "Oid")

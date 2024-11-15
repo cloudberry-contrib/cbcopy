@@ -20,7 +20,7 @@ import (
 var _ = Describe("backup/queries_shared tests", func() {
 	Describe("GetConstraints", func() {
 		It("GetConstraints properly handles NULL constraint definitions", func() {
-			if connectionPool.Version.AtLeast("6") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 				Skip("Test does not apply for GPDB versions after 5")
 			}
 

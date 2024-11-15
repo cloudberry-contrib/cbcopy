@@ -61,9 +61,9 @@ func GenerateAttributeStatisticsQueries(table Table, attStat AttributeStatistic)
 	inheritStr := ""
 	attributeSlotsQueryStr := ""
 	var attributeQueries []string
-	if gpdbVersion.AtLeast("6") {
+	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("6")) || gpdbVersion.IsCBDB() {
 		inheritStr = fmt.Sprintf("\n\t%t::boolean,", attStat.Inherit)
-		if gpdbVersion.AtLeast("7") {
+		if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB() {
 			attributeSlotsQueryStr = generateAttributeSlotsQuery7(attStat)
 		} else {
 			attributeSlotsQueryStr = generateAttributeSlotsQuery6(attStat)

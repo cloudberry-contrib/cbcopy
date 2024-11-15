@@ -62,7 +62,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			results := builtin.GetOperators(connectionPool)
 
 			Expect(results).To(HaveLen(1))
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				structmatcher.ExpectStructsToMatchExcluding(&version4expectedOperator, &results[0], "Oid")
 			} else {
 				structmatcher.ExpectStructsToMatchExcluding(&expectedOperator, &results[0], "Oid")
@@ -128,7 +128,7 @@ var _ = Describe("cbcopy integration tests", func() {
 	Describe("GetOperatorClasses", func() {
 		It("returns a slice of operator classes", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE OPERATOR CLASS public.testclass FOR TYPE int USING hash AS STORAGE int")
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR CLASS public.testclass USING hash")
 			} else {
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR FAMILY public.testclass USING hash")
@@ -140,7 +140,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			results := builtin.GetOperatorClasses(connectionPool)
 
 			Expect(results).To(HaveLen(1))
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				structmatcher.ExpectStructsToMatchExcluding(&version4expected, &results[0], "Oid")
 			} else {
 				structmatcher.ExpectStructsToMatchExcluding(&expected, &results[0], "Oid")
@@ -156,7 +156,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE OPERATOR CLASS public.testclass FOR TYPE int USING gist FAMILY testschema.testfam AS STORAGE int")
 
 			var storageType string
-			if connectionPool.Version.Before("7") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 				storageType = "-"
 			} else {
 				storageType = "integer"
@@ -171,7 +171,7 @@ var _ = Describe("cbcopy integration tests", func() {
 		})
 		It("returns a slice of operator classes with different type and storage type", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE OPERATOR CLASS public.testclass DEFAULT FOR TYPE int USING gist AS STORAGE text")
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR CLASS public.testclass USING gist")
 			} else {
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR FAMILY public.testclass USING gist")
@@ -183,7 +183,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			results := builtin.GetOperatorClasses(connectionPool)
 
 			Expect(results).To(HaveLen(1))
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				structmatcher.ExpectStructsToMatchExcluding(&version4expected, &results[0], "Oid")
 			} else {
 				structmatcher.ExpectStructsToMatchExcluding(&expected, &results[0], "Oid")
@@ -227,7 +227,7 @@ var _ = Describe("cbcopy integration tests", func() {
 		*/
 		It("returns a slice of operator classes for a specific schema", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE OPERATOR CLASS public.testclass FOR TYPE int USING hash AS STORAGE int")
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR CLASS public.testclass USING hash")
 			} else {
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR FAMILY public.testclass USING hash")
@@ -235,7 +235,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE SCHEMA testschema")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP SCHEMA testschema CASCADE")
 			testhelper.AssertQueryRuns(connectionPool, "CREATE OPERATOR CLASS testschema.testclass FOR TYPE int USING hash AS STORAGE int")
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR CLASS testschema.testclass USING hash")
 			} else {
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR FAMILY testschema.testclass USING hash")
@@ -250,7 +250,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			results := builtin.GetOperatorClasses(connectionPool)
 
 			Expect(results).To(HaveLen(1))
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				structmatcher.ExpectStructsToMatchExcluding(&version4expected, &results[0], "Oid")
 			} else {
 				structmatcher.ExpectStructsToMatchExcluding(&expected, &results[0], "Oid")

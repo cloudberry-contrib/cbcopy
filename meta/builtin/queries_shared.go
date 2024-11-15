@@ -130,12 +130,12 @@ func GetConstraints(connectionPool *dbconn.DBConn, includeTables ...Relation) []
 	// tables must propogate to children. For GPDB versions 5 or lower, this
 	// field will default to false.
 	conIsLocal := ""
-	if connectionPool.Version.AtLeast("6") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 		conIsLocal = `con.conislocal,`
 	}
 	// This query is adapted from the queries underlying \d in psql.
 	tableQuery := ""
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		tableQuery = fmt.Sprintf(`
 		SELECT con.oid,
 			quote_ident(n.nspname) AS schema,
@@ -224,7 +224,7 @@ func GetConstraints(connectionPool *dbconn.DBConn, includeTables ...Relation) []
 	err := connectionPool.Select(&results, query)
 	gplog.FatalOnError(err)
 
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		// Remove all constraints that have NULL definitions. This can happen
 		// if the query above is run and a concurrent constraint drop happens
 		// just before the pg_get_constraintdef function executes. Note that

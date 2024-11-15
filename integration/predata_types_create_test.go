@@ -158,7 +158,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 				Oid: 1, Schema: "public", Name: "domain_type", BaseType: "character(8)", DefaultVal: "'abc'::bpchar", NotNull: true, Collation: ""}
 			It("creates domain types", func() {
 				constraints := make([]builtin.Constraint, 0)
-				if connectionPool.Version.AtLeast("6") {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 					testhelper.AssertQueryRuns(connectionPool, "CREATE COLLATION public.some_coll (lc_collate = 'POSIX', lc_ctype = 'POSIX')")
 					defer testhelper.AssertQueryRuns(connectionPool, "DROP COLLATION public.some_coll")
 					domainType.Collation = "public.some_coll"
@@ -221,7 +221,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 		It("creates a basic collation", func() {
 			testutils.SkipIfBefore6(connectionPool)
 			collation := builtin.Collation{Oid: 1, Schema: "public", Name: "testcollation", Collate: "POSIX", Ctype: "POSIX"}
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				collation.IsDeterministic = "true"
 				collation.Provider = "c"
 			}
@@ -238,7 +238,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 		It("creates a basic collation with comment and owner", func() {
 			testutils.SkipIfBefore6(connectionPool)
 			collation := builtin.Collation{Oid: 1, Schema: "public", Name: "testcollation", Collate: "POSIX", Ctype: "POSIX"}
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				collation.IsDeterministic = "true"
 				collation.Provider = "c"
 			}

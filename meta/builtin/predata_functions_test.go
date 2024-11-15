@@ -29,7 +29,7 @@ var _ = Describe("backup/predata_functions tests", func() {
 			funcDef.Parallel = ""
 			funcDef.PlannerSupport = ""
 			DEFAULT_PARALLEL = ""
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				funcDef.Parallel = "u"
 				funcDef.PlannerSupport = "-"
 				DEFAULT_PARALLEL = " PARALLEL UNSAFE"
@@ -555,7 +555,7 @@ $_$`)
 				IdentArgs: sql.NullString{String: `VARIADIC "any" ORDER BY VARIADIC "any"`, Valid: true}, TransitionFunction: 4, FinalFunction: 5,
 				TransitionDataType: "internal", InitValIsNull: true, MInitValIsNull: true, FinalFuncExtra: true,
 			}
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				complexAggDefinition.Kind = "h"
 			} else {
 				complexAggDefinition.Hypothetical = true
@@ -761,7 +761,7 @@ SET search_path=pg_catalog;`, "COMMENT ON EXTENSION extension1 IS 'This is an ex
 			testutils.ExpectEntry(tocfile.PredataEntries, 0, "", "", "plpythonu", "LANGUAGE")
 
 			createStatement1 := "CREATE PROCEDURAL LANGUAGE plpythonu HANDLER pg_catalog.plpython_call_handler;"
-			if connectionPool.Version.AtLeast("6") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 				createStatement1 = "CREATE OR REPLACE PROCEDURAL LANGUAGE plpythonu HANDLER pg_catalog.plpython_call_handler;"
 			}
 			testutils.AssertBufferContents(tocfile.PredataEntries, buffer, createStatement1, "ALTER FUNCTION pg_catalog.plpython_call_handler() OWNER TO testrole;")
@@ -772,7 +772,7 @@ SET search_path=pg_catalog;`, "COMMENT ON EXTENSION extension1 IS 'This is an ex
 			builtin.PrintCreateLanguageStatements(backupfile, tocfile, langs, funcInfoMap, emptyMetadataMap)
 
 			createStatement1 := "CREATE TRUSTED PROCEDURAL LANGUAGE plperl HANDLER pg_catalog.plperl_call_handler INLINE pg_catalog.plperl_inline_handler VALIDATOR pg_catalog.plperl_validator;"
-			if connectionPool.Version.AtLeast("6") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 				createStatement1 = "CREATE OR REPLACE TRUSTED PROCEDURAL LANGUAGE plperl HANDLER pg_catalog.plperl_call_handler INLINE pg_catalog.plperl_inline_handler VALIDATOR pg_catalog.plperl_validator;"
 			}
 
@@ -791,7 +791,7 @@ ALTER FUNCTION pg_catalog.plperl_validator(oid) OWNER TO testrole;`,
 
 			createStatement1 := "CREATE PROCEDURAL LANGUAGE plpythonu HANDLER pg_catalog.plpython_call_handler;"
 			createStatement2 := "CREATE TRUSTED PROCEDURAL LANGUAGE plperl HANDLER pg_catalog.plperl_call_handler INLINE pg_catalog.plperl_inline_handler VALIDATOR pg_catalog.plperl_validator;"
-			if connectionPool.Version.AtLeast("6") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 				createStatement1 = "CREATE OR REPLACE PROCEDURAL LANGUAGE plpythonu HANDLER pg_catalog.plpython_call_handler;"
 				createStatement2 = "CREATE OR REPLACE TRUSTED PROCEDURAL LANGUAGE plperl HANDLER pg_catalog.plperl_call_handler INLINE pg_catalog.plperl_inline_handler VALIDATOR pg_catalog.plperl_validator;"
 			}
@@ -812,7 +812,7 @@ ALTER FUNCTION pg_catalog.plperl_validator(oid) OWNER TO testrole;`,
 			builtin.PrintCreateLanguageStatements(backupfile, tocfile, langs, funcInfoMap, langMetadataMap)
 
 			createStatement1 := "CREATE PROCEDURAL LANGUAGE plpythonu HANDLER pg_catalog.plpython_call_handler;"
-			if connectionPool.Version.AtLeast("6") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 				createStatement1 = "CREATE OR REPLACE PROCEDURAL LANGUAGE plpythonu HANDLER pg_catalog.plpython_call_handler;"
 			}
 
@@ -821,7 +821,7 @@ ALTER FUNCTION pg_catalog.plperl_validator(oid) OWNER TO testrole;`,
 				"ALTER FUNCTION pg_catalog.plpython_call_handler() OWNER TO testrole;",
 				"COMMENT ON LANGUAGE plpythonu IS 'This is a language comment.';",
 			}
-			if connectionPool.Version.AtLeast("5") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDB() {
 				// Languages have implicit owners in 4.3, but do not support ALTER OWNER
 				expectedStatements = append(expectedStatements, "ALTER LANGUAGE plpythonu OWNER TO testrole;")
 			}
@@ -841,7 +841,7 @@ GRANT ALL ON LANGUAGE plpythonu TO testrole;`,
 			builtin.PrintCreateLanguageStatements(backupfile, tocfile, langs, funcInfoMap, langMetadataMap)
 
 			createStatement1 := "CREATE TRUSTED PROCEDURAL LANGUAGE plperl HANDLER pg_catalog.plperl_call_handler INLINE pg_catalog.plperl_inline_handler VALIDATOR pg_catalog.plperl_validator;"
-			if connectionPool.Version.AtLeast("6") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 				createStatement1 = "CREATE OR REPLACE TRUSTED PROCEDURAL LANGUAGE plperl HANDLER pg_catalog.plperl_call_handler INLINE pg_catalog.plperl_inline_handler VALIDATOR pg_catalog.plperl_validator;"
 			}
 			expectedStatements := []string{
@@ -849,7 +849,7 @@ GRANT ALL ON LANGUAGE plpythonu TO testrole;`,
 				"ALTER FUNCTION pg_catalog.plperl_call_handler() OWNER TO owner%percentage;\nALTER FUNCTION pg_catalog.plperl_inline_handler(internal) OWNER TO owner%percentage;\nALTER FUNCTION pg_catalog.plperl_validator(oid) OWNER TO owner%percentage;",
 				`COMMENT ON LANGUAGE plperl IS 'This is a language comment.';`,
 			}
-			if connectionPool.Version.AtLeast("5") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDB() {
 				// Languages have implicit owners in 4.3, but do not support ALTER OWNER
 				expectedStatements = append(expectedStatements, `ALTER LANGUAGE plperl OWNER TO testrole;`)
 			}

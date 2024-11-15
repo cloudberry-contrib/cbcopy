@@ -64,7 +64,7 @@ func lookupSourceTables(schema, name string, partNameMap map[string][]string, ta
 
 	todo: add some more detail description on variables value (partNameMap, tabMap, etc)
 	*/
-	if gpdbVersion.AtLeast("7") {
+	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB() {
 		found = false
 	}
 

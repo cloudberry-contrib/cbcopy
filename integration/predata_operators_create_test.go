@@ -100,7 +100,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 		emptyMetadata := builtin.ObjectMetadata{}
 		It("creates basic operator class", func() {
 			operatorClass := builtin.OperatorClass{Oid: 0, Schema: "public", Name: "testclass", FamilySchema: "public", FamilyName: "testclass", IndexMethod: "hash", Type: "integer", Default: false, StorageType: "-", Operators: nil, Functions: nil}
-			if connectionPool.Version.Before("5") { // Operator families do not exist prior to GPDB5
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") { // Operator families do not exist prior to GPDB5
 				operatorClass.FamilySchema = ""
 				operatorClass.FamilyName = ""
 			}
@@ -108,7 +108,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 			builtin.PrintCreateOperatorClassStatement(backupfile, tocfile, operatorClass, emptyMetadata)
 
 			testhelper.AssertQueryRuns(connectionPool, buffer.String())
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR CLASS public.testclass USING hash")
 			} else {
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR FAMILY public.testclass USING hash CASCADE")
@@ -171,7 +171,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 		It("creates basic operator class with a comment and owner", func() {
 			operatorClass := builtin.OperatorClass{Oid: 1, Schema: "public", Name: "testclass", FamilySchema: "public", FamilyName: "testclass", IndexMethod: "hash", Type: "integer", Default: false, StorageType: "-", Operators: nil, Functions: nil}
 			operatorClassMetadata := testutils.DefaultMetadata("OPERATOR CLASS", false, true, true, false)
-			if connectionPool.Version.Before("5") { // Operator families do not exist prior to GPDB5
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") { // Operator families do not exist prior to GPDB5
 				operatorClass.FamilySchema = ""
 				operatorClass.FamilyName = ""
 			}
@@ -179,7 +179,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 			builtin.PrintCreateOperatorClassStatement(backupfile, tocfile, operatorClass, operatorClassMetadata)
 
 			testhelper.AssertQueryRuns(connectionPool, buffer.String())
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR CLASS public.testclass USING hash")
 			} else {
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP OPERATOR FAMILY public.testclass USING hash CASCADE")

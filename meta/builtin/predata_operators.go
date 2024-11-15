@@ -22,7 +22,7 @@ func PrintCreateOperatorStatement(metadataFile *utils.FileWithByteCount, toc *to
 	var leftArg string
 	var rightArg string
 	var createStatementFuncRepl string
-	if gpdbVersion.AtLeast("7") {
+	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB() {
 		createStatementFuncRepl = "FUNCTION"
 	} else {
 		createStatementFuncRepl = "PROCEDURE"

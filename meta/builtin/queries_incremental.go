@@ -73,7 +73,7 @@ func getAOSegTableFQNs(connectionPool *dbconn.DBConn) map[string]string {
 			) seg ON aoseg_c.oid = seg.segrelid`, relationAndSchemaFilterClause(connectionPool))
 
 	query := ""
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		query = before7Query
 	} else {
 		query = atLeast7Query
@@ -107,7 +107,7 @@ func getModCount(connectionPool *dbconn.DBConn, aosegtablefqn string) int64 {
 		aosegtablefqn)
 
 	query := ""
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		query = before7Query
 	} else {
 		query = atLeast7Query
@@ -164,7 +164,7 @@ func getLastDDLTimestamps(connectionPool *dbconn.DBConn) map[string]string {
 		ON aotables.aooid = lastop.objid`, relationAndSchemaFilterClause(connectionPool))
 
 	query := ""
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		query = before7Query
 	} else {
 		query = atLeast7Query

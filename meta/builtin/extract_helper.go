@@ -19,7 +19,7 @@ func RetrieveAndProcessTables(conn *dbconn.DBConn, includeTables []string) ([]Ta
 
 	tableRelations := GetIncludedUserTableRelations(conn, quotedIncludeRelations)
 
-	if conn.Version.AtLeast("6") {
+	if (conn.Version.IsGPDB() && conn.Version.AtLeast("6")) || conn.Version.IsCBDB() {
 		tableRelations = append(tableRelations, GetForeignTableRelations(conn)...)
 	}
 
@@ -44,7 +44,7 @@ func retrieveFunctions(connectionPool *dbconn.DBConn, sortables *[]Sortable, met
 }
 
 func retrieveTransforms(conn *dbconn.DBConn, sortables *[]Sortable) {
-	if conn.Version.Before("7") {
+	if conn.Version.IsGPDB() && conn.Version.Before("7") {
 		return
 	}
 	gplog.Verbose("Retrieving transform information")
@@ -60,13 +60,13 @@ func retrieveAndBackupTypes(connectionPool *dbconn.DBConn, metadataFile *utils.F
 	composites := GetCompositeTypes(connectionPool)
 	domains := GetDomainTypes(connectionPool)
 	rangeTypes := make([]RangeType, 0)
-	if connectionPool.Version.AtLeast("6") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 		rangeTypes = GetRangeTypes(connectionPool)
 	}
 	typeMetadata := GetMetadataForObjectType(connectionPool, TYPE_TYPE)
 
 	backupShellTypes(metadataFile, shells, bases, rangeTypes)
-	if connectionPool.Version.AtLeast("5") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDB() {
 		backupEnumTypes(connectionPool, metadataFile, typeMetadata)
 	}
 
@@ -86,7 +86,7 @@ func retrieveAndBackupTypes(connectionPool *dbconn.DBConn, metadataFile *utils.F
 func retrieveConstraints(conn *dbconn.DBConn, sortables *[]Sortable, metadataMap MetadataMap, tables ...Relation) []Constraint {
 	gplog.Verbose("Retrieving constraints")
 	constraints := GetConstraints(conn, tables...)
-	if len(constraints) > 0 && conn.Version.AtLeast("7") {
+	if len(constraints) > 0 && ((conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDB()) {
 		RenameExchangedPartitionConstraints(conn, &constraints)
 	}
 
@@ -139,7 +139,7 @@ func retrieveViews(conn *dbconn.DBConn, sortables *[]Sortable) {
 
 // https://github.com/greenplum-db/gpbackup/commit/abdf8cf26dddf97238bee4c4a3e1341eb0077fd5
 func retrieveTSObjects(conn *dbconn.DBConn, sortables *[]Sortable, metadataMap MetadataMap) {
-	if !conn.Version.AtLeast("5") {
+	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("5")) && !conn.Version.IsCBDB() {
 		return
 	}
 	gplog.Verbose("Retrieving Text Search Parsers")
@@ -240,7 +240,7 @@ func retrieveCasts(conn *dbconn.DBConn, sortables *[]Sortable, metadataMap Metad
 }
 
 func retrieveFDWObjects(conn *dbconn.DBConn, sortables *[]Sortable, metadataMap MetadataMap) {
-	if !conn.Version.AtLeast("6") {
+	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("6")) && !conn.Version.IsCBDB() {
 		return
 	}
 	retrieveForeignDataWrappers(conn, sortables, metadataMap)
@@ -319,7 +319,7 @@ func backupResourceQueues(conn *dbconn.DBConn, metadataFile *utils.FileWithByteC
 }
 
 func backupResourceGroups(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount) {
-	if !conn.Version.AtLeast("5") {
+	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("5")) && !conn.Version.IsCBDB() {
 		return
 	}
 	gplog.Verbose("Writing CREATE RESOURCE GROUP statements to metadata file")
@@ -405,7 +405,7 @@ func backupCreateSequences(metadataFile *utils.FileWithByteCount, sequences []Se
 }
 
 func backupAccessMethods(connectionPool *dbconn.DBConn, metadataFile *utils.FileWithByteCount) {
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		return
 	}
 	gplog.Verbose("Writing CREATE ACCESS METHOD statements to metadata file")
@@ -457,7 +457,7 @@ func backupDependentObjects(conn *dbconn.DBConn, metadataFile *utils.FileWithByt
 
 	backupSet := createBackupSet(sortables)
 	relevantDeps := GetDependencies(conn, backupSet, tables)
-	if conn.Version.Is("4") && !tableOnly {
+	if conn.Version.IsGPDB() && conn.Version.Is("4") && !tableOnly {
 		AddProtocolDependenciesForGPDB4(relevantDeps, tables, protocols)
 	}
 
@@ -473,7 +473,7 @@ func backupDependentObjects(conn *dbconn.DBConn, metadataFile *utils.FileWithByt
 	PrintAlterSequenceStatements(metadataFile, globalTOC, sequences)
 
 	extPartInfo, partInfoMap := GetExternalPartitionInfo(conn)
-	if conn.Version.Before("7") && len(extPartInfo) > 0 {
+	if conn.Version.IsGPDB() && conn.Version.Before("7") && len(extPartInfo) > 0 {
 		gplog.Verbose("Writing EXCHANGE PARTITION statements to metadata file")
 		PrintExchangeExternalPartitionStatements(metadataFile, globalTOC, extPartInfo, partInfoMap, tables)
 	}
@@ -488,7 +488,7 @@ func backupConversions(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCoun
 }
 
 func backupOperatorFamilies(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount) {
-	if !conn.Version.AtLeast("5") {
+	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("5")) && !conn.Version.IsCBDB() {
 		return
 	}
 	gplog.Verbose("Writing CREATE OPERATOR FAMILY statements to metadata file")
@@ -499,7 +499,7 @@ func backupOperatorFamilies(conn *dbconn.DBConn, metadataFile *utils.FileWithByt
 }
 
 func backupCollations(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount) {
-	if !conn.Version.AtLeast("6") {
+	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("6")) && !conn.Version.IsCBDB() {
 		return
 	}
 	gplog.Verbose("Writing CREATE COLLATION statements to metadata file")
@@ -510,7 +510,7 @@ func backupCollations(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount
 }
 
 func backupExtensions(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount) {
-	if !conn.Version.AtLeast("5") {
+	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("5")) && !conn.Version.IsCBDB() {
 		return
 	}
 	gplog.Verbose("Writing CREATE EXTENSION statements to metadata file")
@@ -536,7 +536,7 @@ func backupIndexes(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount) {
 	gplog.Verbose("Writing CREATE INDEX statements to metadata file")
 	indexes := GetIndexes(conn)
 	objectCounts["Indexes"] = len(indexes)
-	if objectCounts["Indexes"] > 0 && conn.Version.Is("6") {
+	if objectCounts["Indexes"] > 0 && conn.Version.IsGPDB() && conn.Version.Is("6") {
 		// This bug is not addressed in versions prior to GPDB6
 		// New partition exchange syntax in GPDB7+ obviates the need for this renaming
 		RenameExchangedPartitionIndexes(conn, &indexes)

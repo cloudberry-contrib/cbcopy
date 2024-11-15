@@ -51,7 +51,7 @@ func GetSegmentsIpAddress(conn *dbconn.DBConn, timestamp string) []SegmentIpInfo
 	}
 
 	for _, seg := range results {
-		gplog.Info("dest segment content %v ip address %v", seg.Content, seg.Ip)
+		gplog.Debug("dest segment content %v ip address %v", seg.Content, seg.Ip)
 	}
 
 	return results

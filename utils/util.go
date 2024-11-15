@@ -175,9 +175,9 @@ func ArrayIsDuplicated(elems []string) bool {
 }
 
 func ValidateGPDBVersionCompatibility(connectionPool *dbconn.DBConn) {
-	if connectionPool.Version.Before(MINIMUM_GPDB4_VERSION) {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before(MINIMUM_GPDB4_VERSION) {
 		gplog.Fatal(errors.Errorf(`GPDB version %s is not supported. Please upgrade to GPDB %s.0 or later.`, connectionPool.Version.VersionString, MINIMUM_GPDB4_VERSION), "")
-	} else if connectionPool.Version.Is("5") && connectionPool.Version.Before(MINIMUM_GPDB5_VERSION) {
+	} else if connectionPool.Version.IsGPDB() && connectionPool.Version.Is("5") && connectionPool.Version.Before(MINIMUM_GPDB5_VERSION) {
 		gplog.Fatal(errors.Errorf(`GPDB version %s is not supported. Please upgrade to GPDB %s or later.`, connectionPool.Version.VersionString, MINIMUM_GPDB5_VERSION), "")
 	}
 }

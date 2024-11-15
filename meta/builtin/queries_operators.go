@@ -95,7 +95,7 @@ func GetOperators(connectionPool *dbconn.DBConn) []Operator {
 		AND %s`, SchemaFilterClause("n"), ExtensionFilterClause("o"))
 
 	query := ""
-	if connectionPool.Version.Before("5") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 		query = before5Query
 	} else {
 		query = atLeast5Query
@@ -238,7 +238,7 @@ func GetOperatorClasses(connectionPool *dbconn.DBConn) []OperatorClass {
 		SchemaFilterClause("cls_ns"), ExtensionFilterClause("c"))
 
 	query := ""
-	if connectionPool.Version.Before("5") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 		query = before5Query
 	} else {
 		query = atLeast5Query
@@ -328,9 +328,9 @@ func GetOperatorClassOperators(connectionPool *dbconn.DBConn) map[uint32][]Opera
 	ORDER BY classoid, strategynumber`
 
 	query := ""
-	if connectionPool.Version.Before("5") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 		query = before5Query
-	} else if connectionPool.Version.Is("5") {
+	} else if connectionPool.Version.IsGPDB() && connectionPool.Version.Is("5") {
 		query = version5Query
 	} else if connectionPool.Version.IsCBDB() {
 		query = atLeastPG14Query
@@ -379,7 +379,7 @@ func GetOperatorClassFunctions(connectionPool *dbconn.DBConn) map[uint32][]Opera
 	ORDER BY amprocnum`
 
 	query := ""
-	if connectionPool.Version.Before("5") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 		query = before5Query
 	} else {
 		query = atLeast5Query

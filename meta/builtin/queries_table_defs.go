@@ -190,7 +190,7 @@ func GetPartitionTableMap(connectionPool *dbconn.DBConn) map[uint32]PartitionLev
 		WHERE c.relispartition = true OR c.relkind = 'p'`
 
 	query := ""
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		query = before7Query
 	} else {
 		query = atLeast7Query
@@ -372,9 +372,9 @@ func GetColumnDefinitions(connectionPool *dbconn.DBConn) map[uint32][]ColumnDefi
 	ORDER BY a.attrelid, a.attnum`, relationAndSchemaFilterClause(connectionPool))
 
 	query := ``
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		query = before6Query
-	} else if connectionPool.Version.Is("6") {
+	} else if connectionPool.Version.IsGPDB() && connectionPool.Version.Is("6") {
 		query = version6Query
 	} else {
 		query = atLeast7Query
@@ -387,7 +387,7 @@ func GetColumnDefinitions(connectionPool *dbconn.DBConn) map[uint32][]ColumnDefi
 	resultMap := make(map[uint32][]ColumnDefinition)
 	for _, result := range results {
 		result.StorageType = storageTypeCodes[result.StorageType]
-		if connectionPool.Version.AtLeast("7") {
+		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 			result.AttGenerated = attGeneratedCodes[result.AttGenerated]
 		}
 		resultMap[result.Oid] = append(resultMap[result.Oid], result)
@@ -417,7 +417,7 @@ func GetDistributionPolicies(connectionPool *dbconn.DBConn) map[uint32]string {
 		FROM gp_distribution_policy`
 
 	query := ""
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		query = before6Query
 	} else {
 		query = atLeast6Query
@@ -428,7 +428,7 @@ func GetDistributionPolicies(connectionPool *dbconn.DBConn) map[uint32]string {
 
 func GetTableType(connectionPool *dbconn.DBConn) map[uint32]string {
 	gplog.Verbose("Getting table type")
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		return map[uint32]string{}
 	}
 	query := `
@@ -438,7 +438,7 @@ func GetTableType(connectionPool *dbconn.DBConn) map[uint32]string {
 
 func GetTableAccessMethod(connectionPool *dbconn.DBConn) map[uint32]string {
 	gplog.Verbose("Getting access method")
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		return map[uint32]string{}
 	}
 	query := `
@@ -452,12 +452,12 @@ func GetTableAccessMethod(connectionPool *dbconn.DBConn) map[uint32]string {
 
 func GetTableReplicaIdentity(connectionPool *dbconn.DBConn) map[uint32]string {
 	gplog.Verbose("Getting table replica identity")
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		return make(map[uint32]string)
 	}
 
 	relkindFilter := "'r', 'm'"
-	if connectionPool.Version.AtLeast("7") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 		relkindFilter = "'r', 'm', 'p'"
 	}
 
@@ -473,7 +473,7 @@ func GetTableReplicaIdentity(connectionPool *dbconn.DBConn) map[uint32]string {
 func GetPartitionDetails(connectionPool *dbconn.DBConn) (map[uint32]string, map[uint32]string) {
 	// https://github.com/greenplum-db/gpbackup/commit/ea1c002e65102d34caf37a37e1c158a440799b92
 	// https://github.com/greenplum-db/gpbackup/commit/3d57441e6f56b51c92bd14cb5e46c9f6cac7b0db
-	if connectionPool.Version.AtLeast("7") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 		// GPDB7 reworked partition tables significantly, to match
 		// how upstream handles them.  These separate details are no
 		// longer needed, and instead partition tables are handled as
@@ -526,7 +526,7 @@ type AlteredPartitionRelation struct {
  */
 func GetPartitionAlteredSchema(connectionPool *dbconn.DBConn) map[uint32][]AlteredPartitionRelation {
 	// https://github.com/greenplum-db/gpbackup/commit/ea1c002e65102d34caf37a37e1c158a440799b92
-	if connectionPool.Version.AtLeast("7") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 		return make(map[uint32][]AlteredPartitionRelation)
 	}
 
@@ -598,7 +598,7 @@ func GetTableStorage(connectionPool *dbconn.DBConn) (map[uint32]string, map[uint
 }
 
 func GetUnloggedTables(connectionPool *dbconn.DBConn) map[uint32]bool {
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		return map[uint32]bool{}
 	}
 	query := `
@@ -625,7 +625,7 @@ type ForeignTableDefinition struct {
 }
 
 func GetForeignTableDefinitions(connectionPool *dbconn.DBConn) map[uint32]ForeignTableDefinition {
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		return map[uint32]ForeignTableDefinition{}
 	}
 
@@ -694,7 +694,7 @@ func GetTableInheritance(connectionPool *dbconn.DBConn, tables []Relation) map[u
 // Used to contruct root tables for GPDB 7+, because the root partition must be
 // constructed by itself first.
 func GetPartitionKeyDefs(connectionPool *dbconn.DBConn) map[uint32]string {
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		return make(map[uint32]string, 0)
 	}
 
@@ -728,7 +728,7 @@ type AttachPartitionInfo struct {
 }
 
 func GetAttachPartitionInfo(connectionPool *dbconn.DBConn) map[uint32]AttachPartitionInfo {
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		return make(map[uint32]AttachPartitionInfo, 0)
 	}
 
@@ -758,7 +758,7 @@ func GetAttachPartitionInfo(connectionPool *dbconn.DBConn) map[uint32]AttachPart
 
 func GetForceRowSecurity(connectionPool *dbconn.DBConn) map[uint32]bool {
 	resultMap := make(map[uint32]bool)
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		return resultMap
 	}
 

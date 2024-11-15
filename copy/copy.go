@@ -260,15 +260,15 @@ func (app *Application) doCopy() {
 		metaManager.Open()
 
 		tablec, pgsd := metaManager.MigrateMetadata(srcTables, destTables)
-		if utils.MustGetFlagBool(option.METADATA_ONLY) {
-			metaManager.Wait()
-		} else {
+		if !utils.MustGetFlagBool(option.METADATA_ONLY) {
 			copyManager := NewCopyManager(srcConn, destConn, app.destManageConn,
 				app.srcSegmentsHostInfo, app.destSegmentsIpInfo, app.timestamp,
 				app.applicationName, &app.encodingGuc, pgsd)
 			copyManager.Copy(tablec)
 			copyManager.Close()
 		}
+
+		metaManager.Wait()
 
 		if pgsd != nil {
 			pgsd.Finish()

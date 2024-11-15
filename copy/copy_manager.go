@@ -236,8 +236,6 @@ func (m *CopyManager) Copy(tables chan option.TablePair) {
 	}
 
 	wg.Wait()
-
-	m.generateReport()
 }
 
 func (m *CopyManager) worker(workerID int, tables chan option.TablePair) {
@@ -291,4 +289,5 @@ func (m *CopyManager) Close() {
 	utils.CloseDataFile(m.fFailed)
 	utils.CloseDataFile(m.fSucced)
 	utils.CloseDataFile(m.fSkipped)
+	m.generateReport()
 }

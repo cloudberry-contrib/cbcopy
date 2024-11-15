@@ -85,7 +85,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 			structmatcher.ExpectStructsToMatch(&resultMetadata, &indexMetadata)
 		})
 		It("creates an index in a non-default tablespace", func() {
-			if connectionPool.Version.Before("6") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 				testhelper.AssertQueryRuns(connectionPool, "CREATE TABLESPACE test_tablespace FILESPACE test_dir")
 			} else {
 				testhelper.AssertQueryRuns(connectionPool, "CREATE TABLESPACE test_tablespace LOCATION '/tmp/test_dir'")
@@ -168,7 +168,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 		)
 		BeforeEach(func() {
 			ruleMetadataMap = builtin.MetadataMap{}
-			if connectionPool.Version.Before("6") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 				ruleDef = "CREATE RULE update_notify AS ON UPDATE TO public.testtable DO NOTIFY testtable;"
 			} else {
 				ruleDef = "CREATE RULE update_notify AS\n    ON UPDATE TO public.testtable DO\n NOTIFY testtable;"
@@ -216,7 +216,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 		})
 		It("creates a basic trigger", func() {
 			triggerDef := `CREATE TRIGGER sync_testtable AFTER INSERT OR DELETE OR UPDATE ON public.testtable FOR EACH STATEMENT EXECUTE PROCEDURE "RI_FKey_check_ins"()`
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				triggerDef = `CREATE TRIGGER sync_testtable AFTER INSERT OR DELETE OR UPDATE ON public.testtable FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_ins"()`
 			}
 			triggers := []builtin.TriggerDefinition{{Oid: 0, Name: "sync_testtable", OwningSchema: "public", OwningTable: "testtable", Def: sql.NullString{String: triggerDef, Valid: true}}}
@@ -233,7 +233,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 		})
 		It("creates a trigger with a comment", func() {
 			triggerDef := `CREATE TRIGGER sync_testtable AFTER INSERT OR DELETE OR UPDATE ON public.testtable FOR EACH STATEMENT EXECUTE PROCEDURE "RI_FKey_check_ins"()`
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				triggerDef = `CREATE TRIGGER sync_testtable AFTER INSERT OR DELETE OR UPDATE ON public.testtable FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_ins"()`
 			}
 			triggers := []builtin.TriggerDefinition{{Oid: 1, Name: "sync_testtable", OwningSchema: "public", OwningTable: "testtable", Def: sql.NullString{String: triggerDef, Valid: true}}}
@@ -352,7 +352,7 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 	})
 	Describe("PrintExchangedPartitionIndexes", func() {
 		BeforeEach(func() {
-			if !connectionPool.Version.Is("6") {
+			if !(connectionPool.Version.IsGPDB() && connectionPool.Version.Is("6")) {
 				Skip("Test only applicable to GPDB6")
 			}
 			testhelper.AssertQueryRuns(connectionPool, `CREATE SCHEMA schemaone;`)
@@ -387,7 +387,7 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 			builtin.PrintCreateIndexStatements(backupfile, tocfile, indexes, indexesMetadataMap)
 
 			// Automatically-generated index names end in "_idx" in 6+ and "_key" in earlier versions.
-			if connectionPool.Version.AtLeast("6") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 				Expect(strings.Contains(buffer.String(), `CREATE INDEX heap_can_a_idx`)).To(BeTrue())
 				Expect(strings.Contains(buffer.String(), `CREATE INDEX pt_heap_tab_1_prt_pqr_a_idx`)).To(BeFalse())
 			} else {

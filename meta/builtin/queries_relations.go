@@ -133,7 +133,7 @@ func getUserTableRelations(connectionPool *dbconn.DBConn) []Relation {
 	// GP7 support change ref: https://github.com/greenplum-db/gpbackup/commit/14885d8242f785468496de3310d154e676f686e4
 	// In GPDB 7+, root partitions are marked as relkind 'p'.
 	relkindFilter := `'r'`
-	if connectionPool.Version.AtLeast("7") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 		relkindFilter = `'r', 'p'`
 	}
 
@@ -167,7 +167,7 @@ func getUserTableRelationsWithIncludeFiltering(connectionPool *dbconn.DBConn, in
 	// https://github.com/greenplum-db/gpbackup/commit/14885d8242f785468496de3310d154e676f686e4
 	// In GPDB 7+, root partitions are marked as relkind 'p'.
 	relkindFilter := `'r'`
-	if connectionPool.Version.AtLeast("7") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 		relkindFilter = `'r', 'p'`
 	}
 
@@ -309,7 +309,7 @@ func GetAllSequences(connectionPool *dbconn.DBConn) []Sequence {
 		relationAndSchemaFilterClause(connectionPool), ExtensionFilterClause("c"))
 
 	query := ""
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		query = before7Query
 	} else {
 		query = atLeast7Query
@@ -372,7 +372,7 @@ func GetAllSequenceRelations(connectionPool *dbconn.DBConn) []Relation {
 
 func GetSequenceDefinition(connectionPool *dbconn.DBConn, seqName string) SequenceDefinition {
 	startValQuery := ""
-	if connectionPool.Version.AtLeast("6") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 		startValQuery = "start_value AS startval,"
 	}
 
@@ -401,7 +401,7 @@ func GetSequenceDefinition(connectionPool *dbconn.DBConn, seqName string) Sequen
 		JOIN pg_sequence s ON s.seqrelid = '%s'::regclass::oid;`, seqName, seqName)
 
 	query := ""
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		query = before7Query
 	} else {
 		query = atLeast7Query
@@ -537,7 +537,7 @@ func GetAllViews(connectionPool *dbconn.DBConn) []View {
 		AND %s`, relationAndSchemaFilterClause(connectionPool), ExtensionFilterClause("c"))
 
 	query := ""
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		query = before6Query
 	} else {
 		query = atLeast6Query

@@ -62,7 +62,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			tables := make([]builtin.Table, 0)
 
 			deps := builtin.GetDependencies(connectionPool, backupSet, tables)
-			if connectionPool.Version.Is("4") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Is("4") {
 				tableRelations := builtin.GetIncludedUserTableRelations(connectionPool, []string{})
 				tables := builtin.ConstructDefinitionsForTables(connectionPool, tableRelations)
 				protocols := builtin.GetExternalProtocols(connectionPool)
@@ -101,7 +101,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			Expect(deps[childEntry]).To(HaveKey(parent2Entry))
 		})
 		It("constructs dependencies correctly for a materialized view that depends on two other materialized views", func() {
-			if connectionPool.Version.Before("6.2") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6.2") {
 				Skip("Test only applicable to GPDB 6.2 and above")
 			}
 			testhelper.AssertQueryRuns(connectionPool, "CREATE MATERIALIZED VIEW public.parent1 AS SELECT relname FROM pg_class")

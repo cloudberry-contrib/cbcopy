@@ -22,9 +22,9 @@ const (
 
 const (
 	gpdbPattern  = `\(Greenplum Database ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
-	cbdbPattern  = `\(Cloudberry Database ([09]+\.[0-9]+\.[0-9]+)[^)]*\)`
+	cbdbPattern  = `\(Cloudberry Database ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
 	hdwPattern   = `\(HashData Warehouse ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
-	pgsqlPattern = `^PostgreSQL ([0-9]+\.[0-9]+\.[0-9]+)`
+	pgsqlPattern = `^PostgreSQL\s+([0-9]+\.[0-9]+\.[0-9]+)`
 )
 
 // String provides string representation of DBType
@@ -98,10 +98,11 @@ func InitializeVersion(dbconn *DBConn) (dbversion GPDBVersion, err error) {
 		return
 	}
 
-	gplog.Info("InitializeVersion, dbversion.VersionString: %v", dbversion.VersionString)
-
 	// Determine database type and parse version
 	dbversion.ParseVersionInfo(dbversion.VersionString)
+
+	gplog.Info("Initialized database version - Full Version: %s, Database Type: %s, Semantic Version: %s",
+		dbversion.VersionString, dbversion.Type, dbversion.SemVer)
 	return
 }
 

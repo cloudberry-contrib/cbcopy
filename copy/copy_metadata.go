@@ -97,6 +97,10 @@ func (m *MetadataManager) RestorePostMetadata(dbname, timestamp string) {
 
 // Wait blocks until metadata migration is complete
 func (m *MetadataManager) Wait() {
+	if !config.ContainsMetadata(utils.MustGetFlagBool(option.METADATA_ONLY), utils.MustGetFlagBool(option.DATA_ONLY)) {
+		return
+	}
+
 	<-m.donec
 }
 

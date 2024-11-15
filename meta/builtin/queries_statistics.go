@@ -58,7 +58,7 @@ type AttributeStatistic struct {
 func GetAttributeStatistics(connectionPool *dbconn.DBConn, tables []Table) map[uint32][]AttributeStatistic {
 	inheritClause := ""
 	statSlotClause := ""
-	if connectionPool.Version.AtLeast("6") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
 		inheritClause = "s.stainherit,"
 		statSlotClause = `s.stakind5,
 	s.staop5,
@@ -67,7 +67,7 @@ func GetAttributeStatistics(connectionPool *dbconn.DBConn, tables []Table) map[u
 	}
 
 	statCollationClause := ""
-	if connectionPool.Version.AtLeast("7") {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 		statCollationClause = `s.stacoll1,
 					s.stacoll2,
 					s.stacoll3,

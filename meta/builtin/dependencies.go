@@ -189,7 +189,7 @@ AND typelem != 0`
 	// constraint applied will error.  Our solution is to add additional
 	// "synthetic" dependencies to the backup, requiring all child tables to be
 	// attached to the parent before the constraints are applied.
-	if connectionPool.Version.AtLeast("7") && len(tables) > 0 {
+	if ((connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB()) && len(tables) > 0 {
 		tableOids := make([]string, len(tables))
 		for idx, table := range tables {
 			tableOids[idx] = fmt.Sprintf("%d", table.Oid)

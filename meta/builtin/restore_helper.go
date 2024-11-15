@@ -226,11 +226,11 @@ func GetExistingTableFQNs(connectionPool *dbconn.DBConn) ([]string, error) {
 	existingTableFQNs := make([]string, 0)
 	var relkindFilter string
 
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		relkindFilter = "'r', 'S'"
-	} else if connectionPool.Version.Is("6") {
+	} else if connectionPool.Version.IsGPDB() && connectionPool.Version.Is("6") {
 		relkindFilter = "'r', 'S', 'f'"
-	} else if connectionPool.Version.AtLeast("7") {
+	} else {
 		relkindFilter = "'r', 'S', 'f', 'p'"
 	}
 	query := fmt.Sprintf(`SELECT quote_ident(n.nspname) || '.' || quote_ident(c.relname)

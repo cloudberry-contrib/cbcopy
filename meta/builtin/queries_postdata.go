@@ -88,7 +88,7 @@ func (i IndexDefinition) FQN() string {
  */
 func GetIndexes(connectionPool *dbconn.DBConn) []IndexDefinition {
 	implicitIndexStr := ""
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		indexOidList := ConstructImplicitIndexOidList(connectionPool)
 
 		if indexOidList != "" {
@@ -179,9 +179,9 @@ func GetIndexes(connectionPool *dbconn.DBConn) []IndexDefinition {
 		relationAndSchemaFilterClause(connectionPool), FIRST_NORMAL_OBJECT_ID, ExtensionFilterClause("c"))
 
 	query := ""
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		query = before6Query
-	} else if connectionPool.Version.Is("6") {
+	} else if connectionPool.Version.IsGPDB() && connectionPool.Version.Is("6") {
 		query = version6Query
 	} else {
 		query = atLeast7Query
@@ -200,7 +200,7 @@ func GetIndexes(connectionPool *dbconn.DBConn) []IndexDefinition {
 	for _, index := range resultIndexes {
 		if index.Def.Valid {
 			verifiedResultIndexes = append(verifiedResultIndexes, index)
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				indexMap[index.Oid] = index // hash index for topological sort
 			}
 		} else {
@@ -209,7 +209,7 @@ func GetIndexes(connectionPool *dbconn.DBConn) []IndexDefinition {
 		}
 	}
 
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		return verifiedResultIndexes
 	}
 
@@ -259,7 +259,7 @@ func GetRenameExchangedPartitionQuery(connectionPool *dbconn.DBConn) string {
 	// will cause a name collision in GPDB7+.  Rename those constraints to match their new owning
 	// tables.  In GPDB6 and below this renaming was done automatically by server code.
 	cteClause := ""
-	if connectionPool.Version.Before("7") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		cteClause = `SELECT DISTINCT cl.relname
             FROM pg_class cl
                 INNER JOIN pg_partitions pts
@@ -422,7 +422,7 @@ func (t TriggerDefinition) FQN() string {
 
 func GetTriggers(connectionPool *dbconn.DBConn) []TriggerDefinition {
 	constraintClause := "NOT tgisinternal"
-	if connectionPool.Version.Before("6") {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 		constraintClause = "tgisconstraint = 'f'"
 	}
 	query := fmt.Sprintf(`

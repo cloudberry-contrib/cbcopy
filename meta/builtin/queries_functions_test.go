@@ -84,7 +84,7 @@ SET baz to abc`))
 	})
 	Describe("GetFunctions", func() {
 		It("GetFunctions properly handles NULL function arguments, NULL function identity arguments, or NULL function result types", func() {
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				Skip("Test does not apply for GPDB versions before 5")
 			}
 
@@ -120,7 +120,7 @@ SET baz to abc`))
 	})
 	Describe("GetAggregates", func() {
 		It("GetAggregates properly handles NULL aggregate arguments or NULL aggregate identity arguments", func() {
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				Skip("Test does not apply for GPDB versions before 5")
 			}
 

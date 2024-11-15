@@ -70,7 +70,7 @@ var _ = Describe("cbcopy integration tests", func() {
 
 				// For GPDB 7+, the root partition is not included.
 				// TODO: Should the root be included?
-				if connectionPool.Version.Before("7") {
+				if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 					Expect(aoIncrementalMetadata[aoPartParentTableFQN].LastDDLTimestamp).To(Not(BeEmpty()))
 				}
 
@@ -115,7 +115,7 @@ var _ = Describe("cbcopy integration tests", func() {
 
 					// For GPDB 7+, the root partition is not included.
 					// TODO: Should the root be included?
-					if connectionPool.Version.Before("7") {
+					if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 						Expect(aoIncrementalMetadata[aoPartParentTableFQN].LastDDLTimestamp).To(Not(BeEmpty()))
 					}
 				})
@@ -157,7 +157,7 @@ var _ = Describe("cbcopy integration tests", func() {
 
 					// For GPDB 7+, the root partition is not included.
 					// TODO: Should the root be included?
-					if connectionPool.Version.Before("7") {
+					if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 						Expect(aoIncrementalMetadata[aoPartParentTableFQN].LastDDLTimestamp).To(Not(BeEmpty()))
 					}
 				})

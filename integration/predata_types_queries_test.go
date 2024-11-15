@@ -113,7 +113,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			results := builtin.GetBaseTypes(connectionPool)
 
 			Expect(results).To(HaveLen(1))
-			if connectionPool.Version.Before("5") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("5") {
 				structmatcher.ExpectStructsToMatchExcluding(&baseTypeDefault, &results[0], "Oid", "ModIn", "ModOut")
 			} else {
 				structmatcher.ExpectStructsToMatchExcluding(&baseTypeDefault, &results[0], "Oid")
@@ -188,7 +188,7 @@ var _ = Describe("cbcopy integration tests", func() {
 
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TYPE public.enum_type AS ENUM ('label1','label2','label3')")
 			defer testhelper.AssertQueryRuns(connectionPool, "DROP TYPE public.enum_type")
-			if connectionPool.Version.Before("6") {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("6") {
 				testhelper.AssertQueryRuns(connectionPool, "CREATE TYPE public.enum_type2 AS ENUM ('label3','label2','label1')")
 			} else {
 				testhelper.AssertQueryRuns(connectionPool, "CREATE TYPE public.enum_type2 AS ENUM ('label3', 'label1')")
@@ -345,7 +345,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			Expect(results).To(HaveLen(1))
 
 			collationDef := builtin.Collation{Oid: 0, Schema: "public", Name: "some_coll", Collate: "POSIX", Ctype: "POSIX"}
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				collationDef.IsDeterministic = "true"
 				collationDef.Provider = "c"
 			}
@@ -370,7 +370,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			Expect(results).To(HaveLen(1))
 
 			collationDef := builtin.Collation{Oid: 0, Schema: "testschema", Name: "some_coll", Collate: "POSIX", Ctype: "POSIX"}
-			if connectionPool.Version.AtLeast("7") {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
 				collationDef.IsDeterministic = "true"
 				collationDef.Provider = "c"
 			}

@@ -510,7 +510,7 @@ func GetSegmentConfiguration(connection *dbconn.DBConn, getMirrors ...bool) ([]S
 	includeMirrors := len(getMirrors) == 1 && getMirrors[0]
 	includeOnlyMirrors := len(getMirrors) == 2 && getMirrors[1]
 	query := ""
-	if connection.Version.Before("6") {
+	if connection.Version.IsGPDB() && connection.Version.Before("6") {
 		whereClause := "WHERE%s f.fsname = 'pg_system'"
 		if includeOnlyMirrors {
 			whereClause = fmt.Sprintf(whereClause, " s.role = 'm' AND")

@@ -20,7 +20,7 @@ func PrintCreateFunctionStatement(metadataFile *utils.FileWithByteCount, toc *to
 	start := metadataFile.ByteCount
 	funcFQN := utils.MakeFQN(funcDef.Schema, funcDef.Name)
 
-	if gpdbVersion.AtLeast("7") && funcDef.Kind == "p" {
+	if ((gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB()) && funcDef.Kind == "p" {
 		metadataFile.MustPrintf("\n\nCREATE PROCEDURE %s(%s) AS", funcFQN, funcDef.Arguments.String)
 	} else {
 		metadataFile.MustPrintf("\n\nCREATE FUNCTION %s(%s) RETURNS %s AS", funcFQN, funcDef.Arguments.String, funcDef.ResultType.String)
@@ -95,7 +95,7 @@ func PrintFunctionModifiers(metadataFile *utils.FileWithByteCount, funcDef Funct
 	if funcDef.IsSecurityDefiner {
 		metadataFile.MustPrintf(" SECURITY DEFINER")
 	}
-	if gpdbVersion.AtLeast("7") {
+	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB() {
 		if funcDef.TransformTypes != "" {
 			metadataFile.MustPrintf("\nTRANSFORM %s\n", funcDef.TransformTypes)
 		}
@@ -118,7 +118,7 @@ func PrintFunctionModifiers(metadataFile *utils.FileWithByteCount, funcDef Funct
 
 	// https://github.com/greenplum-db/gpbackup/commit/08e1f840398596be92d6d34020aed390352c7553
 	// Stored procedures do not permit parallelism declarations
-	if gpdbVersion.AtLeast("7") && funcDef.Kind != "p" {
+	if ((gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB()) && funcDef.Kind != "p" {
 		switch funcDef.Parallel {
 		case "u":
 			metadataFile.MustPrintf(" PARALLEL UNSAFE")
@@ -174,7 +174,7 @@ func PrintCreateAggregateStatement(metadataFile *utils.FileWithByteCount, toc *t
 	if aggDef.SortOperator != "" {
 		metadataFile.MustPrintf(",\n\tSORTOP = %s.\"%s\"", aggDef.SortOperatorSchema, aggDef.SortOperator)
 	}
-	if gpdbVersion.Before("7") {
+	if gpdbVersion.IsGPDB() && gpdbVersion.Before("7") {
 		if aggDef.Hypothetical {
 			metadataFile.MustPrintf(",\n\tHYPOTHETICAL")
 		}
@@ -205,7 +205,7 @@ func PrintCreateAggregateStatement(metadataFile *utils.FileWithByteCount, toc *t
 		metadataFile.MustPrintf(",\n\tMINITCOND = '%s'", aggDef.MInitialValue)
 	}
 
-	if gpdbVersion.AtLeast("7") {
+	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB() {
 		var defaultFinalModify string
 		if aggDef.Kind == "o" {
 			defaultFinalModify = "w"
@@ -331,7 +331,7 @@ func PrintCreateLanguageStatements(metadataFile *utils.FileWithByteCount, toc *t
 	for _, procLang := range procLangs {
 		start := metadataFile.ByteCount
 		metadataFile.MustPrintf("\n\nCREATE ")
-		if gpdbVersion.AtLeast("6") {
+		if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("6")) || gpdbVersion.IsCBDB() {
 			metadataFile.MustPrintf("OR REPLACE ")
 		}
 		if procLang.PlTrusted {
