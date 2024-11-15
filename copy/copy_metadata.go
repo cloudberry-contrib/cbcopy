@@ -23,13 +23,15 @@ type MetadataManager struct {
 func NewMetadataManager(srcConn, destConn *dbconn.DBConn,
 	qm *QueryManager,
 	qw *QueryWrapper,
-	convert, withGlobal, metaOnly bool,
+	withGlobal, metaOnly bool,
 	timestamp string,
+
 	partNameMap map[string][]string,
 	tableMap map[string]string,
-	ownerMap map[string]string) *MetadataManager {
+	ownerMap map[string]string,
+	tablespaceMap map[string]string) *MetadataManager {
 
-	metaOps := meta.CreateMetaImpl(convert, withGlobal, metaOnly, timestamp, partNameMap, tableMap, ownerMap)
+	metaOps := meta.CreateMetaImpl(withGlobal, metaOnly, timestamp, partNameMap, tableMap, ownerMap, tablespaceMap)
 
 	return &MetadataManager{
 		srcConn:      srcConn,

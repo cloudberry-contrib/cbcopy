@@ -96,6 +96,10 @@ var _ = BeforeSuite(func() {
 	testhelper.AssertQueryRuns(destConn, "DROP DATABASE IF EXISTS target_db")
 	testhelper.AssertQueryRuns(destConn, "CREATE DATABASE target_db")
 
+	testutils.SetupTestTablespace(sourceConn, "/tmp/e2e_test_same_tablespace")
+	testutils.SetupTestTablespace(sourceConn, "/tmp/e2e_test_source_tablespace")
+	testutils.SetupTestTablespace(sourceConn, "/tmp/e2e_test_dest_tablespace")
+
 	projectRoot, err := os.Getwd()
 	if err != nil {
 		Fail(fmt.Sprintf("Could not get current directory: %v", err))
@@ -113,6 +117,10 @@ var _ = AfterSuite(func() {
 		return
 	}
 
+	testutils.CleanupTestTablespace(sourceConn, "/tmp/e2e_test_same_tablespace")
+	testutils.CleanupTestTablespace(sourceConn, "/tmp/e2e_test_source_tablespace")
+	testutils.CleanupTestTablespace(sourceConn, "/tmp/e2e_test_dest_tablespace")
+
 	if sourceConn != nil {
 		testhelper.AssertQueryRuns(sourceConn, "DROP DATABASE IF EXISTS source_db")
 		sourceConn.Close()
@@ -129,7 +137,7 @@ func end_to_end_setup() {
 func end_to_end_teardown() {
 }
 
-var _ = Describe("migration mode tests", func() {
+var _ = Describe("Migration basic tests", func() {
 	BeforeEach(func() {
 		end_to_end_setup()
 	})

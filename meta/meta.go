@@ -21,17 +21,18 @@ type MetaOperator interface {
 	Close()
 }
 
-func CreateMetaImpl(convert, withGlobal, metaOnly bool,
+func CreateMetaImpl(withGlobal, metaOnly bool,
 	timestamp string,
 	partNameMap map[string][]string,
 	tableMap map[string]string,
-	ownerMap map[string]string) MetaOperator {
+	ownerMap map[string]string,
+	tablespaceMap map[string]string) MetaOperator {
 
-	return builtin.NewBuiltinMeta(convert,
-		withGlobal,
+	return builtin.NewBuiltinMeta(withGlobal,
 		metaOnly,
 		timestamp,
 		partNameMap,
 		tableMap,
-		ownerMap)
+		ownerMap,
+		tablespaceMap)
 }

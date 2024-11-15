@@ -20,6 +20,7 @@ import (
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"github.com/greenplum-db/gp-common-go-libs/operating"
 	"github.com/pkg/errors"
+	"github.com/spf13/pflag"
 )
 
 const MINIMUM_GPDB4_VERSION = "4.3.17"
@@ -222,37 +223,6 @@ func ReadTableFile(filename string) ([]string, error) {
 	return tables, nil
 }
 
-func ReadMapFile(filename string, separator string) (map[string]string, error) {
-	if len(filename) == 0 {
-		return nil, nil
-	}
-
-	f, err := os.Open(filename)
-
-	if err != nil {
-		gplog.Fatal(errors.Errorf("file open fail, file %v, err %v", filename, err), "")
-	}
-
-	defer f.Close()
-	sc := bufio.NewScanner(f)
-
-	maps := make(map[string]string)
-
-	lineNumber := 0
-	for sc.Scan() {
-		lineNumber++
-		line := sc.Text()
-		pair := strings.Split(line, separator)
-		if len(pair) == 2 {
-			maps[strings.TrimSpace(pair[0])] = strings.TrimSpace(pair[1])
-		} else {
-			gplog.Fatal(errors.Errorf("invalid map file content, file %v, line number %v, line content [%v]", filename, lineNumber, line), "")
-		}
-	}
-
-	return maps, nil
-}
-
 func OpenDataFile(filename string) *os.File {
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	gplog.FatalOnError(err)
@@ -300,4 +270,132 @@ func RedirectStream(reader io.Reader, writeCloser io.WriteCloser) error {
 
 func GetVersion() string {
 	return Version
+}
+
+type FqnStruct struct {
+	SchemaName string
+	TableName  string
+}
+
+// https://github.com/greenplum-db/gpbackup/commit/6e9829cf5c12fb8e66cecd8143ac0a7379e44d01
+func QuoteTableNames(conn *dbconn.DBConn, tableNames []string) ([]string, error) {
+	if len(tableNames) == 0 {
+		return []string{}, nil
+	}
+
+	// Properly escape single quote before running quote ident. Postgres
+	// quote_ident escapes single quotes by doubling them
+	escapedTables := make([]string, 0)
+	for _, v := range tableNames {
+		escapedTables = append(escapedTables, EscapeSingleQuotes(v))
+	}
+
+	fqnSlice, err := SeparateSchemaAndTable(escapedTables)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]string, 0)
+
+	quoteIdentTableFQNQuery := `SELECT quote_ident('%s') AS schemaname, quote_ident('%s') AS tablename`
+	for _, fqn := range fqnSlice {
+		queryResultTable := make([]FqnStruct, 0)
+		query := fmt.Sprintf(quoteIdentTableFQNQuery, fqn.SchemaName, fqn.TableName)
+		gplog.Debug("QuoteTableNames, query is %v", query)
+		err := conn.Select(&queryResultTable, query)
+		if err != nil {
+			return nil, err
+		}
+		quoted := queryResultTable[0].SchemaName + "." + queryResultTable[0].TableName
+		result = append(result, quoted)
+	}
+
+	return result, nil
+}
+
+func SeparateSchemaAndTable(tableNames []string) ([]FqnStruct, error) {
+	fqnSlice := make([]FqnStruct, 0)
+	for _, fqn := range tableNames {
+		parts := strings.Split(fqn, ".")
+		if len(parts) > 2 {
+			return nil, errors.Errorf("cannot process an Fully Qualified Name with embedded dots yet: %s", fqn)
+		}
+		if len(parts) < 2 {
+			return nil, errors.Errorf("Fully Qualified Names require a minimum of one dot, specifying the schema and table. Cannot process: %s", fqn)
+		}
+		schema := parts[0]
+		table := parts[1]
+		if schema == "" || table == "" {
+			return nil, errors.Errorf("Fully Qualified Names must specify the schema and table. Cannot process: %s", fqn)
+		}
+
+		currFqn := FqnStruct{
+			SchemaName: schema,
+			TableName:  table,
+		}
+
+		fqnSlice = append(fqnSlice, currFqn)
+	}
+
+	return fqnSlice, nil
+}
+
+func ReadTableFileByFlag(flagSet *pflag.FlagSet, flag string) ([]string, error) {
+	filename, err := flagSet.GetString(flag)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(filename) > 0 {
+		tables, err := ReadTableFile(filename)
+		if err != nil {
+			return nil, err
+		}
+		return tables, nil
+	}
+
+	return nil, nil
+}
+
+func ParseMappingFile(lines []string) map[string]string {
+	mapping := make(map[string]string)
+
+	for _, l := range lines {
+		items := strings.Split(l, ",")
+		if len(items) != 2 {
+			gplog.Fatal(errors.Errorf(`invalid mapping file content [%s]: every line
+			should have two fields, seperated by comma. the first field is the source name,
+			the second field is the target name`, l), "")
+		}
+
+		mapping[items[0]] = items[1]
+	}
+
+	return mapping
+}
+
+func ParseSchemaMappingFile(lines []string) ([]string, []string) {
+	source := make([]string, 0)
+	dest := make([]string, 0)
+
+	for _, l := range lines {
+		items := strings.Split(l, ",")
+		if len(items) != 2 {
+			gplog.Fatal(errors.Errorf(`invalid schema mapping file content [%s]: every line
+			should have two fields, seperated by comma. the first field is the source schema 
+			name, the second field is the target schema name`, l), "")
+		}
+
+		source = append(source, items[0])
+		dest = append(dest, items[1])
+	}
+
+	if lines != nil {
+		if len(source) == 0 {
+			gplog.Fatal(errors.Errorf(`schema mapping file should have at lease one record`), "")
+		}
+
+		return source, dest
+	}
+
+	return nil, nil
 }

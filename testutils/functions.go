@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -768,9 +769,38 @@ func InitializeTestTOC(buffer io.Writer, which string) (*toc.TOC, *utils.FileWit
 	return tocfile, backupfile
 }
 
-/*
-../../testutils/functions.go:225:29: cannot use connectionPool (variable of type *"github.com/cloudberrydb/cbcopy/internal/dbconn".DBConn) as *"github.com/greenplum-db/gp-common-go-libs/dbconn".DBConn value in argument to testhelper.AssertQueryRuns
-../../testutils/functions.go:250:29: cannot use connectionPool (variable of type *"github.com/cloudberrydb/cbcopy/internal/dbconn".DBConn) as *"github.com/greenplum-db/gp-common-go-libs/dbconn".DBConn value in argument to testhelper.AssertQueryRuns
-../../testutils/functions.go:613:30: cannot use connectionPool (variable of type *"github.com/cloudberrydb/cbcopy/internal/dbconn".DBConn) as *"github.com/greenplum-db/gp-common-go-libs/dbconn".DBConn value in argument to testhelper.AssertQueryRuns
+func SetupTestTablespace(connectionPool *dbconn.DBConn, tablespaceLocation string) {
+	// Create the directory using mkdir -p command
+	exec.Command("bash", "-c", fmt.Sprintf("mkdir -p %s", tablespaceLocation)).CombinedOutput()
 
-*/
+	// Get absolute path for the tablespace location
+	absPath, err := filepath.Abs(tablespaceLocation)
+	if err != nil {
+		Fail(fmt.Sprintf("Could not get absolute path for tablespace: %v", err))
+	}
+
+	// Create tablespace in database
+	tablespaceName := filepath.Base(tablespaceLocation)
+	query := fmt.Sprintf("CREATE TABLESPACE %s LOCATION '%s'", tablespaceName, absPath)
+
+	_, err = connectionPool.Exec(query)
+	if err != nil {
+		// Clean up the created directory if tablespace creation fails
+		cleanupOut, cleanupErr := exec.Command("bash", "-c", fmt.Sprintf("rm -rf %s", tablespaceLocation)).CombinedOutput()
+		if cleanupErr != nil {
+			Fail(fmt.Sprintf("Could not create tablespace in database: %v. Additionally, cleanup failed: %s: %s",
+				err, cleanupOut, cleanupErr.Error()))
+		}
+		Fail(fmt.Sprintf("Could not create tablespace in database: %v", err))
+	}
+}
+
+func CleanupTestTablespace(connectionPool *dbconn.DBConn, tablespaceLocation string) {
+	tablespaceName := filepath.Base(tablespaceLocation)
+	testhelper.AssertQueryRuns(connectionPool, fmt.Sprintf("DROP TABLESPACE %s", tablespaceName))
+
+	cleanupOut, cleanupErr := exec.Command("bash", "-c", fmt.Sprintf("rm -rf %s", tablespaceLocation)).CombinedOutput()
+	if cleanupErr != nil {
+		Fail(fmt.Sprintf("Could not cleanup tablespace directory: %s: %s", cleanupOut, cleanupErr.Error()))
+	}
+}

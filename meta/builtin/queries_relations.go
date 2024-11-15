@@ -26,7 +26,7 @@ func relationAndSchemaFilterClause(connectionPool *dbconn.DBConn) string {
 	filterRelationClause = SchemaFilterClause("n")
 	if len(excludeRelations) > 0 {
 		// https://github.com/greenplum-db/gpbackup/commit/1122088597ac9fb08f38587f1d87671264bc77d6
-		quotedExcludeRelations, err := option.QuoteTableNames(connectionPool, excludeRelations)
+		quotedExcludeRelations, err := utils.QuoteTableNames(connectionPool, excludeRelations)
 		gplog.FatalOnError(err)
 
 		excludeOids := getOidsFromRelationList(connectionPool, quotedExcludeRelations)
@@ -36,7 +36,7 @@ func relationAndSchemaFilterClause(connectionPool *dbconn.DBConn) string {
 	}
 	if len(includeRelations) > 0 {
 		gplog.Debug("terry debug, relationAndSchemaFilterClause, includeRelations: %v", includeRelations)
-		quotedIncludeRelations, err := option.QuoteTableNames(connectionPool, includeRelations)
+		quotedIncludeRelations, err := utils.QuoteTableNames(connectionPool, includeRelations)
 		gplog.FatalOnError(err)
 
 		includeOids := getOidsFromRelationList(connectionPool, quotedIncludeRelations)

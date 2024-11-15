@@ -4,7 +4,6 @@ import (
 	"reflect"
 
 	"github.com/cloudberrydb/cbcopy/internal/dbconn"
-	"github.com/cloudberrydb/cbcopy/option"
 	"github.com/cloudberrydb/cbcopy/utils"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 )
@@ -14,7 +13,7 @@ import (
  */
 
 func RetrieveAndProcessTables(conn *dbconn.DBConn, includeTables []string) ([]Table, []Table) {
-	quotedIncludeRelations, err := option.QuoteTableNames(conn, includeTables)
+	quotedIncludeRelations, err := utils.QuoteTableNames(conn, includeTables)
 	gplog.FatalOnError(err)
 
 	tableRelations := GetIncludedUserTableRelations(conn, quotedIncludeRelations)

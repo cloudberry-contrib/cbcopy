@@ -34,11 +34,13 @@ var (
 	objectCounts         map[string]int
 
 	errorTablesMetadata map[string]Empty
-	needConvert         bool
 	relevantDeps        DependencyMap
 	redirectSchema      map[string]string
 	inclDestSchema      string
 	ownerMap            map[string]string
+
+	destTablespace    string
+	destTablespaceMap map[string]string
 )
 
 // --> automation test purpose, start

@@ -269,25 +269,6 @@ func PrintRegularTableCreateStatement(metadataFile *utils.FileWithByteCount, toc
 		metadataFile.MustPrintf("USING %s ", table.AccessMethodName)
 	}
 
-	/* reference: below is 3x code
-	if table.StorageOpts != "" {
-		metadataFile.MustPrintf("WITH (%s) ", rewriteAppendonly(rewriteCompressAlgorithm(replaceBlocksize(table.StorageOpts))))
-	}
-	if !needConvert {
-		if table.TablespaceName != "" {
-			metadataFile.MustPrintf("TABLESPACE %s ", table.TablespaceName)
-		}
-	}
-	metadataFile.MustPrintf("%s", table.DistPolicy)
-	if table.PartDef != "" {
-		metadataFile.MustPrintf(" %s", strings.TrimSpace(rewriteAppendonly(rewriteCompressAlgorithm(replaceBlocksize(replaceTableSpace(table.PartDef))))))
-	}
-	metadataFile.MustPrintln(";")
-	if table.PartTemplateDef != "" {
-		metadataFile.MustPrintf("%s;\n", strings.TrimSpace(rewriteAppendonly(rewriteCompressAlgorithm(replaceBlocksize(replaceTableSpace(table.PartTemplateDef))))))
-	}
-	*/
-
 	if table.StorageOpts != "" {
 		if destDBVersion.IsHDW() && destDBVersion.Is("3") {
 			metadataFile.MustPrintf("WITH (%s) ", rewriteAppendonly(rewriteCompressAlgorithm(replaceBlocksize(table.StorageOpts))))
@@ -295,17 +276,17 @@ func PrintRegularTableCreateStatement(metadataFile *utils.FileWithByteCount, toc
 			metadataFile.MustPrintf("WITH (%s) ", table.StorageOpts)
 		}
 	}
-	if !needConvert {
-		if table.TablespaceName != "" {
-			metadataFile.MustPrintf("TABLESPACE %s ", table.TablespaceName)
-		}
+
+	if table.TablespaceName != "" {
+		metadataFile.MustPrintf("TABLESPACE %s ", GetDestTablespace(table.TablespaceName))
 	}
+
 	metadataFile.MustPrintf("%s", table.DistPolicy)
 	if table.PartDef != "" {
 		if destDBVersion.IsHDW() && destDBVersion.Is("3") {
 			metadataFile.MustPrintf(" %s", strings.TrimSpace(rewriteAppendonly(rewriteCompressAlgorithm(replaceBlocksize(replaceTableSpace(table.PartDef))))))
 		} else {
-			metadataFile.MustPrintf(" %s", strings.TrimSpace(table.PartDef))
+			metadataFile.MustPrintf(" %s", replaceTableSpace(strings.TrimSpace(table.PartDef)))
 		}
 	}
 	metadataFile.MustPrintln(";")
@@ -313,7 +294,7 @@ func PrintRegularTableCreateStatement(metadataFile *utils.FileWithByteCount, toc
 		if destDBVersion.IsHDW() && destDBVersion.Is("3") {
 			metadataFile.MustPrintf("%s;\n", strings.TrimSpace(rewriteAppendonly(rewriteCompressAlgorithm(replaceBlocksize(replaceTableSpace(table.PartTemplateDef))))))
 		} else {
-			metadataFile.MustPrintf("%s;\n", strings.TrimSpace(table.PartTemplateDef))
+			metadataFile.MustPrintf("%s;\n", replaceTableSpace(strings.TrimSpace(table.PartTemplateDef)))
 		}
 	}
 
@@ -325,26 +306,30 @@ func PrintRegularTableCreateStatement(metadataFile *utils.FileWithByteCount, toc
 }
 
 func replaceTableSpace(content string) string {
-	if !needConvert {
-		return content
-	}
-
 	results := ""
-	format := regexp.MustCompile(`(.+)TABLESPACE [^,]+(,| |$)`)
+	format := regexp.MustCompile(`(.+)TABLESPACE ([^,]+)(,| |$)`)
 	lines := strings.Split(content, "\n")
 
 	for _, line := range lines {
-		results = results + format.ReplaceAllString(line, `$1$2`) + "\n"
+		matches := format.FindStringSubmatch(line)
+		if len(matches) == 4 {
+			// matches[2] contains the original tablespace name
+			originalTablespace := matches[2]
+			newTablespace := GetDestTablespace(originalTablespace)
+			newLine := matches[1] + "TABLESPACE " + newTablespace + matches[3]
+			results += newLine + "\n"
+		} else {
+			// If no match, keep the line unchanged
+			results += line + "\n"
+		}
 	}
+
+	results = strings.TrimSuffix(results, "\n")
 
 	return results
 }
 
 func rewriteCompressAlgorithm(content string) string {
-	if !needConvert {
-		return content
-	}
-
 	results := ""
 	format := regexp.MustCompile(`(.*)compresstype=(zlib|quicklz)(.*)`)
 	lines := strings.Split(content, "\n")
@@ -356,14 +341,12 @@ func rewriteCompressAlgorithm(content string) string {
 		}
 	}
 
+	results = strings.TrimSuffix(results, "\n")
+
 	return results
 }
 
 func replaceBlocksize(content string) string {
-	if !needConvert {
-		return content
-	}
-
 	results := ""
 	formatRight := regexp.MustCompile(`([^,]+)(, |,)blocksize=\d+($|\))`)
 	formatMiddle := regexp.MustCompile(`([^,]+)(, |,)blocksize=\d+(, |,)(.*)`)
@@ -385,14 +368,12 @@ func replaceBlocksize(content string) string {
 			results += "\n"
 		}
 	}
+
+	results = strings.TrimSuffix(results, "\n")
 	return results
 }
 
 func rewriteAppendonly(content string) string {
-	if !needConvert {
-		return content
-	}
-
 	results := ""
 	format := regexp.MustCompile(`(.*)appendonly=false(.*)`)
 	lines := strings.Split(content, "\n")
@@ -403,6 +384,8 @@ func rewriteAppendonly(content string) string {
 			results += "\n"
 		}
 	}
+
+	results = strings.TrimSuffix(results, "\n")
 
 	return results
 }
@@ -431,7 +414,11 @@ func printColumnDefinitions(metadataFile *utils.FileWithByteCount, columnDefs []
 			line += " NOT NULL"
 		}
 		if column.Encoding != "" {
-			line += fmt.Sprintf(" ENCODING (%s)", rewriteAppendonly(rewriteCompressAlgorithm(replaceBlocksize(column.Encoding))))
+			if destDBVersion.IsHDW() && destDBVersion.Is("3") {
+				line += fmt.Sprintf(" ENCODING (%s)", rewriteAppendonly(rewriteCompressAlgorithm(replaceBlocksize(column.Encoding))))
+			} else {
+				line += fmt.Sprintf(" ENCODING (%s)", column.Encoding)
+			}
 		}
 		lines = append(lines, line)
 	}
@@ -640,11 +627,11 @@ func PrintAlterSequenceStatements(metadataFile *utils.FileWithByteCount,
 func PrintCreateViewStatement(metadataFile *utils.FileWithByteCount, toc *toc.TOC, view View, viewMetadata ObjectMetadata) {
 	start := metadataFile.ByteCount
 	var tablespaceClause string
-	if !needConvert {
-		if view.Tablespace != "" {
-			tablespaceClause = fmt.Sprintf(" TABLESPACE %s", view.Tablespace)
-		}
+
+	if view.Tablespace != "" {
+		tablespaceClause = fmt.Sprintf(" TABLESPACE %s", GetDestTablespace(view.Tablespace))
 	}
+
 	// Option's keyword WITH is expected to be prepended to its options in the SQL statement
 	// Remove trailing ';' at the end of materialized view's definition
 	if !view.IsMaterialized {
@@ -675,9 +662,10 @@ func PrintCreateViewStatement(metadataFile *utils.FileWithByteCount, toc *toc.TO
 
 		*/
 		viewOptions := view.Options
-		if strings.Contains(viewOptions, "mvhashvalue") {
-			viewOptions = ""
+		if gpdbVersion.IsHDW() && gpdbVersion.Is("3") && viewOptions != "" {
+			viewOptions = transformViewOptions(viewOptions)
 		}
+
 		metadataFile.MustPrintf("\n\nCREATE MATERIALIZED VIEW %s%s%s AS %s\nWITH NO DATA\n%s;\n",
 			view.FQN(), viewOptions, tablespaceClause, view.Definition.String[:len(view.Definition.String)-1], view.DistPolicy)
 	}
@@ -686,23 +674,23 @@ func PrintCreateViewStatement(metadataFile *utils.FileWithByteCount, toc *toc.TO
 	PrintObjectMetadata(metadataFile, toc, viewMetadata, view, "")
 }
 
-// A materialized view's column names are automatically factored into it's definition.
-/*
-func PrintCreateMaterializedViewStatement(metadataFile *utils.FileWithByteCount, toc *toc.TOC, mview MaterializedView, mviewMetadata ObjectMetadata) {
-	start := metadataFile.ByteCount
-	var tablespaceClause string
+func transformViewOptions(viewOptions string) string {
+	optionsContent := strings.TrimPrefix(viewOptions, "WITH (")
+	optionsContent = strings.TrimSuffix(optionsContent, ")")
 
-	if !needConvert {
-		if mview.Tablespace != "" {
-			tablespaceClause = fmt.Sprintf(" TABLESPACE %s", mview.Tablespace)
+	options := strings.Split(optionsContent, ",")
+
+	var filteredOptions []string
+	for _, option := range options {
+		option = strings.TrimSpace(option)
+		if !strings.Contains(option, "mvhashvalue") {
+			filteredOptions = append(filteredOptions, option)
 		}
 	}
-	// Option's keyword WITH is expected to be prepended to its options in the SQL statement
-	// Remove trailing ';' at the end of materialized view's definition
-	metadataFile.MustPrintf("\n\nCREATE MATERIALIZED VIEW %s%s%s AS %s\nWITH NO DATA %s;\n", mview.FQN(), mview.Options, tablespaceClause, mview.Definition[:len(mview.Definition)-1], mview.Policy)
 
-	PrintObjectMetadata(metadataFile, toc, mviewMetadata, mview, "")
-	section, entry := mview.GetMetadataEntry()
-	toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
+	if len(filteredOptions) == 0 {
+		return ""
+	}
+
+	return "WITH (" + strings.Join(filteredOptions, ", ") + ")"
 }
-*/

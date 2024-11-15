@@ -29,7 +29,6 @@ type Application struct {
 	queryWrapper        *QueryWrapper
 	timestamp           string
 	applicationName     string
-	convertDDL          bool
 	encodingGuc         SessionGUCs
 }
 
@@ -95,7 +94,8 @@ func (app *Application) SetFlagDefaults(flagSet *pflag.FlagSet) {
 	flagSet.Bool(option.VALIDATE, true, "Perform data validation when copy is complete")
 	flagSet.String(option.SCHEMA_MAPPING_FILE, "", "Schema mapping file, The line format is \"source_dbname.source_schema,dest_dbname.dest_schema\"")
 	flagSet.String(option.OWNER_MAPPING_FILE, "", "Object owner mapping file, The line format is \"source_role_name,dest_role_name\"")
-	flagSet.String(option.TABLESPACE, "", "Create objects in this tablespace")
+	flagSet.String(option.DEST_TABLESPACE, "", "Create all database objects in the specified tablespace on destination database")
+	flagSet.String(option.TABLESPACE_MAPPING_FILE, "", "Tablespace mapping file, The line format is \"source_tablespace_name,dest_tablespace_name\"")
 	flagSet.Bool("version", false, "Print version number and exit")
 	flagSet.String(option.DATA_PORT_RANGE, "1024-65535", "The range of listening port number to choose for receiving data on dest cluster")
 }
@@ -192,13 +192,6 @@ func (app *Application) initializeConn(srcDbName, destDbName string) (*dbconn.DB
 		utils.MustGetFlagInt(option.DEST_PORT),
 		utils.MustGetFlagInt(option.COPY_JOBS))
 
-	for i := 0; i < destMetaConn.NumConns; i++ {
-		destMetaConn.MustExec("set gp_ignore_error_table to on", i)
-		if len(utils.MustGetFlagString(option.TABLESPACE)) > 0 {
-			destMetaConn.MustExec("set default_tablespace to "+utils.MustGetFlagString(option.TABLESPACE), i)
-		}
-	}
-
 	numJobs := utils.MustGetFlagInt(option.COPY_JOBS)
 	gplog.Info("Establishing %v source db (%v) data connection(s)...", numJobs, srcDbName)
 	srcConn = app.initializeConnectionPool(srcDbName,
@@ -215,10 +208,6 @@ func (app *Application) initializeConn(srcDbName, destDbName string) (*dbconn.DB
 }
 
 func (app *Application) initializeClusterResources() {
-	if app.destManageConn.Version.IsHDW() && app.destManageConn.Version.AtLeast("3") {
-		app.convertDDL = true
-	}
-
 	app.destSegmentsIpInfo = utils.GetSegmentsIpAddress(app.destManageConn, app.timestamp)
 	app.srcSegmentsHostInfo = utils.GetSegmentsHost(app.srcManageConn)
 
@@ -255,8 +244,9 @@ func (app *Application) doCopy() {
 		}
 
 		metaManager := NewMetadataManager(srcMetaConn, destMetaConn, app.queryManager, app.queryWrapper,
-			app.convertDDL, app.needGlobalMetaData(i == 0), utils.MustGetFlagBool(option.METADATA_ONLY),
-			app.timestamp, partNameMap, app.queryWrapper.FormUserTableMap(srcTables, destTables), config.GetOwnerMap())
+			app.needGlobalMetaData(i == 0), utils.MustGetFlagBool(option.METADATA_ONLY),
+			app.timestamp, partNameMap, app.queryWrapper.FormUserTableMap(srcTables, destTables),
+			config.GetOwnerMap(), config.GetTablespaceMap())
 		metaManager.Open()
 
 		tablec, pgsd := metaManager.MigrateMetadata(srcTables, destTables)

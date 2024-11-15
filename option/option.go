@@ -1,11 +1,9 @@
 package option
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
 	"github.com/cloudberrydb/cbcopy/utils"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 
@@ -14,42 +12,43 @@ import (
 )
 
 const (
-	APPEND               = "append"
-	DBNAME               = "dbname"
-	DEBUG                = "debug"
-	DEST_DBNAME          = "dest-dbname"
-	DEST_HOST            = "dest-host"
-	DEST_PORT            = "dest-port"
-	DEST_TABLE           = "dest-table"
-	DEST_TABLE_FILE      = "dest-table-file"
-	DEST_USER            = "dest-user"
-	EXCLUDE_TABLE        = "exclude-table"
-	EXCLUDE_TABLE_FILE   = "exclude-table-file"
-	FULL                 = "full"
-	INCLUDE_TABLE        = "include-table"
-	INCLUDE_TABLE_FILE   = "include-table-file"
-	COPY_JOBS            = "copy-jobs"
-	METADATA_JOBS        = "metadata-jobs"
-	METADATA_ONLY        = "metadata-only"
-	GLOBAL_METADATA_ONLY = "global-metadata-only"
-	DATA_ONLY            = "data-only"
-	WITH_GLOBAL_METADATA = "with-global-metadata"
-	COMPRESSION          = "compression"
-	ON_SEGMENT_THRESHOLD = "on-segment-threshold"
-	QUIET                = "quiet"
-	SOURCE_HOST          = "source-host"
-	SOURCE_PORT          = "source-port"
-	SOURCE_USER          = "source-user"
-	TRUNCATE             = "truncate"
-	VALIDATE             = "validate"
-	SCHEMA               = "schema"
-	EXCLUDE_SCHEMA       = "exclude-schema" // test purpose, to reuse gpbackup integration test case
-	DEST_SCHEMA          = "dest-schema"
-	SCHEMA_MAPPING_FILE  = "schema-mapping-file"
-	OWNER_MAPPING_FILE   = "owner-mapping-file"
-	TABLESPACE           = "tablespace"
-	VERBOSE              = "verbose"
-	DATA_PORT_RANGE      = "data-port-range"
+	APPEND                  = "append"
+	DBNAME                  = "dbname"
+	DEBUG                   = "debug"
+	DEST_DBNAME             = "dest-dbname"
+	DEST_HOST               = "dest-host"
+	DEST_PORT               = "dest-port"
+	DEST_TABLE              = "dest-table"
+	DEST_TABLE_FILE         = "dest-table-file"
+	DEST_USER               = "dest-user"
+	EXCLUDE_TABLE           = "exclude-table"
+	EXCLUDE_TABLE_FILE      = "exclude-table-file"
+	FULL                    = "full"
+	INCLUDE_TABLE           = "include-table"
+	INCLUDE_TABLE_FILE      = "include-table-file"
+	COPY_JOBS               = "copy-jobs"
+	METADATA_JOBS           = "metadata-jobs"
+	METADATA_ONLY           = "metadata-only"
+	GLOBAL_METADATA_ONLY    = "global-metadata-only"
+	DATA_ONLY               = "data-only"
+	WITH_GLOBAL_METADATA    = "with-global-metadata"
+	COMPRESSION             = "compression"
+	ON_SEGMENT_THRESHOLD    = "on-segment-threshold"
+	QUIET                   = "quiet"
+	SOURCE_HOST             = "source-host"
+	SOURCE_PORT             = "source-port"
+	SOURCE_USER             = "source-user"
+	TRUNCATE                = "truncate"
+	VALIDATE                = "validate"
+	SCHEMA                  = "schema"
+	EXCLUDE_SCHEMA          = "exclude-schema" // test purpose, to reuse gpbackup integration test case
+	DEST_SCHEMA             = "dest-schema"
+	SCHEMA_MAPPING_FILE     = "schema-mapping-file"
+	OWNER_MAPPING_FILE      = "owner-mapping-file"
+	DEST_TABLESPACE         = "dest-tablespace"
+	TABLESPACE_MAPPING_FILE = "tablespace-mapping-file"
+	VERBOSE                 = "verbose"
+	DATA_PORT_RANGE         = "data-port-range"
 )
 
 const (
@@ -105,101 +104,37 @@ type Option struct {
 	sourceSchemas []*DbSchema
 	destSchemas   []*DbSchema
 
-	ownerMap map[string]string
+	ownerMap      map[string]string
+	tablespaceMap map[string]string
 }
 
 func NewOption(initialFlags *pflag.FlagSet) (*Option, error) {
-	copyMode := CopyModeFull
-	tableMode := TableModeTruncate
+	copyMode, tableMode := CopyModeFull, TableModeTruncate
 
-	sourceDbnames, err := initialFlags.GetStringSlice(DBNAME)
+	sourceDbnames, err := getDbNames(initialFlags, DBNAME)
 	if err != nil {
 		return nil, err
 	}
-
 	if len(sourceDbnames) > 0 {
 		copyMode = CopyModeDb
 	}
 
-	destDbnames, err := initialFlags.GetStringSlice(DEST_DBNAME)
+	destDbnames, err := getDbNames(initialFlags, DEST_DBNAME)
 	if err != nil {
 		return nil, err
 	}
 
-	tables := make([]string, 0)
-	tables, err = initialFlags.GetStringSlice(EXCLUDE_TABLE)
+	excludeTables, err := getTables(initialFlags, EXCLUDE_TABLE, EXCLUDE_TABLE_FILE, "exclude table")
 	if err != nil {
 		return nil, err
 	}
 
-	if len(tables) == 0 {
-		if tables, err = readTableFileByFlag(initialFlags, EXCLUDE_TABLE_FILE); err != nil {
-			return nil, err
-		}
-	}
-
-	excludeTables, err := validateTables("exclude table", tables, false)
+	sourceSchemas, destSchemas, err := getSchemas(initialFlags, &copyMode)
 	if err != nil {
 		return nil, err
 	}
 
-	schemas, err := initialFlags.GetStringSlice(SCHEMA)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(schemas) > 0 {
-		copyMode = CopyModeSchema
-	}
-
-	sourceSchemas, err := validateSchemas(schemas)
-	if err != nil {
-		return nil, err
-	}
-
-	schemas, err = initialFlags.GetStringSlice(DEST_SCHEMA)
-	if err != nil {
-		return nil, err
-	}
-
-	destSchemas, err := validateSchemas(schemas)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(sourceSchemas) == 0 {
-		schemaContent, err := readTableFileByFlag(initialFlags, SCHEMA_MAPPING_FILE)
-		if err != nil {
-			return nil, err
-		}
-
-		ss, ds := parseSchemaMappingFile(schemaContent)
-		if len(ss) > 0 {
-			copyMode = CopyModeSchema
-
-			sourceSchemas, err = validateSchemas(ss)
-			if err != nil {
-				return nil, err
-			}
-			destSchemas, err = validateSchemas(ds)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	tables, err = initialFlags.GetStringSlice(INCLUDE_TABLE)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(tables) == 0 {
-		if tables, err = readTableFileByFlag(initialFlags, INCLUDE_TABLE_FILE); err != nil {
-			return nil, err
-		}
-	}
-
-	includeTables, err := validateTables("include table", tables, true)
+	includeTables, err := getTables(initialFlags, INCLUDE_TABLE, INCLUDE_TABLE_FILE, "include table")
 	if err != nil {
 		return nil, err
 	}
@@ -207,18 +142,7 @@ func NewOption(initialFlags *pflag.FlagSet) (*Option, error) {
 		copyMode = CopyModeTable
 	}
 
-	tables, err = initialFlags.GetStringSlice(DEST_TABLE)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(tables) == 0 {
-		if tables, err = readTableFileByFlag(initialFlags, DEST_TABLE_FILE); err != nil {
-			return nil, err
-		}
-	}
-
-	destTables, err := validateTables("dest table", tables, true)
+	destTables, err := getTables(initialFlags, DEST_TABLE, DEST_TABLE_FILE, "dest table")
 	if err != nil {
 		return nil, err
 	}
@@ -227,12 +151,15 @@ func NewOption(initialFlags *pflag.FlagSet) (*Option, error) {
 		tableMode = TableModeAppend
 	}
 
-	lines, err := readTableFileByFlag(initialFlags, OWNER_MAPPING_FILE)
+	ownerMap, err := getOwnerMap(initialFlags)
 	if err != nil {
 		return nil, err
 	}
 
-	ownerMap := parseOwnerMappingFile(lines)
+	tablespaceMap, err := getTablespaceMap(initialFlags)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Option{
 		copyMode:       copyMode,
@@ -245,11 +172,88 @@ func NewOption(initialFlags *pflag.FlagSet) (*Option, error) {
 		sourceSchemas:  sourceSchemas,
 		destSchemas:    destSchemas,
 		ownerMap:       ownerMap,
+		tablespaceMap:  tablespaceMap,
 	}, nil
-
 }
 
-func validateTables(title string, tableList []string, check bool) ([]*DbTable, error) {
+func getDbNames(flags *pflag.FlagSet, flagName string) ([]string, error) {
+	return flags.GetStringSlice(flagName)
+}
+
+func getTables(flags *pflag.FlagSet, tableFlag, fileFlag, title string) ([]*DbTable, error) {
+	tables, err := flags.GetStringSlice(tableFlag)
+	if err != nil {
+		return nil, err
+	}
+	if len(tables) == 0 {
+		tables, err = utils.ReadTableFileByFlag(flags, fileFlag)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return validateTables(title, tables)
+}
+
+func getSchemas(flags *pflag.FlagSet, copyMode *string) ([]*DbSchema, []*DbSchema, error) {
+	schemas, err := flags.GetStringSlice(SCHEMA)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(schemas) > 0 {
+		*copyMode = CopyModeSchema
+	}
+	sourceSchemas, err := validateSchemas(schemas)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	schemas, err = flags.GetStringSlice(DEST_SCHEMA)
+	if err != nil {
+		return nil, nil, err
+	}
+	destSchemas, err := validateSchemas(schemas)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(sourceSchemas) == 0 {
+		schemaContent, err := utils.ReadTableFileByFlag(flags, SCHEMA_MAPPING_FILE)
+		if err != nil {
+			return nil, nil, err
+		}
+		ss, ds := utils.ParseSchemaMappingFile(schemaContent)
+		if len(ss) > 0 {
+			*copyMode = CopyModeSchema
+			sourceSchemas, err = validateSchemas(ss)
+			if err != nil {
+				return nil, nil, err
+			}
+			destSchemas, err = validateSchemas(ds)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+	}
+	return sourceSchemas, destSchemas, nil
+}
+
+func getOwnerMap(flags *pflag.FlagSet) (map[string]string, error) {
+	return getMapping(flags, OWNER_MAPPING_FILE)
+}
+
+func getTablespaceMap(flags *pflag.FlagSet) (map[string]string, error) {
+	return getMapping(flags, TABLESPACE_MAPPING_FILE)
+}
+
+func getMapping(flags *pflag.FlagSet, fileFlag string) (map[string]string, error) {
+	lines, err := utils.ReadTableFileByFlag(flags, fileFlag)
+	if err != nil {
+		return nil, err
+	}
+	return utils.ParseMappingFile(lines), nil
+}
+
+func validateTables(title string, tableList []string) ([]*DbTable, error) {
 	if len(tableList) == 0 {
 		return nil, nil
 	}
@@ -450,6 +454,20 @@ func (o Option) GetOwnerMap() map[string]string {
 	return o.ownerMap
 }
 
+func (o Option) GetTablespaceMap() map[string]string {
+	destTablespace := utils.MustGetFlagString(DEST_TABLESPACE)
+	if len(destTablespace) > 0 {
+		if len(o.tablespaceMap) != 0 {
+			gplog.Fatal(errors.Errorf("The tablespace map must be empty. Current contents: %v", o.tablespaceMap), "")
+		}
+
+		o.tablespaceMap[destTablespace] = ""
+		return o.tablespaceMap
+	}
+
+	return o.tablespaceMap
+}
+
 func (o Option) validatePartTables(title string, tables []*DbTable, userTables map[string]TableStatistics, dbname string) {
 	for _, t := range tables {
 		if t.Partition == 1 {
@@ -477,146 +495,6 @@ func (o Option) ValidateDestTables(userTables map[string]TableStatistics, dbname
 	o.validatePartTables("dest table", o.destTables, userTables, dbname)
 }
 
-type FqnStruct struct {
-	SchemaName string
-	TableName  string
-}
-
-// https://github.com/greenplum-db/gpbackup/commit/6e9829cf5c12fb8e66cecd8143ac0a7379e44d01
-func QuoteTableNames(conn *dbconn.DBConn, tableNames []string) ([]string, error) {
-	if len(tableNames) == 0 {
-		return []string{}, nil
-	}
-
-	// Properly escape single quote before running quote ident. Postgres
-	// quote_ident escapes single quotes by doubling them
-	escapedTables := make([]string, 0)
-	for _, v := range tableNames {
-		escapedTables = append(escapedTables, utils.EscapeSingleQuotes(v))
-	}
-
-	fqnSlice, err := SeparateSchemaAndTable(escapedTables)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]string, 0)
-
-	quoteIdentTableFQNQuery := `SELECT quote_ident('%s') AS schemaname, quote_ident('%s') AS tablename`
-	for _, fqn := range fqnSlice {
-		queryResultTable := make([]FqnStruct, 0)
-		query := fmt.Sprintf(quoteIdentTableFQNQuery, fqn.SchemaName, fqn.TableName)
-		gplog.Debug("QuoteTableNames, query is %v", query)
-		err := conn.Select(&queryResultTable, query)
-		if err != nil {
-			return nil, err
-		}
-		quoted := queryResultTable[0].SchemaName + "." + queryResultTable[0].TableName
-		result = append(result, quoted)
-	}
-
-	return result, nil
-}
-
-func SeparateSchemaAndTable(tableNames []string) ([]FqnStruct, error) {
-	fqnSlice := make([]FqnStruct, 0)
-	for _, fqn := range tableNames {
-		parts := strings.Split(fqn, ".")
-		if len(parts) > 2 {
-			return nil, errors.Errorf("cannot process an Fully Qualified Name with embedded dots yet: %s", fqn)
-		}
-		if len(parts) < 2 {
-			return nil, errors.Errorf("Fully Qualified Names require a minimum of one dot, specifying the schema and table. Cannot process: %s", fqn)
-		}
-		schema := parts[0]
-		table := parts[1]
-		if schema == "" || table == "" {
-			return nil, errors.Errorf("Fully Qualified Names must specify the schema and table. Cannot process: %s", fqn)
-		}
-
-		currFqn := FqnStruct{
-			SchemaName: schema,
-			TableName:  table,
-		}
-
-		fqnSlice = append(fqnSlice, currFqn)
-	}
-
-	return fqnSlice, nil
-}
-
-func readTableFileByFlag(flagSet *pflag.FlagSet, flag string) ([]string, error) {
-	filename, err := flagSet.GetString(flag)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(filename) > 0 {
-		tables, err := utils.ReadTableFile(filename)
-		if err != nil {
-			return nil, err
-		}
-		return tables, nil
-	}
-
-	return nil, nil
-}
-
-func CheckExclusiveFlags(flags *pflag.FlagSet, flagNames ...string) {
-	numSet := 0
-	for _, name := range flagNames {
-		if flags.Changed(name) {
-			numSet++
-		}
-	}
-	if numSet > 1 {
-		gplog.Fatal(errors.Errorf("The following flags may not be specified together: %s", strings.Join(flagNames, ", ")), "")
-	}
-}
-
-func parseOwnerMappingFile(lines []string) map[string]string {
-	ownerMap := make(map[string]string)
-
-	for _, l := range lines {
-		items := strings.Split(l, ",")
-		if len(items) != 2 {
-			gplog.Fatal(errors.Errorf(`invalid owner mapping file content [%s]: every line
-			should have two fields, seperated by comma. the first field is the source owner
-			name, the second field is the target owner name`, l), "")
-		}
-
-		ownerMap[items[0]] = items[1]
-	}
-
-	return ownerMap
-}
-
-func parseSchemaMappingFile(lines []string) ([]string, []string) {
-	source := make([]string, 0)
-	dest := make([]string, 0)
-
-	for _, l := range lines {
-		items := strings.Split(l, ",")
-		if len(items) != 2 {
-			gplog.Fatal(errors.Errorf(`invalid schema mapping file content [%s]: every line
-			should have two fields, seperated by comma. the first field is the source schema 
-			name, the second field is the target schema name`, l), "")
-		}
-
-		source = append(source, items[0])
-		dest = append(dest, items[1])
-	}
-
-	if lines != nil {
-		if len(source) == 0 {
-			gplog.Fatal(errors.Errorf(`schema mapping file should have at lease one record`), "")
-		}
-
-		return source, dest
-	}
-
-	return nil, nil
-}
-
 func MakeIncludeOptions(initialFlags *pflag.FlagSet, testTableName string) {
 	initialFlags.Set(COPY_JOBS, "1")
 	initialFlags.Set(METADATA_JOBS, "1")
@@ -625,7 +503,3 @@ func MakeIncludeOptions(initialFlags *pflag.FlagSet, testTableName string) {
 	initialFlags.Set(INCLUDE_TABLE, "postgres."+testTableName)
 	initialFlags.Set(TRUNCATE, "true")
 }
-
-// note:
-// options/option.go has getUserTableRelationsWithIncludeFiltering which was changed for GP7 support (https://github.com/greenplum-db/gpbackup/commit/e00d2a1f6c027b2f634177d4b022fe3b70404619)
-// cbcopy don't have that function

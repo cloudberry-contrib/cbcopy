@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/cloudberrydb/cbcopy/option"
+	"github.com/cloudberrydb/cbcopy/utils"
 	"github.com/greenplum-db/gp-common-go-libs/structmatcher"
 
 	// "github.com/greenplum-db/gp-common-go-libs/testhelper"
@@ -32,7 +33,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "CREATE TABLE testschema.testtable(t text)")
 
 			//includeRelationsQuoted, err := option.QuoteTableNames(connectionPool, builtin.MustGetFlagStringArray(option.INCLUDE_RELATION))
-			includeRelationsQuoted, err := option.QuoteTableNames(connectionPool, make([]string, 0))
+			includeRelationsQuoted, err := utils.QuoteTableNames(connectionPool, make([]string, 0))
 
 			Expect(err).NotTo(HaveOccurred())
 
@@ -105,7 +106,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			builtin.SetRelationFilter(option.INCLUDE_TABLE, "testschema.foo")
 
 			//includeRelationsQuoted, err := option.QuoteTableNames(connectionPool, builtin.MustGetFlagStringArray(option.INCLUDE_RELATION))
-			includeRelationsQuoted, err := option.QuoteTableNames(connectionPool, []string{"testschema.foo"})
+			includeRelationsQuoted, err := utils.QuoteTableNames(connectionPool, []string{"testschema.foo"})
 
 			Expect(err).NotTo(HaveOccurred())
 			tables := builtin.GetIncludedUserTableRelations(connectionPool, includeRelationsQuoted)

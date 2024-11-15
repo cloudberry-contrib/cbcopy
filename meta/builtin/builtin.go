@@ -24,20 +24,21 @@ type BuiltinMeta struct {
 	TocFile  string
 }
 
-func NewBuiltinMeta(convert, withGlobal, metaOnly bool,
+func NewBuiltinMeta(withGlobal, metaOnly bool,
 	timestamp string,
 	partNameMap map[string][]string,
 	tableMap map[string]string,
-	ownerMap map[string]string) *BuiltinMeta {
+	ownerMap map[string]string,
+	tablespaceMap map[string]string) *BuiltinMeta {
 	b := &BuiltinMeta{}
 
-	b.ConvertDdl = convert
 	b.Timestamp = timestamp
 	b.WithGlobal = withGlobal
 	b.MetaOnly = metaOnly
 	b.PartNameMap = partNameMap
 	b.TableMap = tableMap
 	b.OwnerMap = ownerMap
+	b.TablespaceMap = tablespaceMap
 	return b
 }
 
@@ -63,8 +64,10 @@ func (b *BuiltinMeta) Open(srcConn, destConn *dbconn.DBConn) {
 	errorTablesMetadata = make(map[string]Empty)
 	redirectSchema = make(map[string]string)
 	inclDestSchema = ""
-	needConvert = b.ConvertDdl
+
 	ownerMap = b.OwnerMap
+
+	TransformTablespace(b.TablespaceMap)
 }
 
 func (b *BuiltinMeta) CopyDatabaseMetaData(tablec chan option.TablePair, donec chan struct{}) utils.ProgressBar {
@@ -145,10 +148,10 @@ func (b *BuiltinMeta) extractDDL(inSchemas, inTables []string) {
 
 	backupSessionGUC(b.SrcConn, metadataFile)
 	if len(inTables) == 0 || b.WithGlobal {
-		backupGlobals(b.SrcConn, b.ConvertDdl, metadataFile)
+		backupGlobals(b.SrcConn, metadataFile)
 	}
 	backupPredata(b.SrcConn, metadataFile, inSchemas, metadataTables, len(inTables) > 0)
-	backupPostdata(b.SrcConn, b.ConvertDdl, metadataFile, inSchemas)
+	backupPostdata(b.SrcConn, metadataFile, inSchemas)
 
 	b.TocFile = fmt.Sprintf("%s/gpAdminLogs/cbcopy_toc_%v", currentUser.HomeDir, b.Timestamp)
 	globalTOC.WriteToFileAndMakeReadOnly(b.TocFile)
@@ -193,18 +196,15 @@ func initlizeProgressBar(numStmts, numTables int, metaonly bool) (utils.Progress
 	return pgsm, pgsm
 }
 
-func backupGlobals(conn *dbconn.DBConn, convert bool, metadataFile *utils.FileWithByteCount) {
+func backupGlobals(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount) {
 	gplog.Info("Writing global database metadata")
 
 	backupResourceQueues(conn, metadataFile)
 	backupResourceGroups(conn, metadataFile)
 	backupRoles(conn, metadataFile)
 	backupRoleGrants(conn, metadataFile)
-	if !convert {
+	if !ShouldReplaceTablespace() {
 		backupTablespaces(conn, metadataFile)
-		backupCreateDatabase(conn, metadataFile)
-	} else {
-		gplog.Info("convert is true, backupTablespaces and backupCreateDatabase are skipped")
 	}
 	backupDatabaseGUCs(conn, metadataFile)
 	backupRoleGUCs(conn, metadataFile)
@@ -364,12 +364,13 @@ func backupPredata(connectionPool *dbconn.DBConn, metadataFile *utils.FileWithBy
 	gplog.Info("Pre-data metadata backup complete")
 }
 
-func backupPostdata(conn *dbconn.DBConn, convert bool, metadataFile *utils.FileWithByteCount, inSchemas []string) {
+func backupPostdata(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount, inSchemas []string) {
 	gplog.Info("Writing post-data metadata")
 
-	if !convert {
+	if !(destDBVersion.IsHDW() && destDBVersion.Is("3")) {
 		backupIndexes(conn, metadataFile)
 	}
+
 	backupRules(conn, metadataFile)
 	backupTriggers(conn, metadataFile)
 	if (conn.Version.IsGPDB() && conn.Version.AtLeast("6")) || conn.Version.IsCBDB() {
@@ -488,4 +489,48 @@ func restorePostdata(conn *dbconn.DBConn, metadataFilename string) {
 	}
 
 	gplog.Info("Post-data metadata restore complete")
+}
+
+func TransformTablespace(tablespaceMap map[string]string) {
+	if len(tablespaceMap) == 0 {
+		destTablespace = ""
+		destTablespaceMap = make(map[string]string)
+		return
+	}
+
+	if len(tablespaceMap) == 1 {
+		for key, value := range tablespaceMap {
+			if value == "" {
+				destTablespace = key
+				destTablespaceMap = make(map[string]string)
+				return
+			}
+		}
+	}
+
+	destTablespace = ""
+	destTablespaceMap = make(map[string]string)
+	for key, value := range tablespaceMap {
+		destTablespaceMap[key] = value
+	}
+}
+
+func ShouldReplaceTablespace() bool {
+	if destTablespace == "" && len(destTablespaceMap) == 0 {
+		return false
+	}
+
+	return true
+}
+
+func GetDestTablespace(tablespace string) string {
+	if destTablespace != "" {
+		return destTablespace
+	}
+
+	if value, exists := destTablespaceMap[tablespace]; exists {
+		return value
+	}
+
+	return tablespace
 }

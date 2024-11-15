@@ -382,8 +382,11 @@ func NewFlagCombinationValidator(flags *pflag.FlagSet) *FlagCombinationValidator
 			{option.GLOBAL_METADATA_ONLY, option.ON_SEGMENT_THRESHOLD, option.METADATA_ONLY},
 			{option.DEST_TABLE_FILE, option.DEST_DBNAME, option.DEST_SCHEMA, option.SCHEMA_MAPPING_FILE},
 			{option.OWNER_MAPPING_FILE, option.DATA_ONLY},
-			{option.TABLESPACE, option.DATA_ONLY, option.GLOBAL_METADATA_ONLY},
-			{option.TABLESPACE, option.DEST_TABLE, option.DEST_TABLE_FILE},
+			{option.DEST_TABLESPACE, option.DATA_ONLY, option.GLOBAL_METADATA_ONLY},
+			{option.DEST_TABLESPACE, option.DEST_TABLE, option.DEST_TABLE_FILE},
+			{option.TABLESPACE_MAPPING_FILE, option.DEST_TABLESPACE},
+			{option.TABLESPACE_MAPPING_FILE, option.DATA_ONLY, option.GLOBAL_METADATA_ONLY},
+			{option.TABLESPACE_MAPPING_FILE, option.DEST_TABLE, option.DEST_TABLE_FILE},
 		},
 	}
 }

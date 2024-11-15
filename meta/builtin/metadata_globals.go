@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -424,11 +425,12 @@ func PrintRoleGUCStatements(metadataFile *utils.FileWithByteCount, toc *toc.TOC,
 				dbString = fmt.Sprintf("IN DATABASE %s ", roleGUC.DbName)
 			}
 
-			if needConvert && strings.Contains(roleGUC.Config, "SET default_tablespace") {
-				continue
+			gucConfig := roleGUC.Config
+			if strings.Contains(gucConfig, "SET default_tablespace") {
+				gucConfig = transformRoleDefaultTablespace(gucConfig)
 			}
 
-			metadataFile.MustPrintf("\n\nALTER ROLE %s %s%s;", roleName, dbString, roleGUC.Config)
+			metadataFile.MustPrintf("\n\nALTER ROLE %s %s%s;", roleName, dbString, gucConfig)
 
 			section, entry := roleGUC.GetMetadataEntry()
 			toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
@@ -477,4 +479,19 @@ func PrintCreateTablespaceStatements(metadataFile *utils.FileWithByteCount, toc 
 		}
 		PrintObjectMetadata(metadataFile, toc, tablespaceMetadata[tablespace.GetUniqueID()], tablespace, "")
 	}
+}
+
+func transformRoleDefaultTablespace(gucConfig string) string {
+	// Define a regular expression to match the tablespace name
+	re := regexp.MustCompile(`SET default_tablespace TO '([^']+)'`)
+
+	matches := re.FindStringSubmatch(gucConfig)
+	if len(matches) < 2 {
+		return gucConfig
+	}
+
+	// Extract the original tablespace name
+	originalTablespace := matches[1]
+	newTablespace := GetDestTablespace(originalTablespace)
+	return fmt.Sprintf("SET default_tablespace TO '%s'", newTablespace)
 }

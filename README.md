@@ -7,9 +7,9 @@ cbcopy is designed to migrate Greenplum Database clusters, including both metada
 ## How does cbcopy work?
 
 ### Metadata migration
-The metadata migration feature of cbcopy is based on gpbackup. Its primary advantage over the built-in `pg_dump` of GPDB lies in its use of batch retrieval for metadata. Unlike `pg_dump`, which fetches metadata one row at a time, cbcopy retrieves it in batches. This approach significantly enhances performance, particularly when migrating large volumes of metadata from the source database compared to `pg_dump`.
-### Data migration
+The metadata migration feature of cbcopy is based on gpbackup. Compared to GPDB's built-in `pg_dump`, cbcopy's main advantage is its ability to retrieve metadata in batches. While `pg_dump` fetches metadata one row or a few rows at a time, cbcopy retrieves it in batches. This batch processing approach significantly enhances performance, especially when handling large volumes of metadata, making it much faster than `pg_dump`.
 
+### Data migration
 Both GPDB and CBDB support starting programs via SQL commands, and cbcopy utilizes this feature. During data migration, it uses SQL commands to start a program on the target database to receive and load data, while simultaneously using SQL commands to start a program on the source database to unload data and send it to the program on the target database.
 
 ## Pre-Requisites
@@ -121,14 +121,63 @@ cbcopy supports two data loading modes.
 
 ### Object dependencies
 
-If the tables you are migrating depend on certain global objects, you need to include the `--with-global-metadata` option (default: false) during the migration; otherwise, the creation of these tables in the target database will fail.
+If the tables you are migrating depend on certain global objects (such as tablespaces), you have two options:
+
+1. Include the `--with-global-metadata` option (default: false) during migration, which will automatically create these global objects in the target database.
+
+2. If you choose not to use `--with-global-metadata`, you must manually create these global objects in the target database before running the migration. For example:
+   ```sql
+   -- If your tables use custom tablespaces, create them first:
+   CREATE TABLESPACE custom_tablespace LOCATION '/path/to/tablespace';
+   ```
+
+If neither option is taken, the creation of dependent tables in the target database will fail with errors like "tablespace 'custom_tablespace' does not exist".
 
 ### Role
-If you want to change the table owner information during migration, which means you do not want to create the same role in the target database (disable the `--with-global-metadata` option), you need to first create the corresponding role in the target database. Then, use the `--owner-mapping-file` to specify the mapping between the source role and the target role; otherwise, the creation of tables in the target database will fail.
+If you want to change the ownership of the tables during migration without creating identical roles in the target database (by disabling the `--with-global-metadata` option), you need to:
+
+1. First create the target roles in the target database
+2. Use the `--owner-mapping-file` to specify the mapping between source and target roles
+
+For example, if you have a mapping file with:
+```
+source_role1,target_role1
+source_role2,target_role2
+```
+
+The migration process will execute statements like:
+```sql
+ALTER TABLE table_name OWNER TO target_role1;
+```
+
+If the target role doesn't exist in the target database, these ownership change statements will fail with an error like "role 'target_role1' does not exist".
 
 ### Tablespace
-- `--tablespace` - We support migrating all source database objects into a single tablespace on the target database(Other modes besides the `--full` mode). If you need to migrate database objects from different schemas into different tablespaces, the best practice might be to migrate one schema at a time from the source database
+cbcopy provides three ways to handle tablespace migration:
 
+1. **Default Mode** - When no tablespace options are specified, objects will be created in the same tablespace names as they were in the source database. You have two options to ensure the tablespaces exist in the target database:
+   - Use `--with-global-metadata` to automatically create matching tablespaces
+   - Manually create the tablespaces in the target database before migration:
+     ```sql
+     CREATE TABLESPACE custom_space LOCATION '/path/to/tablespace';
+     ```
+
+2. **Single Target Tablespace** (`--dest-tablespace`) - Migrate all source database objects into a single specified tablespace on the target database, regardless of their original tablespace locations. For example:
+   ```bash
+   cbcopy --dest-tablespace=new_space ...
+   ```
+
+3. **Tablespace Mapping** (`--tablespace-mapping-file`) - Map source tablespaces to different target tablespaces using a mapping file. This is useful when you want to maintain separate tablespaces or map them to different locations. The mapping file format is:
+   ```
+   source_tablespace1,target_tablespace1
+   source_tablespace2,target_tablespace2
+   ```
+
+Note: 
+- For the default mode, either use `--with-global-metadata` or ensure all required tablespaces exist in the target database before migration
+- If you need to migrate objects from different schemas into different tablespaces, you can either:
+  1. Use `--tablespace-mapping-file` to specify all mappings at once
+  2. Migrate one schema at a time using `--dest-tablespace` with different target tablespaces
 
 ### Parallel Jobs
 
@@ -145,19 +194,40 @@ cbcopy internally supports three copy strategies for tables.
 - `Copy On Segment` - If the table's statistics `pg_class->reltuples` is greater than `--on-segment-threshold`, and both the source and target databases have the same version and the same number of nodes, cbcopy will enable the `Copy On Segment` strategy for this table. This means that data migration between the source and target databases will occur in parallel across all segment nodes without data redistribution.
 - `Copy on External Table` - For tables that do not meet the conditions for the above two strategies, cbcopy will enable the `Copy On External Table` strategy. This means that data migration between the source and target databases will occur in parallel across all segment nodes with data redistribution.
 
-### Result files
-After the cbcopy finishes running, it generates some files in the `$USER/gpAdminLogs` directory. The `cbcopy_$timestamp.log` file contains all the logs, including debugging and error messages. Additionally, there will be `cbcopy_succeed_$timestamp and cbcopy_failed_$timestamp` files, which contain the tables that were processed successfully and those that failed.
+### Log Files and Migration Results
 
-### Multiple migrations
-If, after migration, some tables migrate successfully while others fail, we can pass the `cbcopy_succeed_$timestamp` file to the `--exclude-table-file` option. This way, we can avoid re-migrating the tables that have already been successfully migrated.
+After cbcopy completes its execution, it generates several files in the `$USER/gpAdminLogs` directory:
 
-### Statistics Used by the cbcopy
-When migrating in a production environment, a good strategy is to perform an analyze command on tables with a large amount of data in advance. cbcopy will use statistics of the table to decide whether to migrate only through the coordinator or through all the segment nodes
+1. **Log File**
+   - `cbcopy_$timestamp.log` - Contains all execution logs, including:
+     - Debug messages
+     - Error messages
+     - Operation details
+
+2. **Migration Result Files**
+   - `cbcopy_succeed_$timestamp` - Lists all successfully migrated tables
+   - `cbcopy_failed_$timestamp` - Lists all tables that failed to migrate
+
+These files are useful for:
+- Monitoring the migration process
+- Troubleshooting any issues
+- Planning retry attempts for failed migrations
 
 ## Examples
+
+### Basic Migration
+```bash
+# Migrate specific schemas
+cbcopy --with-global-metadata --source-host=127.0.0.1 \
+    --source-port=45432 --source-user=gpadmin \
+    --dest-host=127.0.0.1 --dest-port=55432 \
+    --dest-user=cbdb --dbname=testdb \
+    --truncate
 ```
-cbcopy --with-globalmeta --source-host=127.0.0.1 --source-port=45432 --source-user=gpadmin --dest-host=127.0.0.1 --dest-port=55432 --dest-user=cbdb --dbname=testdb --truncate
-```
+
+For more detailed examples, you can refer to our test files:
+- [end_to_end_suite_test.go](end_to_end/end_to_end_suite_test.go)
+- [tablespace_test.go](end_to_end/tablespace_test.go)
 
 ## cbcopy reference
 ```
@@ -167,45 +237,42 @@ Usage:
   cbcopy [flags]
 
 Flags:
-      --append                       Append destination table if it exists
-      --compression                  Transfer the compression data, instead of the plain data
-      --copy-jobs int                The maximum number of tables that concurrently copies, valid values are between 1 and 512 (default 4)
-      --data-only                    Only copy data, do not copy metadata
-      --data-port-range string       The range of listening port number to choose for receiving data on dest cluster (default "1024-65535")
-      --dbname strings               The database(s) to be copied, separated by commas
-      --debug                        Print debug log messages
-      --dest-dbname strings          The database(s) in destination cluster to copy to, separated by commas
-      --dest-host string             The host of destination cluster (default "127.0.0.1")
-      --dest-port int                The port of destination cluster (default 5432)
-      --dest-schema strings          The schema(s) in destination database to copy to, separated by commas
-      --dest-table strings           The renamed dest table(s) for include-table, separated by commas
-      --dest-table-file string       The renamed dest table(s) for include-table-file, The line format is "dbname.schema.table"
-      --dest-user string             The user of destination cluster (default "gpadmin")
-      --exclude-table strings        Copy all tables except the specified table(s), separated by commas
-      --exclude-table-file string    Copy all tables except the specified table(s) listed in the file, The line format is "dbname.schema.table"
-      --full                         Copy full data cluster
-      --global-metadata-only         Only copy global metadata, do not copy data
-      --help                         Print help info and exit
-      --include-table strings        Copy only the specified table(s), separated by commas, in the format database.schema.table
-      --include-table-file string    Copy only the specified table(s) listed in the file, The line format is "dbname.schema.table"
-      --ip-mapping-file string       ip mapping file (format, ip1:ip2)
-      --metadata-jobs int            The maximum number of metadata restore tasks, valid values are between 1 and 512 (default 2)
-      --metadata-only                Only copy metadata, do not copy data
-      --on-segment-threshold int     Copy between coordinators directly, if the table has smaller or same number of rows (default 1000000)
-      --owner-mapping-file string    Object owner mapping file, The line format is "source_role_name,dest_role_name"
-      --quiet                        Suppress non-warning, non-error log messages
-      --schema strings               The schema(s) to be copied, separated by commas, in the format database.schema
-      --schema-mapping-file string   Schema mapping file, The line format is "source_dbname.source_schema,dest_dbname.dest_schema"
-      --source-host string           The host of source cluster (default "127.0.0.1")
-      --source-port int              The port of source cluster (default 5432)
-      --source-user string           The user of source cluster (default "gpadmin")
-      --statistics-file string       Table statistics file
-      --statistics-jobs int          The maximum number of collecting statistics tasks, valid values are between 1 and 64512 (default 4)
-      --statistics-only              Only collect statistics of source cluster and write to file
-      --tablespace string            Create objects in this tablespace
-      --truncate                     Truncate destination table if it exists prior to copying data
-      --validate                     Perform data validation when copy is complete (default true)
-      --verbose                      Print verbose log messages
-      --version                      Print version number and exit
-      --with-global-metadata         Copy global metadata objects (default: false)
+      --append                           Append destination table if it exists
+      --compression                      Transfer the compression data, instead of the plain data
+      --copy-jobs int                    The maximum number of tables that concurrently copies, valid values are between 1 and 512 (default 4)
+      --data-only                        Only copy data, do not copy metadata
+      --data-port-range string           The range of listening port number to choose for receiving data on dest cluster (default "1024-65535")
+      --dbname strings                   The database(s) to be copied, separated by commas
+      --debug                            Print debug log messages
+      --dest-dbname strings              The database(s) in destination cluster to copy to, separated by commas
+      --dest-host string                 The host of destination cluster (default "127.0.0.1")
+      --dest-port int                    The port of destination cluster (default 5432)
+      --dest-schema strings              The schema(s) in destination database to copy to, separated by commas
+      --dest-table strings               The renamed dest table(s) for include-table, separated by commas
+      --dest-table-file string           The renamed dest table(s) for include-table-file, The line format is "dbname.schema.table"
+      --dest-tablespace string           Create all database objects in the specified tablespace on destination database
+      --dest-user string                 The user of destination cluster (default "gpadmin")
+      --exclude-table strings            Copy all tables except the specified table(s), separated by commas
+      --exclude-table-file string        Copy all tables except the specified table(s) listed in the file, The line format is "dbname.schema.table"
+      --full                             Copy full data cluster
+      --global-metadata-only             Only copy global metadata, do not copy data
+      --help                             Print help info and exit
+      --include-table strings            Copy only the specified table(s), separated by commas, in the format database.schema.table
+      --include-table-file string        Copy only the specified table(s) listed in the file, The line format is "dbname.schema.table"
+      --metadata-jobs int                The maximum number of metadata restore tasks, valid values are between 1 and 512 (default 2)
+      --metadata-only                    Only copy metadata, do not copy data
+      --on-segment-threshold int         Copy between Coordinators directly, if the table has smaller or same number of rows (default 1000000)
+      --owner-mapping-file string        Object owner mapping file, The line format is "source_role_name,dest_role_name"
+      --quiet                            Suppress non-warning, non-error log messages
+      --schema strings                   The schema(s) to be copied, separated by commas, in the format database.schema
+      --schema-mapping-file string       Schema mapping file, The line format is "source_dbname.source_schema,dest_dbname.dest_schema"
+      --source-host string               The host of source cluster (default "127.0.0.1")
+      --source-port int                  The port of source cluster (default 5432)
+      --source-user string               The user of source cluster (default "gpadmin")
+      --tablespace-mapping-file string   Tablespace mapping file, The line format is "source_tablespace_name,dest_tablespace_name"
+      --truncate                         Truncate destination table if it exists prior to copying data
+      --validate                         Perform data validation when copy is complete (default true)
+      --verbose                          Print verbose log messages
+      --version                          Print version number and exit
+      --with-global-metadata             Copy global metadata objects (default: false)
 ```
