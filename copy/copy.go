@@ -16,6 +16,48 @@ import (
 	"github.com/spf13/pflag"
 )
 
+/*
+Package copy provides the core functionality for executing data copy operations
+between source and destination databases in a distributed environment. This file,
+copy.go, defines the main application logic for setting up, executing, and
+tearing down the copy process, ensuring data is transferred efficiently and
+reliably.
+
+The main components of this file include:
+
+1. Application Struct:
+   - Represents the main application responsible for managing the entire copy
+     process.
+   - Holds connections to the source and destination databases, manages session
+     settings, and coordinates the overall workflow.
+
+2. Initialization and Setup:
+   - The Application initializes logging, sets default flag values, and validates
+     command-line flags.
+   - Establishes database connections and prepares the environment for data
+     transfer.
+
+3. Copy Process:
+   - The Application orchestrates the data copy process, including metadata
+     migration and table data transfer.
+   - Utilizes a CopyManager to handle concurrent copying of tables and a
+     MetadataManager for managing metadata operations.
+
+4. Cleanup and Teardown:
+   - Ensures all resources, such as database connections, are properly closed
+     after the copy process is complete.
+   - Handles errors and performs necessary cleanup in case of failures or
+     interruptions.
+
+5. Command Execution:
+   - The Run method serves as the entry point for executing the copy operation,
+     coordinating the setup, execution, and teardown phases.
+
+This file is essential for managing data transfer operations in distributed
+database systems, providing a structured and efficient approach to copying data
+between clusters.
+*/
+
 type SessionGUCs struct {
 	ClientEncoding string `db:"client_encoding"`
 }
@@ -59,6 +101,7 @@ func (app *Application) Initialize(cmd *cobra.Command) {
 	utils.InitializeSignalHandler(app.doCleanup, "cbcopy process", &utils.WasTerminated)
 }
 
+// SetFlagDefaults sets the default values for the command-line flags.
 func (app *Application) SetFlagDefaults(flagSet *pflag.FlagSet) {
 	flagSet.Bool(option.APPEND, false, "Append destination table if it exists")
 	flagSet.StringSlice(option.DBNAME, []string{}, "The database(s) to be copied, separated by commas")
@@ -100,6 +143,7 @@ func (app *Application) SetFlagDefaults(flagSet *pflag.FlagSet) {
 	flagSet.String(option.DATA_PORT_RANGE, "1024-65535", "The range of listening port number to choose for receiving data on dest cluster")
 }
 
+// doFlagValidation validates the command-line flags and performs necessary checks.
 func (app *Application) doFlagValidation(cmd *cobra.Command) {
 	vm := NewValidatorManager(cmd.Flags())
 	err := vm.ValidateAll()
@@ -129,6 +173,8 @@ func (app *Application) initializeConnectionPool(dbname, username, host string, 
 	return dbConn
 }
 
+// doSetup initializes the application, sets the logger verbosity, and prepares
+// for the copy operation based on the specified flags.
 func (app *Application) doSetup() {
 	app.setLoggerVerbosity()
 
@@ -228,6 +274,10 @@ func (app *Application) needGlobalMetaData(isFirstDB bool) bool {
 	return false
 }
 
+// doCopy orchestrates the entire data copy process for each database pair.
+// It initializes cluster resources, manages metadata migration, and handles
+// the copying of table data. The function tracks the total elapsed time for
+// the copy operation and ensures proper cleanup and resource management.
 func (app *Application) doCopy() {
 	start := time.Now()
 
@@ -315,6 +365,8 @@ func (app *Application) doTeardown() {
 	}
 }
 
+// doCleanup handles the cleanup process, including closing connections,
+// terminating hanging copy sessions, and ensuring proper resource management.
 func (app *Application) doCleanup(failed bool) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -343,6 +395,7 @@ func (app *Application) doCleanup(failed bool) {
 	}
 }
 
+// Run is the main entry point for the cbcopy application.
 func (app *Application) Run(cmd *cobra.Command) {
 	defer app.doTeardown()
 

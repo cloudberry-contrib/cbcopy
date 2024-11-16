@@ -12,6 +12,45 @@ import (
 	"github.com/greenplum-db/gp-common-go-libs/operating"
 )
 
+/*
+Package copy provides functionality for managing and executing data copy operations
+between source and destination databases in a distributed environment. This file,
+copy_manager.go, defines the core components and logic for orchestrating the copy
+process, ensuring data is transferred efficiently and reliably.
+
+The main components of this file include:
+
+1. TableCopier Struct:
+   - Represents a worker responsible for copying a specific table from the source
+     to the destination database.
+   - Manages the preparation, execution, and cleanup of the copy operation for a
+     single table.
+
+2. CopyManager Struct:
+   - Manages the overall copy process, coordinating multiple TableCopier workers
+     to handle the copying of multiple tables concurrently.
+   - Maintains connections to the source and destination databases, as well as
+     progress tracking and result logging.
+
+3. Copy Process:
+   - The CopyManager initializes and manages a pool of TableCopier workers, each
+     responsible for copying a table.
+   - Each TableCopier prepares the destination table, executes the data copy, and
+     handles any errors or cleanup tasks.
+   - The process is designed to handle large-scale data transfers efficiently,
+     leveraging parallelism and robust error handling.
+
+4. Reporting and Cleanup:
+   - The CopyManager generates a report summarizing the success, failure, and
+     skipped status of each table copy operation.
+   - Ensures all resources, such as database connections and file handles, are
+     properly closed after the copy process is complete.
+
+This file is essential for managing data transfer operations in distributed
+database systems, providing a structured and efficient approach to copying data
+between clusters.
+*/
+
 type TableCopier struct {
 	manager      *CopyManager
 	srcTable     option.Table
@@ -35,6 +74,10 @@ func NewTableCopier(manager *CopyManager,
 	}
 }
 
+// Copy performs the data copy operation for a single table.
+// It checks if the copy should be skipped, prepares the destination,
+// executes the data copy, and commits the transaction if successful.
+// Cleanup is handled automatically at the end of the operation.
 func (tc *TableCopier) Copy() {
 	var inTxn bool
 	var err error
@@ -114,6 +157,9 @@ func (tc *TableCopier) shouldSkipCopy() bool {
 	return true
 }
 
+// cleanupAfterCopy handles the post-copy operations, updating the progress bar
+// and recording the result of the copy operation. It logs whether the table copy
+// was skipped, failed, or succeeded, and performs a rollback if necessary.
 func (tc *TableCopier) cleanupAfterCopy(isSkipped bool, inTxn bool, err error) {
 	tc.manager.progressBar.Increment()
 
@@ -216,6 +262,9 @@ func NewCopyManager(src, dest, destManageConn *dbconn.DBConn,
 	return manager
 }
 
+// Copy manages the concurrent copying of tables from the source to the destination database.
+// It initializes a pool of workers, each responsible for copying a table, and waits for all
+// workers to complete. The function ensures that the table channel is closed when appropriate.
 func (m *CopyManager) Copy(tables chan option.TablePair) {
 	var wg sync.WaitGroup
 

@@ -84,7 +84,7 @@ func (m *MetadataManager) MigrateMetadata(srcTables, destTables []option.Table) 
 	return tablec, pgd
 }
 
-// HandlePostDataTask manages all post-data operations
+// RestorePostMetadata manages all post-data operations
 func (m *MetadataManager) RestorePostMetadata(dbname, timestamp string) {
 	if !config.ContainsMetadata(utils.MustGetFlagBool(option.METADATA_ONLY), utils.MustGetFlagBool(option.DATA_ONLY)) {
 		return
