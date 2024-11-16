@@ -174,7 +174,6 @@ func GetFunctions(connectionPool *dbconn.DBConn) []Function {
 				FROM pg_options_to_table(proconfig)), ' '), '') AS proconfig,
 			procost,
 			prorows,
-			prodataaccess,
 			prokind,
 			prosupport,
 			l.lanname AS language,
