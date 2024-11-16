@@ -1,6 +1,6 @@
 # cbcopy
 
-cbcopy is designed to migrate Greenplum Database clusters, including both metadata and data, to Cloudberry Database clusters. It is also used for data migration between different Cloudberry Database clusters for disaster recovery and specific version upgrades.
+cbcopy is designed to migrate Greenplum Database clusters, including both metadata and data, to Cloudberry Database clusters. While primarily designed for Greenplum to Cloudberry migration, it can also be effectively used for data migration between Greenplum Database clusters, as well as between different Cloudberry Database clusters for disaster recovery and specific version upgrades.
 
 ![cbcopy_arch](.github/cbcopy_arch.png)
 
@@ -97,8 +97,9 @@ Before migrating data, you need to copy cbcopy_helper to the `$GPHOME/bin` direc
 cbcopy relies on the "COPY ON SEGMENT" command of the database, so it has specific version requirements for the database.
 
 - `GPDB 4.x` - A minimum of GPDB version 4.3.17 or higher is required. If your version does not meet this requirement, you can upgrade to GPDB 4.3.17.
-- `GPDB 5.x` - cbcopy is compatible with all versions of GPDB 5.x.
+- `GPDB 5.x` - A minimum of GPDB version 5.1.0 or higher is required. If your version does not meet this requirement, you can upgrade to GPDB 5.1.0.
 - `GPDB 6.x` - cbcopy is compatible with all versions of GPDB 6.x.
+- `GPDB 7.x` - cbcopy is compatible with all versions of GPDB 7.x.
 - `CBDB 1.x` - cbcopy is compatible with all versions of CBDB 1.x.
 
 ### Migration Modes
