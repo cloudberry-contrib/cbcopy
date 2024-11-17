@@ -17,12 +17,7 @@ import (
 )
 
 /*
-Package copy provides various strategies for copying data between source and
-destination clusters in a distributed database environment. The strategies are
-designed to handle different configurations and sizes of source and destination
-clusters, optimizing for performance and resource utilization.
-
-The main components of this package include:
+The main components of this file include:
 
 1. CopyCommand Interface:
    - Defines the methods required for any copy strategy, including CopyTo and

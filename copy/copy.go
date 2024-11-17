@@ -17,12 +17,6 @@ import (
 )
 
 /*
-Package copy provides the core functionality for executing data copy operations
-between source and destination databases in a distributed environment. This file,
-copy.go, defines the main application logic for setting up, executing, and
-tearing down the copy process, ensuring data is transferred efficiently and
-reliably.
-
 The main components of this file include:
 
 1. Application Struct:

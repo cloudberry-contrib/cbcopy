@@ -13,11 +13,6 @@ import (
 )
 
 /*
-Package copy provides functionality for managing and executing data copy operations
-between source and destination databases in a distributed environment. This file,
-copy_manager.go, defines the core components and logic for orchestrating the copy
-process, ensuring data is transferred efficiently and reliably.
-
 The main components of this file include:
 
 1. TableCopier Struct:
