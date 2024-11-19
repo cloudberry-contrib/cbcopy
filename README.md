@@ -214,6 +214,22 @@ These files are useful for:
 - Troubleshooting any issues
 - Planning retry attempts for failed migrations
 
+### Handling Failed Migrations
+
+When a migration fails partially (some tables succeed while others fail), cbcopy generates two files:
+- `cbcopy_succeed_$timestamp` - Lists all successfully migrated tables
+- `cbcopy_failed_$timestamp` - Lists all tables that failed to migrate
+
+For retry attempts, you can skip previously successful tables by using the success file:
+```bash
+cbcopy --exclude-table-file=cbcopy_succeed_$timestamp ...
+```
+
+This approach helps you:
+- Save time by not re-migrating successful tables
+- Reduce the risk of data inconsistency
+- Focus only on resolving failed migrations
+
 ## Examples
 
 ### Basic Migration
