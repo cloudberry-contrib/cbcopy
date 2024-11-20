@@ -238,7 +238,8 @@ This approach helps you:
 cbcopy --with-global-metadata --source-host=127.0.0.1 \
     --source-port=45432 --source-user=gpadmin \
     --dest-host=127.0.0.1 --dest-port=55432 \
-    --dest-user=cbdb --dbname=testdb \
+    --dest-user=cbdb --schema=source_db.source_schema \
+    --dest-schema=target_db.target_schema \
     --truncate
 ```
 
