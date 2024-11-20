@@ -47,11 +47,9 @@ func GetSegmentsIpAddress(conn *dbconn.DBConn, timestamp string) []SegmentIpInfo
 	for _, host := range hosts {
 		gplog.Debug("Resolving IP address of dest segment \"%v\"", host.Hostname)
 		segIp := getSegmentIpAddress(conn, timestamp, int(host.Content), host.Hostname)
-		results = append(results, SegmentIpInfo{int32(host.Content), segIp})
-	}
+		gplog.Debug("dest segment content %v ip address %v", host.Content, segIp)
 
-	for _, seg := range results {
-		gplog.Debug("dest segment content %v ip address %v", seg.Content, seg.Ip)
+		results = append(results, SegmentIpInfo{int32(host.Content), segIp})
 	}
 
 	return results

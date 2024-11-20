@@ -249,7 +249,14 @@ func (app *Application) initializeConn(srcDbName, destDbName string) (*dbconn.DB
 
 func (app *Application) initializeClusterResources() {
 	app.destSegmentsIpInfo = utils.GetSegmentsIpAddress(app.destManageConn, app.timestamp)
+	if len(app.destSegmentsIpInfo) == 0 {
+		gplog.FatalOnError(fmt.Errorf("no destination segments found"))
+	}
+
 	app.srcSegmentsHostInfo = utils.GetSegmentsHost(app.srcManageConn)
+	if len(app.srcSegmentsHostInfo) == 0 {
+		gplog.FatalOnError(fmt.Errorf("no source segments found"))
+	}
 
 	ph := NewPortHelper(app.destManageConn)
 	err := ph.CreateHelperPortTable(app.timestamp)
