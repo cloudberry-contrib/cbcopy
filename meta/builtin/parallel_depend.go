@@ -112,7 +112,8 @@ func executeStatementsForDependentObject(conn *dbconn.DBConn, runningInfos chan 
 		gplog.Debug("executeStatementsForDependentObject, query is %v", info.statement.Statement)
 		_, err := conn.Exec(info.statement.Statement, whichConn)
 		if err != nil && !strings.Contains(err.Error(), "already exists") {
-			gplog.Error("[Worker %v][conn %v] Error encountered when executing statement: %s \nError was: %s", whichConn, conn, strings.TrimSpace(info.statement.Statement), err.Error())
+			gplog.Error("[Worker %v] Error encountered when executing statement: %s Error was: %s",
+				whichConn, strings.TrimSpace(info.statement.Statement), err.Error())
 
 			atomic.AddInt32(numErrors, 1)
 			errMutex.Lock()
