@@ -73,7 +73,7 @@ func (b *BuiltinMeta) Open(srcConn, destConn *dbconn.DBConn) {
 func (b *BuiltinMeta) CopyDatabaseMetaData(tablec chan option.TablePair, donec chan struct{}) utils.ProgressBar {
 	gplog.Info("Copying metadata from database \"%v\" to \"%v\"", b.SrcConn.DBName, b.DestConn.DBName)
 
-	b.extractDDL(nil, nil)
+	b.extractDDL(nil, nil, false)
 	return b.executeDDL(tablec, donec)
 }
 
@@ -93,7 +93,7 @@ func (b *BuiltinMeta) CopySchemaMetaData(sschemas, dschemas []*option.DbSchema, 
 			b.SrcConn.DBName, v.Schema, b.DestConn.DBName, dschema)
 	}
 
-	b.extractDDL(includeSchemas, nil)
+	b.extractDDL(includeSchemas, nil, false)
 	return b.executeDDL(tablec, donec)
 }
 
@@ -111,7 +111,7 @@ func (b *BuiltinMeta) CopyTableMetaData(dschemas []*option.DbSchema,
 		inclDestSchema = dschemas[0].Schema
 	}
 
-	b.extractDDL(includeSchemas, includeRelations)
+	b.extractDDL(includeSchemas, includeRelations, true)
 	return b.executeDDL(tablec, donec)
 }
 
@@ -138,7 +138,7 @@ func (b *BuiltinMeta) Close() {
 	b.DestConn.Close()
 }
 
-func (b *BuiltinMeta) extractDDL(inSchemas, inTables []string) {
+func (b *BuiltinMeta) extractDDL(inSchemas, inTables []string, tableOnly bool) {
 	currentUser, _ := operating.System.CurrentUser()
 	b.MetaFile = fmt.Sprintf("%s/gpAdminLogs/cbcopy_meta_%v", currentUser.HomeDir, b.Timestamp)
 	gplog.Info("Metadata will be written to %s", b.MetaFile)
@@ -151,7 +151,10 @@ func (b *BuiltinMeta) extractDDL(inSchemas, inTables []string) {
 		backupGlobals(b.SrcConn, metadataFile)
 	}
 	backupPredata(b.SrcConn, metadataFile, inSchemas, metadataTables, len(inTables) > 0)
-	backupPostdata(b.SrcConn, metadataFile, inSchemas)
+
+	if !tableOnly {
+		backupPostdata(b.SrcConn, metadataFile, inSchemas)
+	}
 
 	b.TocFile = fmt.Sprintf("%s/gpAdminLogs/cbcopy_toc_%v", currentUser.HomeDir, b.Timestamp)
 	globalTOC.WriteToFileAndMakeReadOnly(b.TocFile)
