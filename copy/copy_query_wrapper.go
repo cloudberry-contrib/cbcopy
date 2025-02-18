@@ -155,7 +155,7 @@ func (qw *QueryWrapper) GetUserTables(srcConn, destConn *dbconn.DBConn) ([]optio
 	config.MarkExcludeTables(srcConn.DBName, srcTables, srcDbPartTables)
 
 	// Handle other mode
-	exlTabs, err := qw.expandPartTables(srcConn, srcTables, config.GetExclTablesByDb(srcConn.DBName), false)
+	exlTabs, err := qw.expandPartTables(srcConn, srcTables, config.GetExclTablesByDb(srcConn.DBName))
 	gplog.FatalOnError(err)
 	if copyMode != option.CopyModeTable {
 		srcTables = qw.filterTablesBySchema(srcConn, srcTables)
@@ -166,7 +166,7 @@ func (qw *QueryWrapper) GetUserTables(srcConn, destConn *dbconn.DBConn) ([]optio
 	// Handle table mode
 	config.MarkIncludeTables(srcConn.DBName, srcTables, srcDbPartTables)
 	if len(config.GetDestTablesByDb(destConn.DBName)) == 0 {
-		inclTabs, _ := qw.expandPartTables(srcConn, srcTables, config.GetIncludeTablesByDb(srcConn.DBName), false)
+		inclTabs, _ := qw.expandPartTables(srcConn, srcTables, config.GetIncludeTablesByDb(srcConn.DBName))
 		results := qw.excludeTables(inclTabs, exlTabs)
 
 		return results, qw.redirectIncludeTables(results), qw.getPartitionTableMapping(srcConn, destConn, false)
@@ -366,13 +366,13 @@ func (qw *QueryWrapper) buildPartitionTableMapping(conn *dbconn.DBConn, isDest b
 
 // expandPartTables expands partition tables and returns expanded table map
 func (qw *QueryWrapper) expandPartTables(conn *dbconn.DBConn, userTables map[string]option.TableStatistics,
-	tables []option.Table, isDest bool) (map[string]option.TableStatistics, error) {
+	tables []option.Table) (map[string]option.TableStatistics, error) {
 
 	expandMap := make(map[string]option.TableStatistics)
 
 	// Build table mapping
 	tabMap := make(map[string][]option.Table)
-	leafTables, err := qw.GetPartitionLeafTables(conn, isDest)
+	leafTables, err := qw.GetPartitionLeafTables(conn, false)
 	if err != nil {
 		return nil, err
 	}
