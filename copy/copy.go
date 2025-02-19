@@ -288,9 +288,9 @@ func (app *Application) doCopy() {
 	dbMap := app.queryWrapper.GetDbNameMap(app.srcManageConn)
 	for srcDbName, destDbName := range dbMap {
 		srcMetaConn, destMetaConn, srcConn, destConn := app.initializeConn(srcDbName, destDbName)
-		srcTables, destTables, partNameMap := app.queryWrapper.GetUserTables(srcConn, destConn)
+		srcTables, destTables, nonPhysicalRels, partNameMap := app.queryWrapper.GetUserTables(srcConn, destConn)
 
-		if len(srcTables) == 0 {
+		if len(srcTables) == 0 && len(nonPhysicalRels) == 0 {
 			continue
 		}
 
@@ -300,7 +300,7 @@ func (app *Application) doCopy() {
 			config.GetOwnerMap(), config.GetTablespaceMap())
 		metaManager.Open()
 
-		tablec, pgsd := metaManager.MigrateMetadata(srcTables, destTables)
+		tablec, pgsd := metaManager.MigrateMetadata(srcTables, destTables, nonPhysicalRels)
 		if !utils.MustGetFlagBool(option.METADATA_ONLY) {
 			copyManager := NewCopyManager(srcConn, destConn, app.destManageConn,
 				app.srcSegmentsHostInfo, app.destSegmentsIpInfo, app.timestamp,

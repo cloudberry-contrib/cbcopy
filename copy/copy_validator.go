@@ -61,13 +61,13 @@ func (v *DatabaseValidator) validateDatabase() error {
 	destNum := len(destDbs)
 
 	// Validate destination database requirements
-	if destNum > 0 && (srcNum == 0 && len(utils.MustGetFlagString(option.INCLUDE_TABLE_FILE)) == 0) {
-		return &ValidationError{"Option[s] \"--dest-dbname\" only supports with option \"--dbname or --include-table-file\""}
+	if destNum > 0 && (srcNum == 0 && len(utils.MustGetFlagStringSlice(option.INCLUDE_TABLE)) == 0 && len(utils.MustGetFlagString(option.INCLUDE_TABLE_FILE)) == 0) {
+		return &ValidationError{"Option[s] \"dest-dbname\" only supports with option \"dbname\" or \"include-table\" or \"include-table-file\""}
 	}
 
 	// Validate source and destination database count match
 	if destNum > 0 && srcNum > 0 && destNum != srcNum {
-		return &ValidationError{"The number of databases specified by \"--dbname\" should be equal to that specified by \"--dest-dbname\""}
+		return &ValidationError{"The number of databases specified by \"dbname\" should be equal to that specified by \"dest-dbname\""}
 	}
 
 	// Check for duplicates in source databases
@@ -122,13 +122,13 @@ func (v *SchemaValidator) validateSchema() error {
 	destNum := len(utils.MustGetFlagStringSlice(option.DEST_SCHEMA))
 
 	// Validate schema requirements
-	if destNum > 0 && (srcNum == 0 && len(utils.MustGetFlagString(option.INCLUDE_TABLE_FILE)) == 0) {
-		return &ValidationError{"Option[s] \"--dest-schema\" only supports with option \"--schema or --include-table-file\""}
+	if destNum > 0 && (srcNum == 0 && len(utils.MustGetFlagStringSlice(option.INCLUDE_TABLE)) == 0 && len(utils.MustGetFlagString(option.INCLUDE_TABLE_FILE)) == 0) {
+		return &ValidationError{"Option[s] \"dest-schema\" only supports with option \"schema\" or \"include-table\" or \"include-table-file\""}
 	}
 
 	// Validate source and destination schema count match
 	if destNum > 0 && srcNum > 0 && destNum != srcNum {
-		return &ValidationError{"The number of schemas specified by \"--schema\" should be equal to that specified by \"--dest-schema\""}
+		return &ValidationError{"The number of schemas specified by \"schema\" should be equal to that specified by \"dest-schema\""}
 	}
 
 	// Check for duplicates

@@ -113,10 +113,6 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	if testFailure {
-		return
-	}
-
 	testutils.CleanupTestTablespace(sourceConn, "/tmp/e2e_test_same_tablespace")
 	testutils.CleanupTestTablespace(sourceConn, "/tmp/e2e_test_source_tablespace")
 	testutils.CleanupTestTablespace(sourceConn, "/tmp/e2e_test_dest_tablespace")

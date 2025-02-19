@@ -127,14 +127,14 @@ func (qw *QueryWrapper) redirectIncludeTables(tables []option.Table) []option.Ta
 }
 
 // GetUserTables retrieves and processes user tables based on copy mode
-func (qw *QueryWrapper) GetUserTables(srcConn, destConn *dbconn.DBConn) ([]option.Table, []option.Table, map[string][]string) {
+func (qw *QueryWrapper) GetUserTables(srcConn, destConn *dbconn.DBConn) ([]option.Table, []option.Table, []option.Table, map[string][]string) {
 	// Handle metadata-only mode
 	if utils.MustGetFlagBool(option.GLOBAL_METADATA_ONLY) {
 		sl := strings.Split(CbcopyTestTable, ".")
 		inclTabs := make([]option.Table, 0)
 		inclTabs = append(inclTabs, option.Table{Schema: sl[0], Name: sl[1]})
 		partNameMap := make(map[string][]string)
-		return inclTabs, inclTabs, partNameMap
+		return inclTabs, inclTabs, make([]option.Table, 0), partNameMap
 	}
 
 	copyMode := config.GetCopyMode()
@@ -155,47 +155,30 @@ func (qw *QueryWrapper) GetUserTables(srcConn, destConn *dbconn.DBConn) ([]optio
 	config.MarkExcludeTables(srcConn.DBName, srcTables, srcDbPartTables)
 
 	// Handle other mode
-	exlTabs, err := qw.expandPartTables(srcConn, srcTables, config.GetExclTablesByDb(srcConn.DBName))
+	exlTabs, _, err := qw.expandPartTables(srcConn, srcTables, config.GetExclTablesByDb(srcConn.DBName))
 	gplog.FatalOnError(err)
 	if copyMode != option.CopyModeTable {
 		srcTables = qw.filterTablesBySchema(srcConn, srcTables)
 		results := qw.excludeTables(srcTables, exlTabs)
-		return results, qw.redirectSchemaTables(results), qw.getPartitionTableMapping(srcConn, destConn, false)
+		return results, qw.redirectSchemaTables(results), nil, qw.getPartitionTableMapping(srcConn, destConn, false)
 	}
 
 	// Handle table mode
 	config.MarkIncludeTables(srcConn.DBName, srcTables, srcDbPartTables)
 	if len(config.GetDestTablesByDb(destConn.DBName)) == 0 {
-		inclTabs, _ := qw.expandPartTables(srcConn, srcTables, config.GetIncludeTablesByDb(srcConn.DBName))
-		results := qw.excludeTables(inclTabs, exlTabs)
+		expandedTables, pendingCheckRels, err := qw.expandPartTables(srcConn, srcTables, config.GetIncludeTablesByDb(srcConn.DBName))
+		gplog.FatalOnError(err)
+		excludedSrcTables := qw.excludeTables(expandedTables, exlTabs)
+		excludedPendingCheckRels := qw.excludeTables(pendingCheckRels, exlTabs)
 
-		return results, qw.redirectIncludeTables(results), qw.getPartitionTableMapping(srcConn, destConn, false)
+		gplog.Info("Retrieving view, mat-view, sequence, foreigntable \"%v\" on source database...", srcConn.DBName)
+		nonPhysicalRels := qw.GetNonPhysicalRelations(srcConn, excludedPendingCheckRels)
+		gplog.Info("Finished retrieving view, mat-view, sequence, foreigntable")
+
+		return excludedSrcTables, qw.redirectIncludeTables(excludedSrcTables), nonPhysicalRels, qw.getPartitionTableMapping(srcConn, destConn, false)
 	}
 
-	// Get destination tables
-	gplog.Info("Retrieving user tables on destination database \"%v\"...", destConn.DBName)
-	destTables, err := qw.queryManager.GetUserTables(destConn)
-	gplog.FatalOnError(err)
-	gplog.Info("Finished retrieving user tables")
-
-	gplog.Info("Retrieving partition table on destination database \"%v\"...", destConn.DBName)
-	destDbPartTables, err := qw.GetRootPartTables(destConn, true)
-	gplog.FatalOnError(err)
-	gplog.Info("Finished retrieving partition table")
-
-	config.MarkDestTables(destConn.DBName, destTables, destDbPartTables)
-
-	config.ValidateIncludeTables(srcTables, srcConn.DBName)
-	config.ValidateExcludeTables(srcTables, srcConn.DBName)
-	config.ValidateDestTables(destTables, destConn.DBName)
-
-	excludedSrcTabs, excludedDstTabs := qw.excludeTablePair(config.GetIncludeTablesByDb(srcConn.DBName),
-		config.GetDestTablesByDb(destConn.DBName),
-		config.GetExclTablesByDb(srcConn.DBName),
-		srcTables,
-		srcConn.DBName)
-
-	return excludedSrcTabs, excludedDstTabs, qw.getPartitionTableMapping(srcConn, destConn, false)
+	return qw.processDestinationTables(srcConn, destConn, srcTables)
 }
 
 // FilterTablesBySchema filters tables to keep only those in the specified schemas
@@ -364,17 +347,20 @@ func (qw *QueryWrapper) buildPartitionTableMapping(conn *dbconn.DBConn, isDest b
 	return partMap
 }
 
-// expandPartTables expands partition tables and returns expanded table map
+// expandPartTables expands partition tables and returns:
+// - expanded table map
+// - relations that need further checking (e.g., foreign tables, views)
+// - error if any
 func (qw *QueryWrapper) expandPartTables(conn *dbconn.DBConn, userTables map[string]option.TableStatistics,
-	tables []option.Table) (map[string]option.TableStatistics, error) {
-
+	tables []option.Table) (map[string]option.TableStatistics, map[string]option.TableStatistics, error) {
+	pendingCheckRels := make(map[string]option.TableStatistics)
 	expandMap := make(map[string]option.TableStatistics)
 
 	// Build table mapping
 	tabMap := make(map[string][]option.Table)
 	leafTables, err := qw.GetPartitionLeafTables(conn, false)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	for _, t := range leafTables {
@@ -383,12 +369,7 @@ func (qw *QueryWrapper) expandPartTables(conn *dbconn.DBConn, userTables map[str
 		if !exists {
 			children = make([]option.Table, 0)
 		}
-		children = append(children, option.Table{
-			Schema:    sl[0],
-			Name:      sl[1],
-			Partition: 0,
-			RelTuples: t.RelTuples,
-		})
+		children = append(children, option.Table{Schema: sl[0], Name: sl[1], Partition: 0, RelTuples: t.RelTuples})
 		tabMap[t.RootName] = children
 	}
 
@@ -400,25 +381,23 @@ func (qw *QueryWrapper) expandPartTables(conn *dbconn.DBConn, userTables map[str
 			if exists {
 				for _, m := range children {
 					k := m.Schema + "." + m.Name
-					expandMap[k] = option.TableStatistics{
-						Partition: 0,
-						RelTuples: m.RelTuples,
-					}
+					expandMap[k] = option.TableStatistics{Partition: 0, RelTuples: m.RelTuples}
 				}
+			} else {
+				pendingCheckRels[fqn] = option.TableStatistics{Partition: 0, RelTuples: t.RelTuples}
 			}
 			continue
 		}
 
 		stat, exists := userTables[fqn]
 		if exists {
-			expandMap[fqn] = option.TableStatistics{
-				Partition: 0,
-				RelTuples: stat.RelTuples,
-			}
+			expandMap[fqn] = option.TableStatistics{Partition: 0, RelTuples: stat.RelTuples}
+		} else {
+			pendingCheckRels[fqn] = option.TableStatistics{Partition: 0, RelTuples: t.RelTuples}
 		}
 	}
 
-	return expandMap, nil
+	return expandMap, pendingCheckRels, nil
 }
 
 // ResetCache resets the partition leaf table cache
@@ -508,4 +487,52 @@ func (qw *QueryWrapper) excludeTablePair(srcTables, destTables, exclTables []opt
 	}
 
 	return excludedSrcTabs, excludedDstTabs
+}
+
+func (qw *QueryWrapper) GetNonPhysicalRelations(conn *dbconn.DBConn, pendingCheckRels []option.Table) []option.Table {
+	nonPhysicalRels, err := qw.queryManager.GetNonPhysicalRelations(conn)
+	gplog.FatalOnError(err)
+
+	results := make([]option.Table, 0)
+	for _, t := range pendingCheckRels {
+		k := t.Schema + "." + t.Name
+		_, exists := nonPhysicalRels[k]
+		if exists {
+			results = append(results, t)
+		} else {
+			gplog.Debug("Relation \"%v\" does not exists in database \"%v\"", k, conn.DBName)
+		}
+	}
+
+	return results
+}
+
+func (qw *QueryWrapper) processDestinationTables(srcConn, destConn *dbconn.DBConn, srcTables map[string]option.TableStatistics) ([]option.Table, []option.Table, []option.Table, map[string][]string) {
+	// Get destination tables
+	gplog.Info("Retrieving user tables on destination database \"%v\"...", destConn.DBName)
+	destTables, err := qw.queryManager.GetUserTables(destConn)
+	gplog.FatalOnError(err)
+	gplog.Info("Finished retrieving user tables")
+
+	// Get destination partition tables
+	gplog.Info("Retrieving partition table on destination database \"%v\"...", destConn.DBName)
+	destDbPartTables, err := qw.GetRootPartTables(destConn, true)
+	gplog.FatalOnError(err)
+	gplog.Info("Finished retrieving partition table")
+
+	config.MarkDestTables(destConn.DBName, destTables, destDbPartTables)
+
+	// Validate tables
+	config.ValidateIncludeTables(srcTables, srcConn.DBName)
+	config.ValidateExcludeTables(srcTables, srcConn.DBName)
+	config.ValidateDestTables(destTables, destConn.DBName)
+
+	excludedSrcTabs, excludedDstTabs := qw.excludeTablePair(
+		config.GetIncludeTablesByDb(srcConn.DBName),
+		config.GetDestTablesByDb(destConn.DBName),
+		config.GetExclTablesByDb(srcConn.DBName),
+		srcTables,
+		srcConn.DBName)
+
+	return excludedSrcTabs, excludedDstTabs, nil, qw.getPartitionTableMapping(srcConn, destConn, false)
 }

@@ -5,8 +5,6 @@ import (
 	"github.com/cloudberrydb/cbcopy/meta"
 	"github.com/cloudberrydb/cbcopy/option"
 	"github.com/cloudberrydb/cbcopy/utils"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
-	"github.com/pkg/errors"
 )
 
 // MetadataManager handles all metadata related operations during copy process
@@ -52,7 +50,7 @@ func (m *MetadataManager) Close() {
 }
 
 // MigrateMetadata manages all pre-data operations
-func (m *MetadataManager) MigrateMetadata(srcTables, destTables []option.Table) (chan option.TablePair, utils.ProgressBar) {
+func (m *MetadataManager) MigrateMetadata(srcTables, destTables, nonPhysicalRels []option.Table) (chan option.TablePair, utils.ProgressBar) {
 	var pgd utils.ProgressBar
 
 	mode := config.GetCopyMode()
@@ -72,8 +70,7 @@ func (m *MetadataManager) MigrateMetadata(srcTables, destTables []option.Table) 
 		pgd = m.metaOps.CopySchemaMetaData(config.GetSourceSchemas(), config.GetDestSchemas(), tablec, m.donec)
 	case option.CopyModeTable:
 		if len(config.GetDestTables()) == 0 {
-			m.validateSchemaExists(m.destConn, destTables)
-			includeSchemas, includeTables := m.collectTablesAndSchemas(srcTables,
+			includeSchemas, includeTables := m.collectTablesAndSchemas(srcTables, nonPhysicalRels,
 				m.queryWrapper.getPartitionTableMapping(m.srcConn, m.destConn, true))
 			pgd = m.metaOps.CopyTableMetaData(config.GetDestSchemas(), includeSchemas, includeTables, tablec, m.donec)
 		} else {
@@ -139,7 +136,7 @@ func (m *MetadataManager) fillTablePairChan(srcTables, destTables []option.Table
 // Returns two slices:
 // - A list of table names (including parent partition tables instead of child tables)
 // - A list of unique schema names
-func (m *MetadataManager) collectTablesAndSchemas(tables []option.Table, partNameMap map[string][]string) ([]string, []string) {
+func (m *MetadataManager) collectTablesAndSchemas(tables, nonPhysicalRels []option.Table, partNameMap map[string][]string) ([]string, []string) {
 	// Build leaf table to parent table mapping
 	leafTableMap := make(map[string]string)
 	for parentTable, leafTables := range partNameMap {
@@ -163,6 +160,10 @@ func (m *MetadataManager) collectTablesAndSchemas(tables []option.Table, partNam
 		schemaMap[t.Schema] = true
 	}
 
+	for _, t := range nonPhysicalRels {
+		schemaMap[t.Schema] = true
+	}
+
 	// Convert maps to sorted slices
 	includeTables := make([]string, 0, len(tableMap))
 	includeSchemas := make([]string, 0, len(schemaMap))
@@ -171,33 +172,13 @@ func (m *MetadataManager) collectTablesAndSchemas(tables []option.Table, partNam
 		includeTables = append(includeTables, tableName)
 	}
 
+	for _, t := range nonPhysicalRels {
+		includeTables = append(includeTables, t.Schema+"."+t.Name)
+	}
+
 	for schemaName := range schemaMap {
 		includeSchemas = append(includeSchemas, schemaName)
 	}
 
 	return includeSchemas, includeTables
-}
-
-// ValidateSchemaExists checks if all required schemas exist in the destination database.
-// It collects all unique schemas from the table list and verifies their existence.
-// If any schema is missing, it will terminate the program with an error message.
-func (m *MetadataManager) validateSchemaExists(destConn *dbconn.DBConn, tables []option.Table) {
-	// Collect all unique schemas
-	schemaMap := make(map[string]bool)
-	for _, t := range tables {
-		schemaMap[t.Schema] = true
-	}
-
-	// Verify each schema exists in the destination database
-	for schema := range schemaMap {
-		exists, err := m.queryManager.SchemaExists(destConn, schema)
-		if err != nil {
-			gplog.Fatal(errors.Errorf("failed to check schema existence: %v", err), "")
-		}
-
-		if !exists {
-			gplog.Fatal(errors.Errorf("Please create the schema \"%v\" on the destination database \"%v\" first",
-				schema, destConn.DBName), "")
-		}
-	}
 }

@@ -253,3 +253,33 @@ func (qm *QueryManager) CreateTestTable(conn *dbconn.DBConn, tableName string) e
 
 	return nil
 }
+
+// getNonPhysicalRelations returns a map of database relations that don't have direct physical storage
+// (except materialized views), including:
+// - Views (v)
+// - Sequences (S)
+// - Foreign Tables (f)
+// - Materialized Views (m)
+// The returned map uses "schema.name" as key and true as value for all entries.
+func (qm *QueryManager) GetNonPhysicalRelations(conn *dbconn.DBConn) (map[string]bool, error) {
+	query := `
+	SELECT quote_ident(n.nspname) AS schema, quote_ident(c.relname) as name
+	FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid
+	WHERE n.nspname NOT IN ('gpexpand', 'pg_bitmapindex', 'information_schema', 'gp_toolkit', 'pg_catalog', 'pg_aoseg', 'pg_ext_aux')
+		AND n.nspname NOT LIKE 'pg_temp_%'
+		AND c.relkind IN ('f','S','m','v')`
+	relations := make([]option.Table, 0)
+	err := conn.Select(&relations, query)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make(map[string]bool)
+
+	for _, v := range relations {
+		k := v.Schema + "." + v.Name
+		results[k] = true
+	}
+
+	return results, nil
+}

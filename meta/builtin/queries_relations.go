@@ -35,7 +35,6 @@ func relationAndSchemaFilterClause(connectionPool *dbconn.DBConn) string {
 		}
 	}
 	if len(includeRelations) > 0 {
-		gplog.Debug("terry debug, relationAndSchemaFilterClause, includeRelations: %v", includeRelations)
 		quotedIncludeRelations, err := utils.QuoteTableNames(connectionPool, includeRelations)
 		gplog.FatalOnError(err)
 

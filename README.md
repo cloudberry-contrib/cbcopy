@@ -244,7 +244,7 @@ cbcopy --with-global-metadata --source-host=127.0.0.1 \
 ```
 
 For more detailed examples, you can refer to our test files:
-- [end_to_end_suite_test.go](end_to_end/end_to_end_suite_test.go)
+- [basic_test.go](end_to_end/basic_test.go)
 - [tablespace_test.go](end_to_end/tablespace_test.go)
 
 ## cbcopy reference
