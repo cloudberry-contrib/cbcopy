@@ -7,7 +7,7 @@ cbcopy is an efficient database migration tool designed to transfer data and met
 ## How does cbcopy work?
 
 ### Metadata migration
-The metadata migration feature of cbcopy is based on gpbackup. Compared to GPDB's built-in `pg_dump`, cbcopy's main advantage is its ability to retrieve metadata in batches. While `pg_dump` fetches metadata one row or a few rows at a time, cbcopy retrieves it in batches. This batch processing approach significantly enhances performance, especially when handling large volumes of metadata, making it much faster than `pg_dump`.
+The metadata migration feature of cbcopy is based on [gpbackup](https://github.com/greenplum-db/gpbackup-archive). Compared to GPDB's built-in `pg_dump`, cbcopy's main advantage is its ability to retrieve metadata in batches. While `pg_dump` fetches metadata one row or a few rows at a time, cbcopy retrieves it in batches. This batch processing approach significantly enhances performance, especially when handling large volumes of metadata, making it much faster than `pg_dump`.
 
 ### Data migration
 Both GPDB and CBDB support starting programs via SQL commands, and cbcopy utilizes this feature. During data migration, it uses SQL commands to start a program on the target database to receive and load data, while simultaneously using SQL commands to start a program on the source database to unload data and send it to the program on the target database.
@@ -91,7 +91,9 @@ This will:
 
 ## Migrating Data with cbcopy
 
-Before migrating data, you need to copy cbcopy_helper to the `$GPHOME/bin` directory on all nodes of both the source and target databases. Then you need to find a host that can connect to both the source database and the target database, and use the cbcopy command on that host to initiate the migration. By default, both metadata and data are migrated.
+Before migrating data, you need to copy cbcopy_helper to the `$GPHOME/bin` directory on all nodes of both the source and target databases. Then you need to find a host that can connect to both the source database and the target database, and use the cbcopy command on that host to initiate the migration. Note that database superuser privileges are required for both source and target databases to perform the migration.
+
+By default, both metadata and data are migrated. You can use `--metadata-only` to migrate only metadata, or `--data-only` to migrate only data. Based on our best practices, we recommend migrating metadata first using `--metadata-only`, and then migrating data using `--data-only`. This two-step approach helps ensure a more controlled and reliable migration process.
 
 ### Database version requirements
 cbcopy relies on the "COPY ON SEGMENT" command of the database, so it has specific version requirements for the database.
@@ -122,7 +124,7 @@ cbcopy supports two data loading modes.
 
 ### Object dependencies
 
-If the tables you are migrating depend on certain global objects (such as tablespaces), you have two options:
+If the tables you are migrating depend on certain global objects (such as tablespaces), there are two ways to handle this:
 
 1. Include the `--with-global-metadata` option (default: false) during migration, which will automatically create these global objects in the target database.
 
@@ -245,6 +247,7 @@ cbcopy --with-global-metadata --source-host=127.0.0.1 \
 
 For more detailed examples, you can refer to our test files:
 - [basic_test.go](end_to_end/basic_test.go)
+- [table_test.go](end_to_end/table_test.go)
 - [tablespace_test.go](end_to_end/tablespace_test.go)
 
 ## cbcopy reference
