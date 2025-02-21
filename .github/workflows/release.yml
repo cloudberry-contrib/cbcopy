@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.19
+
+      - name: Build binaries
+        run: make
+
+      - name: Run tests
+        run: make unit
+
+      - name: Package binaries
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          PACKAGE_NAME="cbcopy-${VERSION}-linux-amd64"
+          
+          mkdir -p release/${PACKAGE_NAME}
+          
+          cp cbcopy cbcopy_helper release/${PACKAGE_NAME}/
+          cp README.md LICENSE release/${PACKAGE_NAME}/ 2>/dev/null || true
+          
+          cd release && tar -czf ${PACKAGE_NAME}.tar.gz ${PACKAGE_NAME}/
+        
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*.tar.gz 
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
