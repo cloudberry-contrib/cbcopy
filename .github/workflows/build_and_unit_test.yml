@@ -1,0 +1,26 @@
+name: build_and_unit_test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    types: [ opened, synchronize, reopened, edited, ready_for_review ]
+
+jobs:
+
+  build_and_unit_test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.19
+
+    - name: Build
+      run: make
+
+    - name: Unit Test
+      run: make unit
