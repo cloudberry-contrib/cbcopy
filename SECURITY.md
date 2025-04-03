@@ -1,4 +1,4 @@
-Thanks for helping make Cloudberry Database safe!
+Thanks for helping make Apache Cloudberry safe!
 
 ---
 
@@ -48,14 +48,14 @@ For better collaboration, we hope you:
 
 Here's an overview of the security issues handling process:
 
-* The reporter reports the security issues to the Cloudberry Database
+* The reporter reports the security issues to the Apache Cloudberry
   team.
-* The Cloudberry Database team investigates the report and decides to
+* The Apache Cloudberry team investigates the report and decides to
   accept or reject the report. If our team rejects the report, the
   team will explain why to the reporter. If we accept the report, our
   team will work privately with the reporter to fix the security
   issues.
-* Release the new version of the Cloudberry Database that includes the
+* Release the new version of the Apache Cloudberry that includes the
   fix.
 * Public the security issues.
 

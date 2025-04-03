@@ -642,7 +642,7 @@ func GetServerVersion(host string, port int, user string) string {
 	/*
 		PostgreSQL 9.4.26 (Greenplum Database 6.20.0 build 9999) (HashData Warehouse 3.13.8 build 27594) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 10.2.1 20210130 (Red Hat 10.2.1-11), 64-bit compiled on Feb 10 2023 17:22:03
 
-		PostgreSQL 14.4 (Cloudberry Database 1.2.0 build commit:5b5ae3f8aa638786f01bbd08307b6474a1ba1997) on x86_64-pc-linux-gnu, compiled by gcc (GCC) 10.2.1 20210130 (Red Hat 10.2.1-11), 64-bit compiled on Feb 16 2023 23:44:39
+		PostgreSQL 14.4 (Apache Cloudberry 1.2.0 build commit:5b5ae3f8aa638786f01bbd08307b6474a1ba1997) on x86_64-pc-linux-gnu, compiled by gcc (GCC) 10.2.1 20210130 (Red Hat 10.2.1-11), 64-bit compiled on Feb 16 2023 23:44:39
 	*/
 
 	re := regexp.MustCompile(`\d+\.\d+(\.\d+)?`)
@@ -665,7 +665,7 @@ func GetPslVersion() string {
 	psqlVersion := strings.TrimSpace(string(out))
 
 	/*
-		psql (Cloudberry Database) 14.4
+		psql (Apache Cloudberry) 14.4
 
 		psql (PostgreSQL) 9.4.26
 	*/

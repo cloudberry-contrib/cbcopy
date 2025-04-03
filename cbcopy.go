@@ -15,7 +15,7 @@ func main() {
 
 	var rootCmd = &cobra.Command{
 		Use:     "cbcopy",
-		Short:   "cbcopy utility for migrating data from Greenplum Database (GPDB) to Cloudberry Database (CBDB)",
+		Short:   "cbcopy utility for migrating data from Greenplum Database (GPDB) to Apache Cloudberry (CBDB)",
 		Args:    cobra.NoArgs,
 		Version: utils.GetVersion(),
 		Run: func(cmd *cobra.Command, args []string) {

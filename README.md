@@ -1,6 +1,6 @@
 # cbcopy
 
-cbcopy is an efficient database migration tool designed to transfer data and metadata from Greenplum Database(GPDB) to Cloudberry Database(Cloudberrydb), while also supporting migrations between Greenplum databases and between Cloudberry databases for disaster recovery and database version upgrades.
+cbcopy is an efficient database migration tool designed to transfer data and metadata from Greenplum Database(GPDB) to Apache Cloudberry(Cloudberrydb), while also supporting migrations between Greenplum databases and between Cloudberry databases for disaster recovery and database version upgrades.
 
 ![cbcopy_arch](.github/cbcopy_arch.png)
 
@@ -252,7 +252,7 @@ For more detailed examples, you can refer to our test files:
 
 ## cbcopy reference
 ```
-cbcopy utility for migrating data from Greenplum Database (GPDB) to Cloudberry Database (CBDB)
+cbcopy utility for migrating data from Greenplum Database (GPDB) to Apache Cloudberry (CBDB)
 
 Usage:
   cbcopy [flags]
