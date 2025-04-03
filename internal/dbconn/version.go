@@ -15,14 +15,14 @@ type DBType int
 const (
 	Unknown DBType = iota
 	GPDB           // Greenplum Database
-	CBDB           // Cloudberry Database
+	CBDB           // Apache Cloudberry
 	HDW            // HashData Database
 	PGSQL          // PostgreSQL
 )
 
 const (
 	gpdbPattern  = `\(Greenplum Database ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
-	cbdbPattern  = `\(Cloudberry Database ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
+	cbdbPattern  = `\(Apache Cloudberry ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
 	hdwPattern   = `\(HashData Warehouse ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
 	pgsqlPattern = `^PostgreSQL\s+([0-9]+\.[0-9]+\.[0-9]+)`
 )
@@ -33,7 +33,7 @@ func (t DBType) String() string {
 	case GPDB:
 		return "Greenplum Database"
 	case CBDB:
-		return "Cloudberry Database"
+		return "Apache Cloudberry"
 	case HDW:
 		return "HashData Database"
 	case PGSQL:
@@ -81,7 +81,7 @@ func NewVersion(versionStr string) GPDBVersion {
 //
 // Cloudberry:
 //
-//	PostgreSQL 14.4 (Cloudberry Database 1.2.0 build commit:5b5ae3f8aa638786f01bbd08307b6474a1ba1997)
+//	PostgreSQL 14.4 (Apache Cloudberry 1.2.0 build commit:5b5ae3f8aa638786f01bbd08307b6474a1ba1997)
 //	on x86_64-pc-linux-gnu, compiled by gcc (GCC) 10.2.1 20210130 (Red Hat 10.2.1-11), 64-bit compiled on Feb 16 2023 23:44:39
 //
 // Greenplum:
