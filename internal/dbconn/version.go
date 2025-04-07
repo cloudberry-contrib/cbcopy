@@ -22,7 +22,8 @@ const (
 
 const (
 	gpdbPattern  = `\(Greenplum Database ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
-	cbdbPattern  = `\(Apache Cloudberry ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
+	cbdbPattern  = `\(Cloudberry Database ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
+	cbdbNewPattern  = `\(Apache Cloudberry ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
 	hdwPattern   = `\(HashData Warehouse ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
 	pgsqlPattern = `^PostgreSQL\s+([0-9]+\.[0-9]+\.[0-9]+)`
 )
@@ -112,6 +113,9 @@ func (dbversion *GPDBVersion) ParseVersionInfo(versionString string) {
 
 	// Try to match each database type
 	if ver, ok := dbversion.extractVersion(cbdbPattern); ok {
+		dbversion.Type = CBDB
+		dbversion.SemVer = ver
+	} else if ver, ok := dbversion.extractVersion(cbdbNewPattern); ok {
 		dbversion.Type = CBDB
 		dbversion.SemVer = ver
 	} else if ver, ok := dbversion.extractVersion(gpdbPattern); ok {
