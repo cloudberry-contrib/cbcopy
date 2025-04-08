@@ -324,7 +324,7 @@ func backupResourceGroups(conn *dbconn.DBConn, metadataFile *utils.FileWithByteC
 	gplog.Verbose("Writing CREATE RESOURCE GROUP statements to metadata file")
 
 	// at resource group part, CBDB is still same as 3x/GP6.
-	if (conn.Version.IsGPDB() && conn.Version.Before("7")) || conn.Version.IsCBDB() {
+	if (conn.Version.IsGPDB() && conn.Version.Before("7")) {
 		resGroups := GetResourceGroups[ResourceGroupBefore7](conn)
 		objectCounts["Resource Groups"] = len(resGroups)
 		resGroupMetadata := GetCommentsForObjectType(conn, TYPE_RESOURCEGROUP)
