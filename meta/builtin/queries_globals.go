@@ -231,15 +231,15 @@ type ResourceGroupBefore7 struct {
 }
 
 type ResourceGroupAtLeast7 struct {
-	ResourceGroup            // embedded common rg fields+methods
-	CpuHardQuotaLimit string `db:"cpu_hard_quota_limit"`
-	CpuSoftPriority   string `db:"cpu_soft_priority"`
+	ResourceGroup        // embedded common rg fields+methods
+	CpuMaxPercent string `db:"cpu_max_percent"`
+	CpuWeight     string `db:"cpu_weight"`
 }
 
 func GetResourceGroups[T ResourceGroupBefore7 | ResourceGroupAtLeast7](connectionPool *dbconn.DBConn) []T {
 	var query string
 
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7")) || connectionPool.Version.IsCBDB() {
+	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		before7SelectClause := ""
 		// This is when pg_dumpall was changed to use the actual values
 		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5.2.0")) || connectionPool.Version.IsCBDB() {
@@ -296,8 +296,8 @@ func GetResourceGroups[T ResourceGroupBefore7 | ResourceGroupAtLeast7](connectio
 				g.oid       AS oid,
 				g.rsgname   AS name,
 				t1.value    AS concurrency,
-				t2.value    AS cpu_hard_quota_limit,
-				t3.value    AS cpu_soft_priority,
+				t2.value    AS cpu_max_percent,
+				t3.value    AS cpu_weight,
 				t4.value    AS cpuset
 			FROM pg_resgroup g
 				JOIN pg_resgroupcapability t1 ON g.oid = t1.resgroupid AND t1.reslimittype = 1

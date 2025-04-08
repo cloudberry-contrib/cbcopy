@@ -179,13 +179,13 @@ var _ = Describe("cbcopy integration tests", func() {
 			} else { // GPDB7+
 				return
 				/* comment out, due to CBDB/PG14 - GP7/PG12 behavior diff
-				testhelper.AssertQueryRuns(connectionPool, `CREATE RESOURCE GROUP someGroup WITH (CPU_HARD_QUOTA_LIMIT=10, CPU_SOFT_PRIORITY=100, CONCURRENCY=15);`)
+				testhelper.AssertQueryRuns(connectionPool, `CREATE RESOURCE GROUP someGroup WITH (CPU_MAX_PERCENT=10, CPU_WEIGHT=100, CONCURRENCY=15);`)
 				defer testhelper.AssertQueryRuns(connectionPool, `DROP RESOURCE GROUP someGroup`)
 
 				results := builtin.GetResourceGroups[builtin.ResourceGroupAtLeast7](connectionPool)
 
 				someGroup := builtin.ResourceGroupAtLeast7{ResourceGroup: builtin.ResourceGroup{Oid: 1, Name: `somegroup`, Concurrency: "15", Cpuset: "-1"},
-					CpuHardQuotaLimit: "10", CpuSoftPriority: "100"}
+					CpuMaxPercent: "10", CpuWeight: "100"}
 
 				for _, resultGroup := range results {
 					if resultGroup.Name == `somegroup` {
@@ -236,13 +236,13 @@ var _ = Describe("cbcopy integration tests", func() {
 			} else {
 				return
 				/* comment out, due to CBDB/PG14 - GP7/PG12 behavior diff
-				testhelper.AssertQueryRuns(connectionPool, `CREATE RESOURCE GROUP someGroup WITH (CPU_HARD_QUOTA_LIMIT=10, CPU_SOFT_PRIORITY=100);`)
+				testhelper.AssertQueryRuns(connectionPool, `CREATE RESOURCE GROUP someGroup WITH (CPU_MAX_PERCENT=10, CPU_WEIGHT=100);`)
 				defer testhelper.AssertQueryRuns(connectionPool, `DROP RESOURCE GROUP someGroup`)
 
 				results := builtin.GetResourceGroups[builtin.ResourceGroupAtLeast7](connectionPool)
 
 				expectedDefaults := builtin.ResourceGroupAtLeast7{ResourceGroup: builtin.ResourceGroup{Oid: 1, Name: `somegroup`, Concurrency: concurrencyDefault, Cpuset: cpuSetDefault},
-					CpuHardQuotaLimit: "10", CpuSoftPriority: "100"}
+					CpuMaxPercent: "10", CpuWeight: "100"}
 
 				for _, resultGroup := range results {
 					if resultGroup.Name == `somegroup` {
