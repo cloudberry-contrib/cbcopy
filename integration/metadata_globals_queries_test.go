@@ -185,7 +185,7 @@ var _ = Describe("cbcopy integration tests", func() {
 				results := builtin.GetResourceGroups[builtin.ResourceGroupAtLeast7](connectionPool)
 
 				someGroup := builtin.ResourceGroupAtLeast7{ResourceGroup: builtin.ResourceGroup{Oid: 1, Name: `somegroup`, Concurrency: "15", Cpuset: "-1"},
-					CpuMaxPercent: "10", CpuSoftPriority: "100"}
+					CpuMaxPercent: "10", CpuWeight: "100"}
 
 				for _, resultGroup := range results {
 					if resultGroup.Name == `somegroup` {
@@ -242,7 +242,7 @@ var _ = Describe("cbcopy integration tests", func() {
 				results := builtin.GetResourceGroups[builtin.ResourceGroupAtLeast7](connectionPool)
 
 				expectedDefaults := builtin.ResourceGroupAtLeast7{ResourceGroup: builtin.ResourceGroup{Oid: 1, Name: `somegroup`, Concurrency: concurrencyDefault, Cpuset: cpuSetDefault},
-					CpuMaxPercent: "10", CpuSoftPriority: "100"}
+					CpuMaxPercent: "10", CpuWeight: "100"}
 
 				for _, resultGroup := range results {
 					if resultGroup.Name == `somegroup` {

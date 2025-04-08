@@ -163,7 +163,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 			} else { // GPDB7+
 				return
 				/* comment out, due to CBDB/PG14 - GP7/PG12 behavior diff
-				someGroup := builtin.ResourceGroupAtLeast7{ResourceGroup: builtin.ResourceGroup{Oid: 1, Name: "some_group", Concurrency: "15", Cpuset: "-1"}, CpuMaxPercent: "10", CpuSoftPriority: "100"}
+				someGroup := builtin.ResourceGroupAtLeast7{ResourceGroup: builtin.ResourceGroup{Oid: 1, Name: "some_group", Concurrency: "15", Cpuset: "-1"}, CpuMaxPercent: "10", CpuWeight: "100"}
 				builtin.PrintCreateResourceGroupStatementsAtLeast7(backupfile, tocfile, []builtin.ResourceGroupAtLeast7{someGroup}, emptyMetadataMap)
 				testhelper.AssertQueryRuns(connectionPool, buffer.String())
 				defer testhelper.AssertQueryRuns(connectionPool, `DROP RESOURCE GROUP some_group`)
@@ -200,7 +200,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 				return
 				/* comment out, due to CBDB/PG14 - GP7/PG12 behavior diff
 				expectedDefaults := builtin.ResourceGroupAtLeast7{ResourceGroup: builtin.ResourceGroup{Oid: 1, Name: "some_group", Concurrency: concurrencyDefault, Cpuset: cpuSetDefault},
-					CpuMaxPercent: "10", CpuSoftPriority: "100"}
+					CpuMaxPercent: "10", CpuWeight: "100"}
 
 				testhelper.AssertQueryRuns(connectionPool, "CREATE RESOURCE GROUP some_group WITH (CPU_MAX_PERCENT=10, CPU_WEIGHT=100);")
 				defer testhelper.AssertQueryRuns(connectionPool, `DROP RESOURCE GROUP some_group`)
@@ -243,7 +243,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 				return
 				/* comment out, due to CBDB/PG14 - GP7/PG12 behavior diff
 				expectedDefaults := builtin.ResourceGroupAtLeast7{ResourceGroup: builtin.ResourceGroup{Oid: 1, Name: "some_group", Concurrency: concurrencyDefault, Cpuset: cpuSetDefault},
-					CpuMaxPercent: "10", CpuSoftPriority: "100"}
+					CpuMaxPercent: "10", CpuWeight: "100"}
 
 				testhelper.AssertQueryRuns(connectionPool, "CREATE RESOURCE GROUP some_group WITH (CPU_MAX_PERCENT=10, CPU_WEIGHT=100);")
 				defer testhelper.AssertQueryRuns(connectionPool, `DROP RESOURCE GROUP some_group`)
@@ -285,7 +285,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 				return
 				/* comment out, due to CBDB/PG14 - GP7/PG12 behavior diff
 				defaultGroup := builtin.ResourceGroupAtLeast7{ResourceGroup: builtin.ResourceGroup{Oid: 1, Name: "default_group", Concurrency: "15", Cpuset: "-1"},
-					CpuMaxPercent: "10", CpuSoftPriority: "100"}
+					CpuMaxPercent: "10", CpuWeight: "100"}
 				emptyMetadataMap := map[builtin.UniqueID]builtin.ObjectMetadata{}
 
 				builtin.PrintCreateResourceGroupStatementsAtLeast7(backupfile, tocfile, []builtin.ResourceGroupAtLeast7{defaultGroup}, emptyMetadataMap)
