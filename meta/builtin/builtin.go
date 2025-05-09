@@ -376,14 +376,14 @@ func backupPostdata(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount, 
 
 	backupRules(conn, metadataFile)
 	backupTriggers(conn, metadataFile)
-	if (conn.Version.IsGPDB() && conn.Version.AtLeast("6")) || conn.Version.IsCBDB() {
+	if (conn.Version.IsGPDB() && conn.Version.AtLeast("6")) || conn.Version.IsCBDBFamily() {
 		backupDefaultPrivileges(conn, metadataFile)
 		if len(inSchemas) == 0 {
 			backupEventTriggers(conn, metadataFile)
 		}
 	}
 
-	if (conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDB() {
+	if (conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDBFamily() {
 		backupRowLevelSecurityPolicies(conn, metadataFile) // https://github.com/greenplum-db/gpbackup/commit/5051cd4cfecfe7bc396baeeb9b0ac6ea13c21010
 		backupExtendedStatistic(conn, metadataFile)        // https://github.com/greenplum-db/gpbackup/commit/7072d534d48ba32946c4112ad03f52fbef372c8c
 	}

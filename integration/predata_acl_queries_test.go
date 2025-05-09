@@ -180,7 +180,7 @@ LANGUAGE SQL`)
 
 				slabel := ""
 				slabelProvider := ""
-				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6.0.0")) || connectionPool.Version.IsCBDB() {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6.0.0")) || connectionPool.Version.IsCBDBFamily() {
 					slabel = "unclassified"
 					slabelProvider = "dummy"
 				}

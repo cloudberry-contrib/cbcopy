@@ -20,7 +20,7 @@ func PrintCreateFunctionStatement(metadataFile *utils.FileWithByteCount, toc *to
 	start := metadataFile.ByteCount
 	funcFQN := utils.MakeFQN(funcDef.Schema, funcDef.Name)
 
-	if ((gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB()) && funcDef.Kind == "p" {
+	if ((gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDBFamily()) && funcDef.Kind == "p" {
 		metadataFile.MustPrintf("\n\nCREATE PROCEDURE %s(%s) AS", funcFQN, funcDef.Arguments.String)
 	} else {
 		metadataFile.MustPrintf("\n\nCREATE FUNCTION %s(%s) RETURNS %s AS", funcFQN, funcDef.Arguments.String, funcDef.ResultType.String)
@@ -95,7 +95,7 @@ func PrintFunctionModifiers(metadataFile *utils.FileWithByteCount, funcDef Funct
 	if funcDef.IsSecurityDefiner {
 		metadataFile.MustPrintf(" SECURITY DEFINER")
 	}
-	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB() {
+	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDBFamily() {
 		if funcDef.TransformTypes != "" {
 			metadataFile.MustPrintf("\nTRANSFORM %s\n", funcDef.TransformTypes)
 		}
@@ -118,7 +118,7 @@ func PrintFunctionModifiers(metadataFile *utils.FileWithByteCount, funcDef Funct
 
 	// https://github.com/greenplum-db/gpbackup/commit/08e1f840398596be92d6d34020aed390352c7553
 	// Stored procedures do not permit parallelism declarations
-	if ((gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB()) && funcDef.Kind != "p" {
+	if ((gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDBFamily()) && funcDef.Kind != "p" {
 		switch funcDef.Parallel {
 		case "u":
 			metadataFile.MustPrintf(" PARALLEL UNSAFE")
@@ -205,7 +205,7 @@ func PrintCreateAggregateStatement(metadataFile *utils.FileWithByteCount, toc *t
 		metadataFile.MustPrintf(",\n\tMINITCOND = '%s'", aggDef.MInitialValue)
 	}
 
-	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB() {
+	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDBFamily() {
 		var defaultFinalModify string
 		if aggDef.Kind == "o" {
 			defaultFinalModify = "w"
@@ -331,7 +331,7 @@ func PrintCreateLanguageStatements(metadataFile *utils.FileWithByteCount, toc *t
 	for _, procLang := range procLangs {
 		start := metadataFile.ByteCount
 		metadataFile.MustPrintf("\n\nCREATE ")
-		if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("6")) || gpdbVersion.IsCBDB() {
+		if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("6")) || gpdbVersion.IsCBDBFamily() {
 			metadataFile.MustPrintf("OR REPLACE ")
 		}
 		if procLang.PlTrusted {

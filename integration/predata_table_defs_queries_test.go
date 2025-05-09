@@ -76,7 +76,7 @@ PARTITION BY RANGE (year)
 			testhelper.AssertQueryRuns(connectionPool, "ALTER TABLE public.atttable ALTER COLUMN e SET STORAGE PLAIN")
 			oid := testutils.OidFromObjectName(connectionPool, "public", "atttable", builtin.TYPE_RELATION)
 			privileges := sql.NullString{String: "", Valid: false}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				testhelper.AssertQueryRuns(connectionPool, "GRANT SELECT (c, d) ON TABLE public.atttable TO testrole")
 				privileges = sql.NullString{String: "testrole=r/testrole", Valid: true}
 			}
@@ -101,7 +101,7 @@ PARTITION BY RANGE (year)
 			tableAtts := builtin.GetColumnDefinitions(connectionPool)[oid]
 
 			var encoding string
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				encoding = "compresstype=none,compresslevel=0,blocksize=32768"
 			} else {
 				encoding = "compresstype=none,blocksize=32768,compresslevel=0"
@@ -311,11 +311,11 @@ CREATE TABLE public.test_tsvector (
 		var partitionPartFalseExpectation = "false "
 		BeforeEach(func() {
 			// GPDB 7+ does not have pg_get_partition_def()
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				Skip("Test is not applicable to GPDB 7+")
 			}
 
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				partitionPartFalseExpectation = "'false'"
 			}
 		})
@@ -465,7 +465,7 @@ PARTITION BY LIST (gender)
 	Describe("GetPartitionTemplates", func() {
 		BeforeEach(func() {
 			// GPDB 7+ does not have pg_get_partition_template_def()
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				Skip("Test is not applicable to GPDB 7+")
 			}
 		})
@@ -943,7 +943,7 @@ SET SUBPARTITION TEMPLATE
 	Describe("GetPartitionAlteredSchema", func() {
 		BeforeEach(func() {
 			// For GPDB 7+, leaf partitions have their own DDL which will have the correct namespace
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				Skip("Test is not applicable to GPDB 7+")
 			}
 		})

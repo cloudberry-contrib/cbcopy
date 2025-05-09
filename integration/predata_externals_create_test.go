@@ -71,7 +71,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 			extTable.URIs = nil
 			extTable.Command = `bash % someone's \.custom_script.sh`
 			testTable.ExtTableDef = extTable
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				// The query for GPDB 7+ will have a NULL value instead of ""
 				extTable.Location.Valid = false
 			}
@@ -110,7 +110,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 			extTable.Writable = false
 			extTable.FormatType = "b"
 			extTable.FormatOpts = "formatter 'fixedwidth_out' i '20' "
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				extTable.FormatOpts = "formatter 'fixedwidth_out'i '20'"
 			}
 			testTable.ExtTableDef = extTable
@@ -251,7 +251,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 		emptyPartInfoMap := make(map[uint32]builtin.PartitionInfo)
 		BeforeEach(func() {
 			// For GPDB 7+, external partitions will have their own ATTACH PARTITION DDL commands.
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				Skip("Test is not applicable to GPDB 7+")
 			}
 		})

@@ -18,21 +18,46 @@ type SegmentIpInfo struct {
 	Ip      string
 }
 
-// GetSegmentsHost retrieves the content ID and hostname for each primary segment in the Greenplum database.
-// It queries the gp_segment_configuration table to get the list of primary segments and their corresponding
-// content IDs and hostnames. The function returns a slice of SegmentHostInfo structs containing the content ID
-// and hostname for each primary segment.
+// GetSegmentsHost retrieves the content ID and hostname for each primary segment.
+// For Cloudberry Enterprise DB, it attempts to get segments for the warehouse identified by 'SHOW warehouse'.
+// For other databases (GPDB, CBDB), it gets all primary segments.
 func GetSegmentsHost(conn *dbconn.DBConn) []SegmentHostInfo {
-	query := `
-	select content,hostname
-	from gp_segment_configuration
-	where role = 'p' and content != -1 order by content
-	`
+	var query string
 
-	gplog.Debug("GetSegmentsHost, query is %v", query)
+	if conn.Version.IsCBEDB() {
+		var warehouseName string
+		errShowWarehouse := conn.Get(&warehouseName, "SHOW warehouse")
+		gplog.FatalOnError(errShowWarehouse, "Failed to get warehouse name")
+
+		query = fmt.Sprintf(`
+		WITH targetWarehouseID AS (
+			SELECT gw.oid AS wh_id
+			FROM gp_warehouse gw
+			WHERE gw.warehouse_name = '%s'
+		)
+		SELECT gsc.content, gsc.hostname
+		FROM gp_segment_configuration gsc
+		WHERE gsc.role = 'p'
+		AND gsc.content >= 0
+		AND gsc.status = 'u'
+		AND gsc.warehouseid = (SELECT wh_id FROM targetWarehouseID)
+		ORDER BY gsc.content;
+		`, warehouseName)
+	} else {
+		// For GPDB/CBDB: Get all primary segments
+		query = `
+		SELECT content, hostname
+		FROM gp_segment_configuration
+		WHERE role = 'p'
+		AND content >= 0
+		ORDER BY content
+		`
+	}
+
 	hosts := make([]SegmentHostInfo, 0)
+	gplog.Debug("GetSegmentsHost, query is %v", query)
 	err := conn.Select(&hosts, query)
-	gplog.FatalOnError(err, fmt.Sprintf("Query was: %s", query))
+	gplog.FatalOnError(err)
 	return hosts
 }
 

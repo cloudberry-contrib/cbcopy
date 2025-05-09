@@ -77,7 +77,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 			enableNestLoopGUC := "SET enable_nestloop TO 'true'"
 			searchPathGUC := "SET search_path TO pg_catalog, public"
 			defaultStorageGUC := "SET gp_default_storage_options TO 'appendonly=true, compresslevel=6, orientation=row, compresstype=none'"
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				defaultStorageGUC = "SET gp_default_storage_options TO 'compresslevel=6, compresstype=none'"
 			}
 
@@ -388,10 +388,10 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 					},
 				},
 			}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDBFamily() {
 				role1.ResGroup = "default_group"
 			}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				role1.Createrexthdfs = false
 				role1.Createwexthdfs = false
 			}
@@ -485,7 +485,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 		})
 		It("Sets GUCs for a particular role", func() {
 			defaultStorageOptionsString := "appendonly=true, compresslevel=6, orientation=row, compresstype=none"
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				defaultStorageOptionsString = "compresslevel=6, compresstype=none"
 			}
 
@@ -506,7 +506,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 			testutils.SkipIfBefore6(connectionPool)
 
 			defaultStorageOptionsString := "appendonly=true, compresslevel=6, orientation=row, compresstype=none"
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				defaultStorageOptionsString = "compresslevel=6, compresstype=none"
 			}
 
@@ -527,7 +527,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 	Describe("PrintCreateTablespaceStatements", func() {
 		var expectedTablespace builtin.Tablespace
 		BeforeEach(func() {
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				expectedTablespace = builtin.Tablespace{Oid: 1, Tablespace: "test_tablespace", FileLocation: "'/tmp/test_dir'", SegmentLocations: []string{}}
 			} else {
 				expectedTablespace = builtin.Tablespace{Oid: 1, Tablespace: "test_tablespace", FileLocation: "test_dir"}
@@ -586,7 +586,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 			tablespaceMetadata := tablespaceMetadataMap[expectedTablespace.GetUniqueID()]
 			builtin.PrintCreateTablespaceStatements(backupfile, tocfile, []builtin.Tablespace{expectedTablespace}, tablespaceMetadataMap)
 
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				/*
 				 * In GPDB 6 and later, a CREATE TABLESPACE statement can't be run in a multi-command string
 				 * with other statements, so we execute it separately from the metadata statements.

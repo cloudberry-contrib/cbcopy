@@ -102,7 +102,7 @@ func GetExternalTableDefinitions(connectionPool *dbconn.DBConn) map[uint32]Exter
 		query = version5Query
 	} else if connectionPool.Version.IsGPDB() && connectionPool.Version.Is("6") {
 		query = version6Query
-	} else if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+	} else if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 		query = atLeast7Query
 	}
 
@@ -207,7 +207,7 @@ func (pi PartitionInfo) GetMetadataEntry() (string, toc.MetadataEntry) {
 func GetExternalPartitionInfo(connectionPool *dbconn.DBConn) ([]PartitionInfo, map[uint32]PartitionInfo) {
 	// For GPDB 7+, external partitions will have their own ATTACH PARTITION DDL command
 	// instead of a complicated EXCHANGE PARTITION command.
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 		return []PartitionInfo{}, make(map[uint32]PartitionInfo, 0)
 	}
 

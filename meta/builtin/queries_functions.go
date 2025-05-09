@@ -107,7 +107,7 @@ func GetFunctionsAllVersions(connectionPool *dbconn.DBConn) []Function {
 // https://github.com/greenplum-db/gpbackup/commit/04c31a8b156d962410b0c4d4ca6ca3709ce1e477
 func GetFunctions(connectionPool *dbconn.DBConn) []Function {
 	excludeImplicitFunctionsClause := ""
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 		// This excludes implicitly created functions. Currently this is only range type functions
 		excludeImplicitFunctionsClause = `
 	AND NOT EXISTS (
@@ -219,13 +219,13 @@ func GetFunctions(connectionPool *dbconn.DBConn) []Function {
 	// before the pg_get_function_* functions execute.
 	verifiedResults := make([]Function, 0)
 	for _, result := range results {
-		if ((connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB()) && result.Kind == "w" {
+		if ((connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily()) && result.Kind == "w" {
 			result.IsWindow = true
 		}
 
 		if result.Arguments.Valid && result.IdentArgs.Valid && result.ResultType.Valid {
 			verifiedResults = append(verifiedResults, result)
-		} else if ((connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB()) && result.Kind == "p" && !result.ResultType.Valid { // GPDB7+ stored procedure
+		} else if ((connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily()) && result.Kind == "p" && !result.ResultType.Valid { // GPDB7+ stored procedure
 			verifiedResults = append(verifiedResults, result)
 		} else {
 			gplog.Warn("Function '%s.%s' not backed up, most likely dropped after gpbackup had begun.", result.Schema, result.Name)
@@ -781,7 +781,7 @@ func GetCasts(connectionPool *dbconn.DBConn) []Cast {
 		argStr = `coalesce(pg_get_function_arguments(p.oid), '') AS functionargs,`
 	}
 	methodStr := ""
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 		methodStr = "castmethod,"
 	} else {
 		methodStr = "CASE WHEN c.castfunc = 0 THEN 'b' ELSE 'f' END AS castmethod,"

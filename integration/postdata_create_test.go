@@ -216,7 +216,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 		})
 		It("creates a basic trigger", func() {
 			triggerDef := `CREATE TRIGGER sync_testtable AFTER INSERT OR DELETE OR UPDATE ON public.testtable FOR EACH STATEMENT EXECUTE PROCEDURE "RI_FKey_check_ins"()`
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				triggerDef = `CREATE TRIGGER sync_testtable AFTER INSERT OR DELETE OR UPDATE ON public.testtable FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_ins"()`
 			}
 			triggers := []builtin.TriggerDefinition{{Oid: 0, Name: "sync_testtable", OwningSchema: "public", OwningTable: "testtable", Def: sql.NullString{String: triggerDef, Valid: true}}}
@@ -233,7 +233,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 		})
 		It("creates a trigger with a comment", func() {
 			triggerDef := `CREATE TRIGGER sync_testtable AFTER INSERT OR DELETE OR UPDATE ON public.testtable FOR EACH STATEMENT EXECUTE PROCEDURE "RI_FKey_check_ins"()`
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				triggerDef = `CREATE TRIGGER sync_testtable AFTER INSERT OR DELETE OR UPDATE ON public.testtable FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_ins"()`
 			}
 			triggers := []builtin.TriggerDefinition{{Oid: 1, Name: "sync_testtable", OwningSchema: "public", OwningTable: "testtable", Def: sql.NullString{String: triggerDef, Valid: true}}}
@@ -387,7 +387,7 @@ AS $$ BEGIN RAISE EXCEPTION 'exception'; END; $$;`)
 			builtin.PrintCreateIndexStatements(backupfile, tocfile, indexes, indexesMetadataMap)
 
 			// Automatically-generated index names end in "_idx" in 6+ and "_key" in earlier versions.
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				Expect(strings.Contains(buffer.String(), `CREATE INDEX heap_can_a_idx`)).To(BeTrue())
 				Expect(strings.Contains(buffer.String(), `CREATE INDEX pt_heap_tab_1_prt_pqr_a_idx`)).To(BeFalse())
 			} else {

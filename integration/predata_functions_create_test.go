@@ -101,10 +101,11 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 					Volatility: "v", IsStrict: false, IsSecurityDefiner: false, Config: "", Cost: 100, NumRows: 0, DataAccess: "c",
 					Language: "sql", ExecLocation: "a",
 				}
-				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 					addFunction.PlannerSupport = "-"
 					addFunction.Kind = "f"
 					addFunction.Parallel = "u"
+					addFunction.DataAccess = ""
 				}
 
 				metadata := testutils.DefaultMetadata("FUNCTION", true, true, true, includeSecurityLabels)
@@ -128,10 +129,11 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 					Volatility: "s", IsStrict: true, IsSecurityDefiner: true, Config: "SET search_path TO 'pg_temp'", Cost: 200,
 					NumRows: 200, DataAccess: "m", Language: "sql", ExecLocation: "a",
 				}
-				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 					appendFunction.PlannerSupport = "-"
 					appendFunction.Kind = "f"
 					appendFunction.Parallel = "u"
+					appendFunction.DataAccess = ""
 				}
 
 				builtin.PrintCreateFunctionStatement(backupfile, tocfile, appendFunction, funcMetadata)
@@ -154,10 +156,11 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 					Volatility: "v", IsStrict: false, IsSecurityDefiner: false, Config: "", Cost: 100, NumRows: 1000, DataAccess: "c",
 					Language: "sql", ExecLocation: "a",
 				}
-				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 					dupFunction.PlannerSupport = "-"
 					dupFunction.Kind = "f"
 					dupFunction.Parallel = "u"
+					dupFunction.DataAccess = ""
 				}
 
 				builtin.PrintCreateFunctionStatement(backupfile, tocfile, dupFunction, funcMetadata)
@@ -184,11 +187,12 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 					ResultType: sql.NullString{String: "integer", Valid: true},
 					Volatility: "v", IsStrict: false, IsSecurityDefiner: false, Config: "", Cost: 100, NumRows: 0, DataAccess: "c",
 					Language: "sql", ExecLocation: "m", IsWindow: true}
-				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 					windowFunction.PlannerSupport = "-"
 					windowFunction.Kind = "w"
 					windowFunction.Parallel = "u"
 					windowFunction.ExecLocation = "c"
+					windowFunction.DataAccess = ""
 
 					// GPDB7 only allows set-returning functions to execute on coordinator
 					windowFunction.ReturnsSet = true
@@ -215,11 +219,11 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 					Volatility: "v", IsStrict: false, IsSecurityDefiner: false, Config: "", Cost: 100, NumRows: 0, DataAccess: "c",
 					Language: "sql", IsWindow: false, ExecLocation: "s",
 				}
-				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 					segmentFunction.PlannerSupport = "-"
 					segmentFunction.Kind = "f"
 					segmentFunction.Parallel = "u"
-
+					segmentFunction.DataAccess = ""
 					// GPDB7 only allows set-returning functions to execute on coordinator
 					segmentFunction.ReturnsSet = true
 					segmentFunction.NumRows = 1000
@@ -245,10 +249,11 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 					Volatility: "v", IsStrict: false, IsLeakProof: true, IsSecurityDefiner: false, Config: "", Cost: 100, NumRows: 0, DataAccess: "c",
 					Language: "sql", IsWindow: false, ExecLocation: "a",
 				}
-				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 					leakProofFunction.PlannerSupport = "-"
 					leakProofFunction.Kind = "f"
 					leakProofFunction.Parallel = "u"
+					leakProofFunction.DataAccess = ""
 				}
 
 				builtin.PrintCreateFunctionStatement(backupfile, tocfile, leakProofFunction, funcMetadata)
@@ -275,6 +280,9 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 					ResultType: sql.NullString{String: "integer", Valid: true},
 					Volatility: "v", IsStrict: false, IsLeakProof: false, IsSecurityDefiner: false, Config: "", Cost: 100, NumRows: 0, DataAccess: "c",
 					Language: "sql", IsWindow: false, ExecLocation: "a", PlannerSupport: "-", Kind: "f", Parallel: "r",
+				}
+				if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
+					ParallelFunction.DataAccess = ""
 				}
 
 				builtin.PrintCreateFunctionStatement(backupfile, tocfile, ParallelFunction, funcMetadata)
@@ -362,7 +370,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 				IdentArgs: sql.NullString{String: "numeric, numeric", Valid: true}, TransitionFunction: 1, PreliminaryFunction: 2,
 				TransitionDataType: "numeric", InitialValue: "0", MInitValIsNull: true,
 			}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				basicAggregateDef.Kind = "n"
 				basicAggregateDef.Finalmodify = "r"
 				basicAggregateDef.Mfinalmodify = "r"
@@ -404,7 +412,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 				IdentArgs: sql.NullString{String: `VARIADIC "any" ORDER BY VARIADIC "any"`, Valid: true}, TransitionFunction: 3, FinalFunction: 4,
 				TransitionDataType: "internal", InitValIsNull: true, FinalFuncExtra: true, Hypothetical: true, MInitValIsNull: true,
 			}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				complexAggregateDef.Hypothetical = false
 				complexAggregateDef.Kind = "h"
 				complexAggregateDef.Finalmodify = "w"
@@ -428,7 +436,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 				SortOperator: "+", SortOperatorSchema: "pg_catalog", TransitionDataType: "numeric",
 				InitialValue: "0", IsOrdered: false, MInitValIsNull: true,
 			}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				aggregateDef.Kind = "n"
 				aggregateDef.Finalmodify = "r"
 				aggregateDef.Mfinalmodify = "r"
@@ -452,7 +460,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 				FinalFunction: 0, SortOperator: "", TransitionDataType: "numeric", TransitionDataSize: 1000,
 				InitialValue: "0", IsOrdered: false, MInitValIsNull: true,
 			}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				aggregateDef.Kind = "n"
 				aggregateDef.Finalmodify = "r"
 				aggregateDef.Mfinalmodify = "r"
@@ -476,7 +484,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 				FinalFunction: 5, SerialFunction: 6, DeserialFunction: 7, TransitionDataType: "internal",
 				IsOrdered: false, InitValIsNull: true, MInitValIsNull: true,
 			}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				aggregateDef.Kind = "n"
 				aggregateDef.Finalmodify = "r"
 				aggregateDef.Mfinalmodify = "r"
@@ -501,7 +509,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 				MTransitionDataType: "numeric", MTransitionDataSize: 100, MFinalFunction: 1,
 				MFinalFuncExtra: true, MInitialValue: "0", MInitValIsNull: false,
 			}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				aggregateDef.Kind = "n"
 				aggregateDef.Finalmodify = "r"
 				aggregateDef.Mfinalmodify = "r"

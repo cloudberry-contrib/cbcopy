@@ -285,7 +285,7 @@ var _ = Describe("cbcopy integration tests", func() {
 
 		BeforeEach(func() {
 			dataType = ""
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				dataType = "bigint"
 			}
 		})
@@ -297,10 +297,10 @@ var _ = Describe("cbcopy integration tests", func() {
 			resultSequenceDef := builtin.GetSequenceDefinition(connectionPool, "public.my_sequence")
 
 			expectedSequence := builtin.SequenceDefinition{LastVal: 1, Type: dataType, Increment: 1, MaxVal: math.MaxInt64, MinVal: 1, CacheVal: 1}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				expectedSequence.StartVal = 1
 			}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				// In GPDB 7+, default cache value is 20
 				expectedSequence.CacheVal = 20
 			}
@@ -319,7 +319,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			resultSequenceDef := builtin.GetSequenceDefinition(connectionPool, "public.my_sequence")
 
 			expectedSequence := builtin.SequenceDefinition{LastVal: 105, Type: dataType, Increment: 5, MaxVal: 1000, MinVal: 20, CacheVal: 1, IsCycled: false, IsCalled: true}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				expectedSequence.StartVal = 100
 			}
 
@@ -398,7 +398,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			testhelper.AssertQueryRuns(connectionPool, "COMMENT ON SEQUENCE public.seq_one IS 'this is a sequence comment'")
 			startValOne := int64(0)
 			startValTwo := int64(0)
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				startValOne = 3
 				startValTwo = 7
 			}
@@ -411,7 +411,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			seqOneDef := builtin.SequenceDefinition{LastVal: 3, Increment: 1, MaxVal: math.MaxInt64, MinVal: 1, CacheVal: 1, StartVal: startValOne}
 			seqTwoRelation := builtin.Relation{Schema: "public", Name: "seq_two"}
 			seqTwoDef := builtin.SequenceDefinition{LastVal: 7, Increment: 1, MaxVal: math.MaxInt64, MinVal: 1, CacheVal: 1, StartVal: startValTwo}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				// In GPDB 7+, default cache value is 20
 				seqOneDef.CacheVal = 20
 				seqOneDef.Type = "bigint"

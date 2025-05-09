@@ -345,7 +345,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			Expect(results).To(HaveLen(1))
 
 			collationDef := builtin.Collation{Oid: 0, Schema: "public", Name: "some_coll", Collate: "POSIX", Ctype: "POSIX"}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				collationDef.IsDeterministic = "true"
 				collationDef.Provider = "c"
 			}
@@ -370,7 +370,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			Expect(results).To(HaveLen(1))
 
 			collationDef := builtin.Collation{Oid: 0, Schema: "testschema", Name: "some_coll", Collate: "POSIX", Ctype: "POSIX"}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				collationDef.IsDeterministic = "true"
 				collationDef.Provider = "c"
 			}

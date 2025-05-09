@@ -18,7 +18,7 @@ func RetrieveAndProcessTables(conn *dbconn.DBConn, includeTables []string) ([]Ta
 
 	tableRelations := GetIncludedUserTableRelations(conn, quotedIncludeRelations)
 
-	if (conn.Version.IsGPDB() && conn.Version.AtLeast("6")) || conn.Version.IsCBDB() {
+	if (conn.Version.IsGPDB() && conn.Version.AtLeast("6")) || conn.Version.IsCBDBFamily() {
 		tableRelations = append(tableRelations, GetForeignTableRelations(conn)...)
 	}
 
@@ -59,13 +59,13 @@ func retrieveAndBackupTypes(connectionPool *dbconn.DBConn, metadataFile *utils.F
 	composites := GetCompositeTypes(connectionPool)
 	domains := GetDomainTypes(connectionPool)
 	rangeTypes := make([]RangeType, 0)
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 		rangeTypes = GetRangeTypes(connectionPool)
 	}
 	typeMetadata := GetMetadataForObjectType(connectionPool, TYPE_TYPE)
 
 	backupShellTypes(metadataFile, shells, bases, rangeTypes)
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDBFamily() {
 		backupEnumTypes(connectionPool, metadataFile, typeMetadata)
 	}
 
@@ -85,7 +85,7 @@ func retrieveAndBackupTypes(connectionPool *dbconn.DBConn, metadataFile *utils.F
 func retrieveConstraints(conn *dbconn.DBConn, sortables *[]Sortable, metadataMap MetadataMap, tables ...Relation) []Constraint {
 	gplog.Verbose("Retrieving constraints")
 	constraints := GetConstraints(conn, tables...)
-	if len(constraints) > 0 && ((conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDB()) {
+	if len(constraints) > 0 && ((conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDBFamily()) {
 		RenameExchangedPartitionConstraints(conn, &constraints)
 	}
 
@@ -138,7 +138,7 @@ func retrieveViews(conn *dbconn.DBConn, sortables *[]Sortable) {
 
 // https://github.com/greenplum-db/gpbackup/commit/abdf8cf26dddf97238bee4c4a3e1341eb0077fd5
 func retrieveTSObjects(conn *dbconn.DBConn, sortables *[]Sortable, metadataMap MetadataMap) {
-	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("5")) && !conn.Version.IsCBDB() {
+	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("5")) && !conn.Version.IsCBDBFamily() {
 		return
 	}
 	gplog.Verbose("Retrieving Text Search Parsers")
@@ -239,7 +239,7 @@ func retrieveCasts(conn *dbconn.DBConn, sortables *[]Sortable, metadataMap Metad
 }
 
 func retrieveFDWObjects(conn *dbconn.DBConn, sortables *[]Sortable, metadataMap MetadataMap) {
-	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("6")) && !conn.Version.IsCBDB() {
+	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("6")) && !conn.Version.IsCBDBFamily() {
 		return
 	}
 	retrieveForeignDataWrappers(conn, sortables, metadataMap)
@@ -318,13 +318,13 @@ func backupResourceQueues(conn *dbconn.DBConn, metadataFile *utils.FileWithByteC
 }
 
 func backupResourceGroups(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount) {
-	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("5")) && !conn.Version.IsCBDB() {
+	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("5")) && !conn.Version.IsCBDBFamily() {
 		return
 	}
 	gplog.Verbose("Writing CREATE RESOURCE GROUP statements to metadata file")
 
 	// at resource group part, CBDB is still same as 3x/GP6.
-	if (conn.Version.IsGPDB() && conn.Version.Before("7")) {
+	if conn.Version.IsGPDB() && conn.Version.Before("7") {
 		resGroups := GetResourceGroups[ResourceGroupBefore7](conn)
 		objectCounts["Resource Groups"] = len(resGroups)
 		resGroupMetadata := GetCommentsForObjectType(conn, TYPE_RESOURCEGROUP)
@@ -487,7 +487,7 @@ func backupConversions(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCoun
 }
 
 func backupOperatorFamilies(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount) {
-	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("5")) && !conn.Version.IsCBDB() {
+	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("5")) && !conn.Version.IsCBDBFamily() {
 		return
 	}
 	gplog.Verbose("Writing CREATE OPERATOR FAMILY statements to metadata file")
@@ -498,7 +498,7 @@ func backupOperatorFamilies(conn *dbconn.DBConn, metadataFile *utils.FileWithByt
 }
 
 func backupCollations(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount) {
-	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("6")) && !conn.Version.IsCBDB() {
+	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("6")) && !conn.Version.IsCBDBFamily() {
 		return
 	}
 	gplog.Verbose("Writing CREATE COLLATION statements to metadata file")
@@ -509,7 +509,7 @@ func backupCollations(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount
 }
 
 func backupExtensions(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount) {
-	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("5")) && !conn.Version.IsCBDB() {
+	if !(conn.Version.IsGPDB() && conn.Version.AtLeast("5")) && !conn.Version.IsCBDBFamily() {
 		return
 	}
 	gplog.Verbose("Writing CREATE EXTENSION statements to metadata file")

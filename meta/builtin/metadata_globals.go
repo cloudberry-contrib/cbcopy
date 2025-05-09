@@ -181,7 +181,7 @@ func PrintCreateResourceGroupStatementsAtLeast7(metadataFile *utils.FileWithByte
 			if !strings.HasPrefix(resGroup.CpuMaxPercent, "-") {
 				/* cpu rate mode */
 				attributes = append(attributes, fmt.Sprintf("CPU_MAX_PERCENT=%s", resGroup.CpuMaxPercent))
-			} else if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5.9.0")) || gpdbVersion.IsCBDB() {
+			} else if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5.9.0")) || gpdbVersion.IsCBDBFamily() {
 				/* cpuset mode */
 				attributes = append(attributes, fmt.Sprintf("CPUSET='%s'", resGroup.Cpuset))
 			}
@@ -238,7 +238,7 @@ func PrintCreateResourceGroupStatementsBefore7(metadataFile *utils.FileWithByteC
 			if !strings.HasPrefix(resGroup.CPURateLimit, "-") {
 				/* cpu rate mode */
 				metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET CPU_RATE_LIMIT %s;", resGroup.Name, resGroup.CPURateLimit)
-			} else if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5.9.0")) || gpdbVersion.IsCBDB() {
+			} else if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5.9.0")) || gpdbVersion.IsCBDBFamily() {
 				/* cpuset mode */
 				metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET CPUSET '%s';", resGroup.Name, resGroup.Cpuset)
 			}
@@ -253,7 +253,7 @@ func PrintCreateResourceGroupStatementsBefore7(metadataFile *utils.FileWithByteC
 			if !strings.HasPrefix(resGroup.CPURateLimit, "-") {
 				/* cpu rate mode */
 				attributes = append(attributes, fmt.Sprintf("CPU_RATE_LIMIT=%s", resGroup.CPURateLimit))
-			} else if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5.9.0")) || gpdbVersion.IsCBDB() {
+			} else if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5.9.0")) || gpdbVersion.IsCBDBFamily() {
 				/* cpuset mode */
 				attributes = append(attributes, fmt.Sprintf("CPUSET='%s'", resGroup.Cpuset))
 			}
@@ -265,7 +265,7 @@ func PrintCreateResourceGroupStatementsBefore7(metadataFile *utils.FileWithByteC
 			 */
 			if resGroup.MemoryAuditor == "1" {
 				attributes = append(attributes, "MEMORY_AUDITOR=cgroup")
-			} else if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5.8.0")) || gpdbVersion.IsCBDB() {
+			} else if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5.8.0")) || gpdbVersion.IsCBDBFamily() {
 				attributes = append(attributes, "MEMORY_AUDITOR=vmtracker")
 			}
 
@@ -338,7 +338,7 @@ func PrintCreateRoleStatements(metadataFile *utils.FileWithByteCount, toc *toc.T
 
 		attrs = append(attrs, fmt.Sprintf("RESOURCE QUEUE %s", role.ResQueue))
 
-		if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5")) || gpdbVersion.IsCBDB() {
+		if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("5")) || gpdbVersion.IsCBDBFamily() {
 			attrs = append(attrs, fmt.Sprintf("RESOURCE GROUP %s", role.ResGroup))
 		}
 

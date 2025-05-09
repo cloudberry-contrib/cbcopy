@@ -130,7 +130,7 @@ func GetConstraints(connectionPool *dbconn.DBConn, includeTables ...Relation) []
 	// tables must propogate to children. For GPDB versions 5 or lower, this
 	// field will default to false.
 	conIsLocal := ""
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 		conIsLocal = `con.conislocal,`
 	}
 	// This query is adapted from the queries underlying \d in psql.

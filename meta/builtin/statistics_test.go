@@ -18,7 +18,7 @@ import (
 var _ = Describe("backup/statistics tests", func() {
 	getStatInsertReplace := func(smallint int, oid int) (string, string, string, string, string) {
 		insertReplace1, insertReplace2, insertReplace3, insertReplace4, insertReplace5 := "", "", "", "", ""
-		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 			insertReplace1 = `
 	false::boolean,`
 			insertReplace2 = fmt.Sprintf(`
@@ -32,7 +32,7 @@ var _ = Describe("backup/statistics tests", func() {
 		}
 
 		// GPDB 7+ has collations
-		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 			insertReplace3 = insertReplace3 + `
 	0::oid,
 	0::oid,
@@ -166,7 +166,7 @@ WHERE oid = '"""test''schema"""."""test''table"""'::regclass::oid;`))
 			attStats := builtin.AttributeStatistic{Schema: "testschema", Table: "testtable", AttName: "testatt", Type: "_array", Relid: 2,
 				AttNumber: 3, NullFraction: .4, Width: 10, Distinct: .5, Kind1: 20, Operator1: 10,
 				Numbers1: pq.StringArray([]string{"1", "2", "3"}), Values1: pq.StringArray([]string{"4", "5", "6"})}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				attStats.Kind5 = 10
 				attStats.Operator5 = 12
 			}
@@ -202,7 +202,7 @@ WHERE oid = '"""test''schema"""."""test''table"""'::regclass::oid;`))
 			attStats := builtin.AttributeStatistic{Schema: "testschema", Table: "testtable", AttName: "testatt", Type: "testtype", Relid: 2,
 				AttNumber: 3, NullFraction: .4, Width: 10, Distinct: .5, Kind1: 20, Operator1: 10,
 				Numbers1: pq.StringArray([]string{"1", "2", "3"}), Values1: pq.StringArray([]string{"4", "5", "6"})}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				attStats.Kind5 = 10
 				attStats.Operator5 = 12
 			}

@@ -387,7 +387,7 @@ func GetColumnDefinitions(connectionPool *dbconn.DBConn) map[uint32][]ColumnDefi
 	resultMap := make(map[uint32][]ColumnDefinition)
 	for _, result := range results {
 		result.StorageType = storageTypeCodes[result.StorageType]
-		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 			result.AttGenerated = attGeneratedCodes[result.AttGenerated]
 		}
 		resultMap[result.Oid] = append(resultMap[result.Oid], result)
@@ -457,7 +457,7 @@ func GetTableReplicaIdentity(connectionPool *dbconn.DBConn) map[uint32]string {
 	}
 
 	relkindFilter := "'r', 'm'"
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 		relkindFilter = "'r', 'm', 'p'"
 	}
 
@@ -473,7 +473,7 @@ func GetTableReplicaIdentity(connectionPool *dbconn.DBConn) map[uint32]string {
 func GetPartitionDetails(connectionPool *dbconn.DBConn) (map[uint32]string, map[uint32]string) {
 	// https://github.com/greenplum-db/gpbackup/commit/ea1c002e65102d34caf37a37e1c158a440799b92
 	// https://github.com/greenplum-db/gpbackup/commit/3d57441e6f56b51c92bd14cb5e46c9f6cac7b0db
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 		// GPDB7 reworked partition tables significantly, to match
 		// how upstream handles them.  These separate details are no
 		// longer needed, and instead partition tables are handled as
@@ -526,7 +526,7 @@ type AlteredPartitionRelation struct {
  */
 func GetPartitionAlteredSchema(connectionPool *dbconn.DBConn) map[uint32][]AlteredPartitionRelation {
 	// https://github.com/greenplum-db/gpbackup/commit/ea1c002e65102d34caf37a37e1c158a440799b92
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 		return make(map[uint32][]AlteredPartitionRelation)
 	}
 

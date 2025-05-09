@@ -73,7 +73,7 @@ func (db Database) FQN() string {
 
 func GetDefaultDatabaseEncodingInfo(connectionPool *dbconn.DBConn) Database {
 	lcQuery := ""
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 		lcQuery = "datcollate AS collate, datctype AS ctype,"
 	}
 
@@ -92,7 +92,7 @@ func GetDefaultDatabaseEncodingInfo(connectionPool *dbconn.DBConn) Database {
 
 func GetDatabaseInfo(connectionPool *dbconn.DBConn) Database {
 	lcQuery := ""
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 		lcQuery = "datcollate AS collate, datctype AS ctype,"
 	}
 	query := fmt.Sprintf(`
@@ -242,7 +242,7 @@ func GetResourceGroups[T ResourceGroupBefore7 | ResourceGroupAtLeast7](connectio
 	if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 		before7SelectClause := ""
 		// This is when pg_dumpall was changed to use the actual values
-		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5.2.0")) || connectionPool.Version.IsCBDB() {
+		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5.2.0")) || connectionPool.Version.IsCBDBFamily() {
 			before7SelectClause += `
 		SELECT g.oid,
 			quote_ident(g.rsgname) AS name,
@@ -274,7 +274,7 @@ func GetResourceGroups[T ResourceGroupBefore7 | ResourceGroupAtLeast7](connectio
 		// 5.8.0. Default the value to '0' (vmtracker) since there could
 		// be a resource group created before 5.8.0 which will not have
 		// this memoryauditor field defined.
-		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5.8.0")) || connectionPool.Version.IsCBDB() {
+		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5.8.0")) || connectionPool.Version.IsCBDBFamily() {
 			before7SelectClause += `, coalesce(t6.value, '0') AS memoryauditor`
 			before7FromClause += ` LEFT JOIN pg_resgroupcapability t6 ON t6.resgroupid = g.oid AND t6.reslimittype = 6`
 		}
@@ -283,7 +283,7 @@ func GetResourceGroups[T ResourceGroupBefore7 | ResourceGroupAtLeast7](connectio
 		// 5.9.0. Default the value to '-1' since there could be a
 		// resource group created before 5.9.0 which will not have this
 		// cpuset field defined.
-		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5.9.0")) || connectionPool.Version.IsCBDB() {
+		if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5.9.0")) || connectionPool.Version.IsCBDBFamily() {
 			before7SelectClause += `, coalesce(t7.value, '-1') AS cpuset`
 			before7FromClause += ` LEFT JOIN pg_resgroupcapability t7 ON t7.resgroupid = g.oid AND t7.reslimittype = 7`
 		}
@@ -374,20 +374,20 @@ func (r Role) FQN() string {
  */
 func GetRoles(connectionPool *dbconn.DBConn) []Role {
 	resgroupQuery := ""
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDBFamily() {
 		resgroupQuery = "(SELECT quote_ident(rsgname) FROM pg_resgroup WHERE pg_resgroup.oid = rolresgroup) AS resgroup,"
 	}
 	replicationQuery := ""
 	readExtHdfs := "rolcreaterexthdfs,"
 	writeExtHdfs := "rolcreatewexthdfs,"
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 		replicationQuery = "rolreplication,"
 		readExtHdfs = ""
 		writeExtHdfs = ""
 	}
 
 	var whereClause string
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 		whereClause = `
 	WHERE rolname !~ '^pg_'`
 	}
@@ -463,7 +463,7 @@ func GetRoleGUCs(connectionPool *dbconn.DBConn) map[string][]RoleGUC {
 		END AS config`
 
 	var gucsForDBQuery string
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 		gucsForDBQuery = `UNION
 	SELECT quote_ident(r.rolname) AS rolename,
 		quote_ident(d.datname) AS dbname,
@@ -481,7 +481,7 @@ func GetRoleGUCs(connectionPool *dbconn.DBConn) map[string][]RoleGUC {
 			FROM pg_roles %s) AS options`, gucsForDBQuery)
 
 	var whereClause string
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 		whereClause = `
 	WHERE rolename !~ '^pg_'`
 	}
@@ -553,7 +553,7 @@ func (rm RoleMember) GetMetadataEntry() (string, toc.MetadataEntry) {
 func GetRoleMembers(connectionPool *dbconn.DBConn) []RoleMember {
 	var caseClause string
 	var whereClause string
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDBFamily() {
 		caseClause = `
 		WHEN pg_get_userbyid(pga.grantor) like 'unknown (OID='||pga.grantor::regclass||')'
 		THEN '' ELSE quote_ident(pg_get_userbyid(pga.grantor))`
@@ -563,7 +563,7 @@ func GetRoleMembers(connectionPool *dbconn.DBConn) []RoleMember {
 		THEN '' ELSE quote_ident(pg_get_userbyid(pga.grantor))`
 	}
 
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 		whereClause = fmt.Sprintf(`WHERE roleid >= %d`, FIRST_NORMAL_OBJECT_ID)
 	} else {
 		whereClause = ``

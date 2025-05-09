@@ -264,7 +264,7 @@ GRANT TEMPORARY,CONNECT ON DATABASE testdb TO testrole;`,
 		It("prints prepare resource groups", func() {
 			builtin.PrintResetResourceGroupStatements(backupfile, tocfile)
 			testutils.ExpectEntry(tocfile.GlobalEntries, 0, "", "", "admin_group", "RESOURCE GROUP")
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7")) {
+			if connectionPool.Version.IsGPDB() && connectionPool.Version.Before("7") {
 				testutils.AssertBufferContents(tocfile.GlobalEntries, buffer,
 					`ALTER RESOURCE GROUP admin_group SET CPU_RATE_LIMIT 1;`,
 					`ALTER RESOURCE GROUP admin_group SET MEMORY_LIMIT 1;`,
@@ -341,7 +341,7 @@ GRANT TEMPORARY,CONNECT ON DATABASE testdb TO testrole;`,
 
 		getResourceGroupReplace := func() (string, string) {
 			resourceGroupReplace1, resourceGroupReplace2 := "", ""
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDBFamily() {
 				resourceGroupReplace1 = ` RESOURCE GROUP default_group`
 				resourceGroupReplace2 = `RESOURCE GROUP "testGroup" `
 			}

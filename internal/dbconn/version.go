@@ -15,7 +15,9 @@ type DBType int
 const (
 	Unknown DBType = iota
 	GPDB           // Greenplum Database
-	CBDB           // Apache Cloudberry
+	CBDB           // Cloudberry Database
+	CBEDB          // Cloudberry Enterprise Database
+	ACBDB          // Apache Cloudberry Database
 	HDW            // HashData Database
 	PGSQL          // PostgreSQL
 )
@@ -23,7 +25,8 @@ const (
 const (
 	gpdbPattern  = `\(Greenplum Database ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
 	cbdbPattern  = `\(Cloudberry Database ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
-	cbdbNewPattern  = `\(Apache Cloudberry ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
+	cbedbPattern = `\(HashData Enterprise ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
+	acbdbPattern = `\(Apache Cloudberry ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
 	hdwPattern   = `\(HashData Warehouse ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
 	pgsqlPattern = `^PostgreSQL\s+([0-9]+\.[0-9]+\.[0-9]+)`
 )
@@ -34,7 +37,11 @@ func (t DBType) String() string {
 	case GPDB:
 		return "Greenplum Database"
 	case CBDB:
-		return "Apache Cloudberry"
+		return "Cloudberry Database"
+	case CBEDB:
+		return "Cloudberry Enterprise Database"
+	case ACBDB:
+		return "Apache Cloudberry Database"
 	case HDW:
 		return "HashData Database"
 	case PGSQL:
@@ -82,8 +89,18 @@ func NewVersion(versionStr string) GPDBVersion {
 //
 // Cloudberry:
 //
-//	PostgreSQL 14.4 (Apache Cloudberry 1.2.0 build commit:5b5ae3f8aa638786f01bbd08307b6474a1ba1997)
+//	PostgreSQL 14.4 (Cloudberry Database 1.2.0 build commit:5b5ae3f8aa638786f01bbd08307b6474a1ba1997)
 //	on x86_64-pc-linux-gnu, compiled by gcc (GCC) 10.2.1 20210130 (Red Hat 10.2.1-11), 64-bit compiled on Feb 16 2023 23:44:39
+//
+// Cloudberry Enterprise:
+//
+//	PostgreSQL 14.4 (Cloudberry Database 1.1.5 build dev) (HashData Enterprise 1.1.5 build dev)
+//	on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 10.2.1 20210130 (Red Hat 10.2.1-11), 64-bit compiled on Feb 13 2025 14:37:41
+//
+// Apache Cloudberry:
+//
+//	PostgreSQL 14.4 (Apache Cloudberry 2.0.0 build commit:a071e3f8aa638786f01bbd08307b6474a1ba7890)
+//	on x86_64-pc-linux-gnu, compiled by gcc (GCC) 10.2.1 20210130 (Red Hat 10.2.1-11), 64-bit compiled on Jun 10 2025 15:42:54
 //
 // Greenplum:
 //
@@ -112,17 +129,20 @@ func (dbversion *GPDBVersion) ParseVersionInfo(versionString string) {
 	dbversion.Type = Unknown
 
 	// Try to match each database type
-	if ver, ok := dbversion.extractVersion(cbdbPattern); ok {
+	if ver, ok := dbversion.extractVersion(cbedbPattern); ok {
+		dbversion.Type = CBEDB
+		dbversion.SemVer = ver
+	} else if ver, ok := dbversion.extractVersion(cbdbPattern); ok {
 		dbversion.Type = CBDB
 		dbversion.SemVer = ver
-	} else if ver, ok := dbversion.extractVersion(cbdbNewPattern); ok {
-		dbversion.Type = CBDB
-		dbversion.SemVer = ver
-	} else if ver, ok := dbversion.extractVersion(gpdbPattern); ok {
-		dbversion.Type = GPDB
+	} else if ver, ok := dbversion.extractVersion(acbdbPattern); ok {
+		dbversion.Type = ACBDB
 		dbversion.SemVer = ver
 	} else if ver, ok := dbversion.extractVersion(hdwPattern); ok {
 		dbversion.Type = HDW
+		dbversion.SemVer = ver
+	} else if ver, ok := dbversion.extractVersion(gpdbPattern); ok {
+		dbversion.Type = GPDB
 		dbversion.SemVer = ver
 	} else if ver, ok := dbversion.extractVersion(pgsqlPattern); ok {
 		dbversion.Type = PGSQL
@@ -170,6 +190,18 @@ func (dbversion GPDBVersion) Is(targetVersion string) bool {
 
 func (dbversion GPDBVersion) IsCBDB() bool {
 	return dbversion.Type == CBDB
+}
+
+func (dbversion GPDBVersion) IsCBEDB() bool {
+	return dbversion.Type == CBEDB
+}
+
+func (dbversion GPDBVersion) IsACBDB() bool {
+	return dbversion.Type == ACBDB
+}
+
+func (dbversion GPDBVersion) IsCBDBFamily() bool {
+	return dbversion.IsCBDB() || dbversion.IsCBEDB() || dbversion.IsACBDB()
 }
 
 func (dbversion GPDBVersion) IsGPDB() bool {

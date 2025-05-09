@@ -31,11 +31,15 @@ SET gp_autostats_mode = NONE;
 SELECT set_config('extra_float_digits', (SELECT max_val FROM pg_settings WHERE name = 'extra_float_digits'), false);
 `, applicationName)
 
-	if (conn.Version.IsGPDB() && conn.Version.AtLeast("5")) || conn.Version.IsCBDB() {
+	if (conn.Version.IsGPDB() && conn.Version.AtLeast("5")) || conn.Version.IsCBDBFamily() {
 		setupQuery += "SET synchronize_seqscans TO off;\n"
 	}
-	if (conn.Version.IsGPDB() && conn.Version.AtLeast("6")) || conn.Version.IsCBDB() {
+	if (conn.Version.IsGPDB() && conn.Version.AtLeast("6")) || conn.Version.IsCBDBFamily() {
 		setupQuery += "SET INTERVALSTYLE = POSTGRES;\n"
+	}
+
+	if conn.Version.IsCBEDB() {
+		setupQuery += "set hashdata.gp_create_syntax_compatible to on;\n"
 	}
 
 	return setupQuery
@@ -62,7 +66,7 @@ func (qm *QueryManager) GetAllDatabases(conn *dbconn.DBConn) ([]string, error) {
 func (tm *QueryManager) GetUserTables(conn *dbconn.DBConn) (map[string]option.TableStatistics, error) {
 	var query string
 
-	if (conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDB() {
+	if (conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDBFamily() {
 		query = `
 		SELECT
 			quote_ident(n.nspname) AS schema, quote_ident(c.relname) as name, 0 as partition, cast(c.reltuples as bigint) AS relTuples
@@ -191,7 +195,7 @@ type PartLeafTable struct {
 func (qm *QueryManager) GetPartitionLeafTables(conn *dbconn.DBConn) ([]PartLeafTable, error) {
 	var query string
 
-	if (conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDB() {
+	if (conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDBFamily() {
 		query = `
 		SELECT quote_ident(n.nspname) || '.' || quote_ident(relname) AS rootname,   
  	 	quote_ident(n.nspname) || '.' || 

@@ -132,7 +132,7 @@ func getUserTableRelations(connectionPool *dbconn.DBConn) []Relation {
 	// GP7 support change ref: https://github.com/greenplum-db/gpbackup/commit/14885d8242f785468496de3310d154e676f686e4
 	// In GPDB 7+, root partitions are marked as relkind 'p'.
 	relkindFilter := `'r'`
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 		relkindFilter = `'r', 'p'`
 	}
 
@@ -166,7 +166,7 @@ func getUserTableRelationsWithIncludeFiltering(connectionPool *dbconn.DBConn, in
 	// https://github.com/greenplum-db/gpbackup/commit/14885d8242f785468496de3310d154e676f686e4
 	// In GPDB 7+, root partitions are marked as relkind 'p'.
 	relkindFilter := `'r'`
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 		relkindFilter = `'r', 'p'`
 	}
 
@@ -371,7 +371,7 @@ func GetAllSequenceRelations(connectionPool *dbconn.DBConn) []Relation {
 
 func GetSequenceDefinition(connectionPool *dbconn.DBConn, seqName string) SequenceDefinition {
 	startValQuery := ""
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 		startValQuery = "start_value AS startval,"
 	}
 

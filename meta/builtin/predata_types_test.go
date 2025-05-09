@@ -120,7 +120,7 @@ var _ = Describe("backup/predata_types tests", func() {
 		})
 		It("prints a base type where all optional arguments have default values where possible", func() {
 			expectedArgsReplace := ""
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDBFamily() {
 				expectedArgsReplace = `
 	TYPMOD_IN = modin_fn,
 	TYPMOD_OUT = modout_fn,`
@@ -139,7 +139,7 @@ var _ = Describe("backup/predata_types tests", func() {
 		})
 		It("prints a base type with all optional arguments provided", func() {
 			expectedArgsReplace := ""
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDBFamily() {
 				expectedArgsReplace = `
 	TYPMOD_IN = modin_fn,
 	TYPMOD_OUT = modout_fn,`

@@ -730,7 +730,7 @@ func GetUserByID(connectionPool *dbconn.DBConn, oid uint32) string {
 }
 
 func CreateSecurityLabelIfGPDB6(connectionPool *dbconn.DBConn, objectType string, objectName string) {
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 		testhelper.AssertQueryRuns(connectionPool, fmt.Sprintf("SECURITY LABEL FOR dummy ON %s %s IS 'unclassified';", objectType, objectName))
 	}
 }
@@ -738,7 +738,7 @@ func CreateSecurityLabelIfGPDB6(connectionPool *dbconn.DBConn, objectType string
 /**/
 
 func SkipIfNot4(connectionPool *dbconn.DBConn) {
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("5")) || connectionPool.Version.IsCBDBFamily() {
 		Skip("Test only applicable to GPDB4")
 	}
 }

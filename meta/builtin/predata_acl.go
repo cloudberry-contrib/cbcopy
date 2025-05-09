@@ -105,7 +105,7 @@ func PrintObjectMetadata(metadataFile *utils.FileWithByteCount, toc *toc.TOC,
 	}
 
 	objectType := entry.ObjectType
-	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDB() {
+	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDBFamily() {
 		switch object := obj.(type) {
 		case Function:
 			if object.Kind == "p" {

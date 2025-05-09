@@ -200,7 +200,7 @@ func GetIndexes(connectionPool *dbconn.DBConn) []IndexDefinition {
 	for _, index := range resultIndexes {
 		if index.Def.Valid {
 			verifiedResultIndexes = append(verifiedResultIndexes, index)
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				indexMap[index.Oid] = index // hash index for topological sort
 			}
 		} else {

@@ -35,7 +35,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 				Relation:        builtin.Relation{Schema: "public", Name: "testtable"},
 				TableDefinition: builtin.TableDefinition{DistPolicy: "DISTRIBUTED RANDOMLY", ExtTableDef: extTableEmpty, Inherits: []string{}},
 			}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				partitionPartFalseExpectation = "'false'"
 				testTable.ReplicaIdentity = "d"
 			}
@@ -86,7 +86,7 @@ var _ = Describe("cbcopy integration create statement tests", func() {
 			rowOneDefault := builtin.ColumnDefinition{Oid: 0, Num: 1, Name: "i", NotNull: false, HasDefault: true, Type: "integer", Encoding: "", StatTarget: -1, StorageType: "", DefaultVal: "(42)", Comment: ""}
 			rowNotNullDefault := builtin.ColumnDefinition{Oid: 0, Num: 2, Name: "j", NotNull: true, HasDefault: true, Type: "character varying(20)", Encoding: "", StatTarget: -1, StorageType: "", DefaultVal: "('bar'::text)", Comment: ""}
 			rowNonDefaultStorageAndStats := builtin.ColumnDefinition{Oid: 0, Num: 3, Name: "k", NotNull: false, HasDefault: false, Type: "text", Encoding: "", StatTarget: 3, StorageType: "PLAIN", DefaultVal: "", Comment: ""}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				testhelper.AssertQueryRuns(connectionPool, "CREATE COLLATION public.some_coll (lc_collate = 'POSIX', lc_ctype = 'POSIX')")
 				defer testhelper.AssertQueryRuns(connectionPool, "DROP COLLATION public.some_coll CASCADE")
 				rowNonDefaultStorageAndStats.Collation = "public.some_coll"
@@ -381,7 +381,7 @@ SET SUBPARTITION TEMPLATE ` + `
 				Relation:        builtin.Relation{Schema: "public", Name: "testtable"},
 				TableDefinition: builtin.TableDefinition{DistPolicy: "DISTRIBUTED BY (i)", ColumnDefs: []builtin.ColumnDefinition{tableRow}, ExtTableDef: extTableEmpty, Inherits: []string{}},
 			}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				testTable.ReplicaIdentity = "d"
 			}
 		})
@@ -594,13 +594,13 @@ SET SUBPARTITION TEMPLATE ` + `
 			sequenceMetadataMap = builtin.MetadataMap{}
 
 			dataType = ""
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				dataType = "bigint"
 			}
 		})
 		It("creates a basic sequence", func() {
 			startValue := int64(0)
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				startValue = 1
 			}
 			sequence.Definition = builtin.SequenceDefinition{LastVal: 1, Type: dataType, Increment: 1, MaxVal: math.MaxInt64, MinVal: 1, CacheVal: 1, StartVal: startValue}
@@ -617,7 +617,7 @@ SET SUBPARTITION TEMPLATE ` + `
 		})
 		It("creates a complex sequence", func() {
 			startValue := int64(0)
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				startValue = 105
 			}
 			sequence.Definition = builtin.SequenceDefinition{LastVal: 105, Type: dataType, Increment: 5, MaxVal: 1000, MinVal: 20, CacheVal: 1, IsCycled: false, IsCalled: true, StartVal: startValue}
@@ -634,7 +634,7 @@ SET SUBPARTITION TEMPLATE ` + `
 		})
 		It("creates a sequence with privileges, owner, and comment", func() {
 			startValue := int64(0)
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				startValue = 1
 			}
 			sequence.Definition = builtin.SequenceDefinition{LastVal: 1, Type: dataType, Increment: 1, MaxVal: math.MaxInt64, MinVal: 1, CacheVal: 1, StartVal: startValue}
@@ -679,14 +679,14 @@ SET SUBPARTITION TEMPLATE ` + `
 	Describe("PrintAlterSequenceStatements", func() {
 		It("creates a sequence owned by a table column", func() {
 			startValue := int64(0)
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 				startValue = 1
 			}
 			sequence := builtin.Sequence{Relation: builtin.Relation{SchemaOid: 0, Oid: 1, Schema: "public", Name: "my_sequence"}}
 			sequence.OwningColumn = "public.sequence_table.a"
 
 			sequence.Definition = builtin.SequenceDefinition{LastVal: 1, Increment: 1, MaxVal: math.MaxInt64, MinVal: 1, CacheVal: 1, StartVal: startValue}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				sequence.Definition.Type = "bigint"
 			}
 

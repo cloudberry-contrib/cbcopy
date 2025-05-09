@@ -147,7 +147,7 @@ var _ = BeforeSuite(func() {
 	gpbackupHelperPath = buildAndInstallBinaries()
 
 	// Set GUC Defaults and version logic
-	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDB() {
+	if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("6")) || connectionPool.Version.IsCBDBFamily() {
 		memSharedDefault = "80"
 		memSpillDefault = "0"
 

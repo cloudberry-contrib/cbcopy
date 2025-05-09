@@ -57,7 +57,7 @@ var _ = Describe("cbcopy integration tests", func() {
 			expectedStats5K := builtin.AttributeStatistic{Oid: tableOid, Schema: "public", Table: "foo", AttName: "k",
 				Type: "bool", Relid: tableOid, AttNumber: 3, Inherit: false, Width: 1, Distinct: -0.5, Kind1: 1, Kind2: 3, Operator1: 91,
 				Operator2: 58, Numbers1: []string{"0.5", "0.5"}, Numbers2: []string{"0.5"}, Values1: []string{"f", "t"}}
-			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDB() {
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
 				expectedStats5J.Collation1 = 100
 				expectedStats5J.Collation2 = 100
 			}
