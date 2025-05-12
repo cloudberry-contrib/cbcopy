@@ -353,7 +353,7 @@ func (edgc *ExtDestGeCopy) CopyFrom(conn *dbconn.DBConn, ctx context.Context, ta
 	extTabName := "cbcopy_ext_" + strings.Replace(uuid.NewV4().String(), "-", "", -1)
 	ids := edgc.FormAllSegsIds()
 
-	query := fmt.Sprintf(`CREATE EXTERNAL WEB TEMP TABLE %v (like %v.%v) EXECUTE 'MATCHED=0; SEGMENTS=(%v); for i in "${SEGMENTS[@]}"; do [ $i = "$GP_SEGMENT_ID" ] && MATCHED=1; done; [ $MATCHED != 1 ] && exit 0 || cbcopy_helper %v --listen --seg-id $GP_SEGMENT_ID --cmd-id %s --data-port-range %v' FORMAT 'csv'`,
+	query := fmt.Sprintf(`CREATE EXTERNAL WEB TEMP TABLE %v (like %v.%v) EXECUTE 'MATCHED="0"; SRC_SEG_IDS_STR="%v"; for cur_id in $SRC_SEG_IDS_STR; do if [ "$cur_id" = "$GP_SEGMENT_ID" ]; then MATCHED="1"; break; fi; done; [ "$MATCHED" != "1" ] && exit 0 || cbcopy_helper %v --listen --seg-id $GP_SEGMENT_ID --cmd-id %s --data-port-range %v' FORMAT 'csv'`,
 		extTabName, table.Schema, table.Name, ids, edgc.CompArg, cmdId, dataPortRange)
 
 	if err := edgc.CommitBegin(conn); err != nil {
