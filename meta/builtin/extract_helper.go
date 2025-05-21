@@ -540,6 +540,12 @@ func backupIndexes(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount) {
 		// New partition exchange syntax in GPDB7+ obviates the need for this renaming
 		RenameExchangedPartitionIndexes(conn, &indexes)
 	}
+
+	if objectCounts["Indexes"] > 0 && conn.Version.IsGPDB() && conn.Version.Before("7") &&
+		((destDBVersion.IsGPDB() && destDBVersion.AtLeast("7")) || destDBVersion.IsCBDBFamily()) {
+		EnsurePartitionKeysInUniqueIndexDefs(conn, &indexes)
+	}
+
 	indexMetadata := GetCommentsForObjectType(conn, TYPE_INDEX)
 	PrintCreateIndexStatements(metadataFile, globalTOC, indexes, indexMetadata)
 }

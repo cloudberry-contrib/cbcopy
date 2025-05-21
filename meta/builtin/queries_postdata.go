@@ -8,6 +8,7 @@ package builtin
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/cloudberrydb/cbcopy/internal/dbconn"
@@ -313,6 +314,261 @@ func RenameExchangedPartitionIndexes(connectionPool *dbconn.DBConn, indexes *[]I
 			(*indexes)[idx].Name = newName
 		}
 	}
+}
+
+// GetPartitionColumnsByTable queries the database for partition key information of all partitioned tables
+// and returns the result as a map where key is "schema.table" and value is a list of column names sorted by partition level
+func GetPartitionColumnsByTable(connectionPool *dbconn.DBConn) map[string][]string {
+	// Map to store results, with key as schema.table and value as array of partition column names
+	partitionColumnsByTable := make(map[string][]string)
+
+	// Query to get partition columns for each table, sorted by partition level
+	query := `
+	WITH distinct_columns AS (
+		SELECT DISTINCT schemaname, tablename, columnname, partitionlevel
+		FROM pg_partition_columns
+	)
+	SELECT 
+		schemaname, 
+		tablename,
+		array_to_string(array_agg(columnname ORDER BY partitionlevel), ',') AS columnnames
+	FROM distinct_columns
+	GROUP BY schemaname, tablename`
+
+	// Define struct to receive query results
+	type partitionColumnResult struct {
+		SchemaName  string
+		TableName   string
+		ColumnNames string // Comma-separated column names
+	}
+
+	results := make([]partitionColumnResult, 0)
+
+	gplog.Debug("GetPartitionColumnsByTable, query is %v", query)
+	err := connectionPool.Select(&results, query)
+	if err != nil {
+		gplog.Warn("Failed to get partition column information: %v", err)
+		return partitionColumnsByTable
+	}
+
+	// Process query results, convert comma-separated column names to array and store in map
+	for _, result := range results {
+		tableFQN := fmt.Sprintf("%s.%s", result.SchemaName, result.TableName)
+		columnNames := strings.Split(result.ColumnNames, ",")
+
+		// Clean each column name (remove possible spaces)
+		for i, col := range columnNames {
+			columnNames[i] = strings.TrimSpace(col)
+		}
+
+		partitionColumnsByTable[tableFQN] = columnNames
+	}
+
+	gplog.Debug("Retrieved partition key information for %d partitioned tables", len(partitionColumnsByTable))
+	return partitionColumnsByTable
+}
+
+// EnsurePartitionKeysInUniqueIndexDefs modifies unique index definitions on partitioned tables
+// to ensure they include all partition key columns
+func EnsurePartitionKeysInUniqueIndexDefs(connectionPool *dbconn.DBConn, indexes *[]IndexDefinition) {
+	gplog.Debug("Starting EnsurePartitionKeysInUniqueIndexDefs")
+
+	// Get partition key information for all partitioned tables from database
+	partitionColumnsByTable := GetPartitionColumnsByTable(connectionPool)
+
+	for i := range *indexes {
+		idx := &(*indexes)[i] // Work with a pointer to modify the original slice element
+
+		// Step 1: Check if the index is unique
+		if !strings.HasPrefix(strings.ToUpper(idx.Def.String), "CREATE UNIQUE INDEX") {
+			continue
+		}
+
+		// Step 2: Get partition keys for the table this index belongs to
+		tableFQN := fmt.Sprintf("%s.%s", idx.OwningSchema, idx.OwningTable)
+		partitionKeys, tableHasPartitionKeys := partitionColumnsByTable[tableFQN]
+		if !tableHasPartitionKeys || len(partitionKeys) == 0 {
+			continue
+		}
+
+		// Step 3: Extract the current column/expression definition string from the index's Def
+		currentColumnsDefsStr, err := extractIndexColumnDefinitionString(idx.Def.String)
+		if err != nil {
+			gplog.Warn("Failed to extract column definition string from index '%s' (OID %d): %v. Def: %s",
+				idx.Name, idx.Oid, err, idx.Def.String)
+			continue
+		}
+
+		// Step 4: Determine which partition keys are missing from the current index definition
+		missingKeys := findMissingPartitionKeys(currentColumnsDefsStr, partitionKeys)
+
+		// Step 5: If any partition keys are missing, rewrite the index definition
+		if len(missingKeys) > 0 {
+			newDefString, err := rewriteIndexDefToAddKeys(idx.Def.String, currentColumnsDefsStr, missingKeys)
+			if err != nil {
+				gplog.Warn("Failed to rewrite definition for index '%s': %v. Original def: %s",
+					idx.Name, err, idx.Def.String)
+				continue
+			}
+
+			if idx.Def.String != newDefString {
+				gplog.Info("Index '%s' on partitioned table '%s' needs to be rewritten to include partition keys: %v. "+
+					"Original definition: %s New definition: %s",
+					idx.Name, tableFQN, missingKeys, idx.Def.String, newDefString)
+				idx.Def.String = newDefString
+				idx.Def.Valid = true
+			}
+		}
+	}
+
+	gplog.Debug("Finished EnsurePartitionKeysInUniqueIndexDefs")
+}
+
+// extractIndexColumnDefinitionString extracts the column definition part from a CREATE INDEX statement.
+// It returns the content between the first pair of parentheses that follows "ON table_name [USING method]".
+// For example, from: "CREATE UNIQUE INDEX idx ON table USING btree (col1, lower(col2)) WHERE..."
+// it returns: "col1, lower(col2)"
+func extractIndexColumnDefinitionString(defString string) (string, error) {
+	// Regex to match "ON table_name [USING method] ("
+	// This handles schema-qualified table names and optional USING clause
+	re := regexp.MustCompile(`(?i)ON\s+[\w\."]+(?:\s+USING\s+\w+)?\s*\(`)
+
+	matchLocations := re.FindStringIndex(defString)
+	if matchLocations == nil {
+		return "", fmt.Errorf("could not find column definition pattern 'ON table_name [USING method] (' in: %s", defString)
+	}
+
+	// Find the position of the opening parenthesis in the matched string
+	openParenPos := -1
+	for i := matchLocations[1] - 1; i >= matchLocations[0]; i-- {
+		if defString[i] == '(' {
+			openParenPos = i
+			break
+		}
+	}
+
+	if openParenPos == -1 {
+		return "", fmt.Errorf("could not find opening parenthesis after ON clause in: %s", defString)
+	}
+
+	// Skip the opening parenthesis
+	contentStartIndex := openParenPos + 1
+
+	// Find the matching closing parenthesis, accounting for nested parentheses
+	balance := 1
+	endContentIndex := -1
+
+	for i := contentStartIndex; i < len(defString); i++ {
+		switch defString[i] {
+		case '(':
+			balance++
+		case ')':
+			balance--
+			if balance == 0 {
+				endContentIndex = i
+				goto foundEnd // Exit loop once matching parenthesis is found
+			}
+		}
+	}
+
+foundEnd:
+	if endContentIndex == -1 {
+		return "", fmt.Errorf("could not find matching closing parenthesis for column definition in: %s", defString)
+	}
+
+	return strings.TrimSpace(defString[contentStartIndex:endContentIndex]), nil
+}
+
+// findMissingPartitionKeys compares the index column definition string with partition key columns
+// and returns a list of partition key columns that are missing from the index definition
+func findMissingPartitionKeys(currentColumnsDefsStr string, partitionKeyCols []string) []string {
+	var missingKeys []string
+
+	// Normalize the definition: remove extra whitespace, convert to lowercase for case-insensitive matching
+	normalizedDef := strings.ToLower(regexp.MustCompile(`\s+`).ReplaceAllString(currentColumnsDefsStr, " "))
+
+	for _, pkCol := range partitionKeyCols {
+		// Check if the column appears as a standalone identifier with word boundaries
+		// This handles cases like "col_name" or "col_name ASC"
+		pattern := fmt.Sprintf(`\b%s\b`, regexp.QuoteMeta(strings.ToLower(pkCol)))
+
+		// Also check if the column appears inside expressions like functions or calculations
+		// This handles cases like "lower(col_name)" or "(col_name + 1)"
+		patternInExpression := fmt.Sprintf(`\W%s\W`, regexp.QuoteMeta(strings.ToLower(pkCol)))
+
+		// If the column isn't found with either pattern, consider it missing
+		if !regexp.MustCompile(pattern).MatchString(normalizedDef) &&
+			!regexp.MustCompile(patternInExpression).MatchString(normalizedDef) {
+			missingKeys = append(missingKeys, pkCol)
+		}
+	}
+
+	return missingKeys
+}
+
+// rewriteIndexDefToAddKeys takes the original index definition string,
+// the extracted string of current columns/expressions, and a list of missing key strings.
+// It returns a new index definition string with the missing keys appended.
+func rewriteIndexDefToAddKeys(originalDef, currentColumnsDefsStr string, missingKeys []string) (string, error) {
+	if len(missingKeys) == 0 {
+		return originalDef, nil // No changes needed
+	}
+
+	// Use the same regex as extractIndexColumnDefinitionString for consistency
+	re := regexp.MustCompile(`(?i)ON\s+[\w\."]+(?:\s+USING\s+\w+)?\s*\(`)
+
+	matchLocations := re.FindStringIndex(originalDef)
+	if matchLocations == nil {
+		return "", fmt.Errorf("could not find column definition pattern 'ON table_name [USING method] (' in: %s", originalDef)
+	}
+
+	// Find the position of the opening parenthesis in the matched string
+	openParenIndexOriginal := -1
+	for i := matchLocations[1] - 1; i >= matchLocations[0]; i-- {
+		if originalDef[i] == '(' {
+			openParenIndexOriginal = i
+			break
+		}
+	}
+
+	if openParenIndexOriginal == -1 {
+		return "", fmt.Errorf("could not find opening parenthesis after ON clause in: %s", originalDef)
+	}
+
+	// Find the matching closing parenthesis, accounting for nested parentheses
+	balance := 1
+	closeParenIndexOriginal := -1
+
+	for i := openParenIndexOriginal + 1; i < len(originalDef); i++ {
+		switch originalDef[i] {
+		case '(':
+			balance++
+		case ')':
+			balance--
+			if balance == 0 {
+				closeParenIndexOriginal = i
+				goto foundEnd // Exit loop once matching parenthesis is found
+			}
+		}
+	}
+
+foundEnd:
+	if closeParenIndexOriginal == -1 {
+		return "", fmt.Errorf("could not find matching closing parenthesis for column definition in: %s", originalDef)
+	}
+
+	// Construct the new column definition string
+	newColumnsDefStr := currentColumnsDefsStr
+	if strings.TrimSpace(newColumnsDefStr) != "" && len(strings.Split(currentColumnsDefsStr, ",")) > 0 {
+		newColumnsDefStr += ", "
+	}
+	newColumnsDefStr += strings.Join(missingKeys, ", ")
+
+	// Assemble the new full definition
+	prefix := originalDef[:openParenIndexOriginal+1] // Includes the opening '('
+	suffix := originalDef[closeParenIndexOriginal:]  // Includes the closing ')' and rest of statement
+
+	return prefix + newColumnsDefStr + suffix, nil
 }
 
 type ExchangedPartitionName struct {

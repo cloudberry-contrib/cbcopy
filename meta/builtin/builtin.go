@@ -152,9 +152,7 @@ func (b *BuiltinMeta) extractDDL(inSchemas, inTables []string, tableOnly bool) {
 	}
 	backupPredata(b.SrcConn, metadataFile, inSchemas, metadataTables, len(inTables) > 0)
 
-	if !tableOnly {
-		backupPostdata(b.SrcConn, metadataFile, inSchemas)
-	}
+	backupPostdata(b.SrcConn, metadataFile, inSchemas, tableOnly)
 
 	b.TocFile = fmt.Sprintf("%s/gpAdminLogs/cbcopy_toc_%v", currentUser.HomeDir, b.Timestamp)
 	globalTOC.WriteToFileAndMakeReadOnly(b.TocFile)
@@ -367,7 +365,7 @@ func backupPredata(connectionPool *dbconn.DBConn, metadataFile *utils.FileWithBy
 	gplog.Info("Pre-data metadata backup complete")
 }
 
-func backupPostdata(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount, inSchemas []string) {
+func backupPostdata(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount, inSchemas []string, tableOnly bool) {
 	gplog.Info("Writing post-data metadata")
 
 	if !(destDBVersion.IsHDW() && destDBVersion.Is("3")) {
@@ -376,16 +374,19 @@ func backupPostdata(conn *dbconn.DBConn, metadataFile *utils.FileWithByteCount, 
 
 	backupRules(conn, metadataFile)
 	backupTriggers(conn, metadataFile)
-	if (conn.Version.IsGPDB() && conn.Version.AtLeast("6")) || conn.Version.IsCBDBFamily() {
-		backupDefaultPrivileges(conn, metadataFile)
-		if len(inSchemas) == 0 {
-			backupEventTriggers(conn, metadataFile)
-		}
-	}
 
-	if (conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDBFamily() {
-		backupRowLevelSecurityPolicies(conn, metadataFile) // https://github.com/greenplum-db/gpbackup/commit/5051cd4cfecfe7bc396baeeb9b0ac6ea13c21010
-		backupExtendedStatistic(conn, metadataFile)        // https://github.com/greenplum-db/gpbackup/commit/7072d534d48ba32946c4112ad03f52fbef372c8c
+	if !tableOnly {
+		if (conn.Version.IsGPDB() && conn.Version.AtLeast("6")) || conn.Version.IsCBDBFamily() {
+			backupDefaultPrivileges(conn, metadataFile)
+			if len(inSchemas) == 0 {
+				backupEventTriggers(conn, metadataFile)
+			}
+		}
+
+		if (conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDBFamily() {
+			backupRowLevelSecurityPolicies(conn, metadataFile) // https://github.com/greenplum-db/gpbackup/commit/5051cd4cfecfe7bc396baeeb9b0ac6ea13c21010
+			backupExtendedStatistic(conn, metadataFile)        // https://github.com/greenplum-db/gpbackup/commit/7072d534d48ba32946c4112ad03f52fbef372c8c
+		}
 	}
 
 	gplog.Info("Post-data metadata backup complete")
