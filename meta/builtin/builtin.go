@@ -48,7 +48,7 @@ func (b *BuiltinMeta) Open(srcConn, destConn *dbconn.DBConn) {
 
 	InitializeMetadataParams(srcConn)
 
-	gpdbVersion = srcConn.Version
+	srcDBVersion = srcConn.Version
 	destDBVersion = destConn.Version
 
 	globalTOC = &toc.TOC{}

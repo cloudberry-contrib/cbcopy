@@ -448,7 +448,7 @@ func generateSequenceDefinitionStatement(sequence Sequence) string {
 	minVal := int64(math.MinInt64)
 
 	// Identity columns cannot be defined with `AS smallint/integer`
-	if ((gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDBFamily()) && sequence.OwningColumnAttIdentity == "" {
+	if ((srcDBVersion.IsGPDB() && srcDBVersion.AtLeast("7")) || srcDBVersion.IsCBDBFamily()) && sequence.OwningColumnAttIdentity == "" {
 		if definition.Type != "bigint" {
 			statement += fmt.Sprintf("\n\tAS %s", definition.Type)
 		}
@@ -460,7 +460,7 @@ func generateSequenceDefinitionStatement(sequence Sequence) string {
 			minVal = int64(math.MinInt32)
 		}
 	}
-	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("6")) || gpdbVersion.IsCBDBFamily() {
+	if (srcDBVersion.IsGPDB() && srcDBVersion.AtLeast("6")) || srcDBVersion.IsCBDBFamily() {
 		statement += fmt.Sprintf("\n\tSTART WITH %d", definition.StartVal)
 	} else if !definition.IsCalled {
 		statement += fmt.Sprintf("\n\tSTART WITH %d", definition.LastVal)
@@ -553,7 +553,7 @@ func PrintPostCreateTableStatements(metadataFile *utils.FileWithByteCount, toc *
 				utils.MakeFQN(alteredPartitionRelation.OldSchema, alteredPartitionRelation.Name), alteredPartitionRelation.NewSchema))
 	}
 
-	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDBFamily() {
+	if (srcDBVersion.IsGPDB() && srcDBVersion.AtLeast("7")) || srcDBVersion.IsCBDBFamily() {
 
 		attachInfo := table.AttachPartitionInfo
 		// https://github.com/greenplum-db/gpbackup/commit/08fd7c563bdf5510ffd9256632adb56fa43d65ff
@@ -662,7 +662,7 @@ func PrintCreateViewStatement(metadataFile *utils.FileWithByteCount, toc *toc.TO
 
 		*/
 		viewOptions := view.Options
-		if gpdbVersion.IsHDW() && gpdbVersion.Is("3") && viewOptions != "" {
+		if srcDBVersion.IsHDW() && srcDBVersion.Is("3") && viewOptions != "" {
 			viewOptions = transformViewOptions(viewOptions)
 		}
 

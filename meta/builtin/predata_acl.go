@@ -105,7 +105,7 @@ func PrintObjectMetadata(metadataFile *utils.FileWithByteCount, toc *toc.TOC,
 	}
 
 	objectType := entry.ObjectType
-	if (gpdbVersion.IsGPDB() && gpdbVersion.AtLeast("7")) || gpdbVersion.IsCBDBFamily() {
+	if (srcDBVersion.IsGPDB() && srcDBVersion.AtLeast("7")) || srcDBVersion.IsCBDBFamily() {
 		switch object := obj.(type) {
 		case Function:
 			if object.Kind == "p" {
@@ -117,7 +117,7 @@ func PrintObjectMetadata(metadataFile *utils.FileWithByteCount, toc *toc.TOC,
 	}
 
 	if owner := metadata.GetOwnerStatement(obj.FQN(), objectType); owner != "" {
-		if !((gpdbVersion.IsGPDB() && gpdbVersion.Before("5")) && entry.ObjectType == "LANGUAGE") {
+		if !((srcDBVersion.IsGPDB() && srcDBVersion.Before("5")) && entry.ObjectType == "LANGUAGE") {
 			// Languages have implicit owners in 4.3, but do not support ALTER OWNER
 			statements = append(statements, strings.TrimSpace(owner))
 		}
@@ -487,7 +487,7 @@ func createPrivilegeStrings(acl ACL, objectType string) (string, string) {
 }
 func (obj ObjectMetadata) GetOwnerStatement(objectName string, objectType string) string {
 	typeStr := objectType
-	if (gpdbVersion.IsGPDB() && gpdbVersion.Before("6")) && (objectType == "SEQUENCE" || objectType == "VIEW") {
+	if (srcDBVersion.IsGPDB() && srcDBVersion.Before("6")) && (objectType == "SEQUENCE" || objectType == "VIEW") {
 		typeStr = "TABLE"
 	} else if objectType == "FOREIGN SERVER" {
 		typeStr = "SERVER"

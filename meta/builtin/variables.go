@@ -17,7 +17,7 @@ import (
 type Empty struct{}
 
 var (
-	gpdbVersion   dbconn.GPDBVersion
+	srcDBVersion  dbconn.GPDBVersion
 	destDBVersion dbconn.GPDBVersion
 
 	// --> automation test purpose, start
@@ -51,7 +51,8 @@ func SetCmdFlags(flagSet *pflag.FlagSet) {
 func SetConnection(conn *dbconn.DBConn) {
 	// current code many place has connectionPool, which is not very clear how it's used, let's comment it out to see effect.
 	// connectionPool = conn
-	gpdbVersion = conn.Version
+	srcDBVersion = conn.Version
+	destDBVersion = conn.Version
 }
 
 func SetQuotedRoleNames(quotedRoles map[string]string) {
