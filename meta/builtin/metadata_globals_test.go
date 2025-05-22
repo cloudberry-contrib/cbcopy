@@ -162,6 +162,7 @@ GRANT TEMPORARY,CONNECT ON DATABASE testdb TO testrole;`,
 			defaultGroup := builtin.ResourceGroupBefore7{ResourceGroup: builtin.ResourceGroup{Oid: 1, Name: "default_group", Concurrency: "15"}, CPURateLimit: "10", MemoryLimit: "20", MemorySharedQuota: "25", MemorySpillRatio: "30"}
 			resGroups := []builtin.ResourceGroupBefore7{defaultGroup}
 
+			SetDBVersion(connectionPool, "6.0.0")
 			builtin.PrintCreateResourceGroupStatementsBefore7(backupfile, tocfile, resGroups, emptyResGroupMetadata)
 			testutils.ExpectEntry(tocfile.GlobalEntries, 0, "", "", "default_group", "RESOURCE GROUP")
 			testutils.AssertBufferContents(tocfile.GlobalEntries, buffer,

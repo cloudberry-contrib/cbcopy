@@ -99,11 +99,11 @@ func PrintCreateResourceQueueStatements(metadataFile *utils.FileWithByteCount, t
 
 func PrintResetResourceGroupStatements(metadataFile *utils.FileWithByteCount, tocfile *toc.TOC) {
 	/*
-	 * total cpu_rate_limit and memory_limit should less than 100, so clean
-	 * them before we seting new memory_limit and cpu_rate_limit.
+	 * Total cpu_rate_limit and memory_limit should be less than 100, so clean
+	 * them before setting new memory_limit and cpu_rate_limit.
 	 *
 	 * Minimal memory_limit is adjusted from 1 to 0 since 5.20, however for
-	 * backward compatibility we still use 1 as the minimal value.  The only
+	 * backward compatibility we still use 1 as the minimal value. The only
 	 * failing case is that default_group has memory_limit=100 and admin_group
 	 * has memory_limit=0, but this should not happen in real world.
 	 */
@@ -115,12 +115,14 @@ func PrintResetResourceGroupStatements(metadataFile *utils.FileWithByteCount, to
 	}
 	defSettings := make([]DefSetting, 0)
 
-	if srcDBVersion.IsGPDB() && srcDBVersion.Before("7") {
+	if destDBVersion.IsGPDB() && destDBVersion.Before("7") {
+		// Target is GPDB 6 or earlier
 		defSettings = append(defSettings, DefSetting{"admin_group", "SET CPU_RATE_LIMIT 1"})
 		defSettings = append(defSettings, DefSetting{"admin_group", "SET MEMORY_LIMIT 1"})
 		defSettings = append(defSettings, DefSetting{"default_group", "SET CPU_RATE_LIMIT 1"})
 		defSettings = append(defSettings, DefSetting{"default_group", "SET MEMORY_LIMIT 1"})
-	} else { // GPDB7+
+	} else {
+		// Target is GPDB 7+ or CloudberryDB
 		defSettings = append(defSettings, DefSetting{"admin_group", "SET CPU_MAX_PERCENT 1"})
 		defSettings = append(defSettings, DefSetting{"admin_group", "SET CPU_WEIGHT 100"})
 		defSettings = append(defSettings, DefSetting{"default_group", "SET CPU_MAX_PERCENT 1"})
@@ -195,88 +197,131 @@ func PrintCreateResourceGroupStatementsAtLeast7(metadataFile *utils.FileWithByte
 	}
 }
 
-func PrintCreateResourceGroupStatementsBefore7(metadataFile *utils.FileWithByteCount, toc *toc.TOC, resGroups []ResourceGroupBefore7, resGroupMetadata MetadataMap) {
-	for _, resGroup := range resGroups {
+// printResGroupStmtsBefore7ForTarget7OrLater handles printing resource group statements
+// when the source is GPDB before 7, and the target is GPDB 7+ or CloudberryDB.
+func printResGroupStmtsBefore7ForTarget7OrLater(metadataFile *utils.FileWithByteCount, toc *toc.TOC, resGroup ResourceGroupBefore7, resGroupMetadata MetadataMap) {
+	var start uint64
+	section, entry := resGroup.GetMetadataEntry()
 
-		// temporarily special case for 5x resource groups #temp5xResGroup
-		memorySpillRatio := resGroup.MemorySpillRatio
+	if resGroup.Name == "default_group" || resGroup.Name == "admin_group" || resGroup.Name == "system_group" {
+		start = metadataFile.ByteCount
+		metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET CONCURRENCY %s;", resGroup.Name, resGroup.Concurrency)
+		toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
 
-		if srcDBVersion.IsGPDB() && srcDBVersion.Is("5") {
-			/*
-			 * memory_spill_ratio can be set in absolute value format since 5.20,
-			 * such as '1 MB', it has to be set as a quoted string, otherwise set
-			 * it without quotes.
-			 */
-			if _, err := strconv.Atoi(memorySpillRatio); err != nil {
-				/* memory_spill_ratio is in absolute value format, set it with quotes */
+		start = metadataFile.ByteCount
+		metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET CPU_WEIGHT %s;", resGroup.Name, "100")
+		toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
 
-				memorySpillRatio = "'" + memorySpillRatio + "'"
-			}
+		start = metadataFile.ByteCount
+		if !strings.HasPrefix(resGroup.CPURateLimit, "-") {
+			metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET CPU_MAX_PERCENT %s;", resGroup.Name, resGroup.CPURateLimit)
+		} else {
+			metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET CPUSET '%s';", resGroup.Name, resGroup.Cpuset)
+		}
+		toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
+
+		PrintObjectMetadata(metadataFile, toc, resGroupMetadata[resGroup.GetUniqueID()], resGroup, "")
+
+	} else {
+		start = metadataFile.ByteCount
+		attributes := make([]string, 0)
+
+		attributes = append(attributes, fmt.Sprintf("CONCURRENCY=%s", resGroup.Concurrency))
+		attributes = append(attributes, fmt.Sprintf("CPU_WEIGHT=%s", "100"))
+
+		if !strings.HasPrefix(resGroup.CPURateLimit, "-") {
+			attributes = append(attributes, fmt.Sprintf("CPU_MAX_PERCENT=%s", resGroup.CPURateLimit))
+		} else {
+			// Assuming Cpuset is applicable/desired here as it was in the original logic for CREATE
+			attributes = append(attributes, fmt.Sprintf("CPUSET='%s'", resGroup.Cpuset))
 		}
 
-		var start uint64
-		section, entry := resGroup.GetMetadataEntry()
-		if resGroup.Name == "default_group" || resGroup.Name == "admin_group" {
-			resGroupList := []struct {
-				setting string
-				value   string
-			}{
-				{"MEMORY_LIMIT", resGroup.MemoryLimit},
-				{"MEMORY_SHARED_QUOTA", resGroup.MemorySharedQuota},
-				{"MEMORY_SPILL_RATIO", memorySpillRatio},
-				{"CONCURRENCY", resGroup.Concurrency},
-			}
-			for _, property := range resGroupList {
-				start = metadataFile.ByteCount
-				metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET %s %s;", resGroup.Name, property.setting, property.value)
+		metadataFile.MustPrintf("\n\nCREATE RESOURCE GROUP %s WITH (%s);", resGroup.Name, strings.Join(attributes, ", "))
+		toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
+		PrintObjectMetadata(metadataFile, toc, resGroupMetadata[resGroup.GetUniqueID()], resGroup, "")
+	}
+}
 
-				toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
-			}
+// printResGroupStmtsBefore7ForTargetBefore7 handles printing resource group statements
+// when the source is GPDB before 7, and the target is also GPDB before 7.
+func printResGroupStmtsBefore7ForTargetBefore7(metadataFile *utils.FileWithByteCount, toc *toc.TOC, resGroup ResourceGroupBefore7, resGroupMetadata MetadataMap) {
+	var start uint64
+	section, entry := resGroup.GetMetadataEntry()
 
-			/* special handling for cpu properties */
+	memorySpillRatio := resGroup.MemorySpillRatio
+	// Check if source DB is GPDB version 5. GPDB 5 has a memory_spill_ratio 'gpmemlimit' which is not an int
+	if srcDBVersion.IsGPDB() && srcDBVersion.Is("5") {
+		if _, err := strconv.Atoi(resGroup.MemorySpillRatio); err != nil {
+			memorySpillRatio = "'" + resGroup.MemorySpillRatio + "'"
+		}
+	}
+
+	if resGroup.Name == "default_group" || resGroup.Name == "admin_group" {
+		resGroupList := []struct {
+			setting string
+			value   string
+		}{
+			{"MEMORY_LIMIT", resGroup.MemoryLimit},
+			{"MEMORY_SHARED_QUOTA", resGroup.MemorySharedQuota},
+			{"MEMORY_SPILL_RATIO", memorySpillRatio},
+			{"CONCURRENCY", resGroup.Concurrency},
+		}
+		for _, property := range resGroupList {
 			start = metadataFile.ByteCount
-			if !strings.HasPrefix(resGroup.CPURateLimit, "-") {
-				/* cpu rate mode */
-				metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET CPU_RATE_LIMIT %s;", resGroup.Name, resGroup.CPURateLimit)
-			} else if (srcDBVersion.IsGPDB() && srcDBVersion.AtLeast("5.9.0")) || srcDBVersion.IsCBDBFamily() {
-				/* cpuset mode */
-				metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET CPUSET '%s';", resGroup.Name, resGroup.Cpuset)
-			}
-
+			metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET %s %s;", resGroup.Name, property.setting, property.value)
 			toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
-			PrintObjectMetadata(metadataFile, toc, resGroupMetadata[resGroup.GetUniqueID()], resGroup, "")
+		}
+
+		start = metadataFile.ByteCount
+		// For CPU_RATE_LIMIT vs CPUSET
+		if !strings.HasPrefix(resGroup.CPURateLimit, "-") {
+			metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET CPU_RATE_LIMIT %s;", resGroup.Name, resGroup.CPURateLimit)
+		} else if srcDBVersion.IsGPDB() && srcDBVersion.AtLeast("5.9.0") { // CPUSET available from GPDB 5.9.0
+			metadataFile.MustPrintf("\n\nALTER RESOURCE GROUP %s SET CPUSET '%s';", resGroup.Name, resGroup.Cpuset)
+		}
+		toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
+		PrintObjectMetadata(metadataFile, toc, resGroupMetadata[resGroup.GetUniqueID()], resGroup, "")
+	} else {
+		start = metadataFile.ByteCount
+		attributes := make([]string, 0)
+
+		// For CPU_RATE_LIMIT vs CPUSET
+		if !strings.HasPrefix(resGroup.CPURateLimit, "-") {
+			attributes = append(attributes, fmt.Sprintf("CPU_RATE_LIMIT=%s", resGroup.CPURateLimit))
+		} else if srcDBVersion.IsGPDB() && srcDBVersion.AtLeast("5.9.0") { // CPUSET available from GPDB 5.9.0
+			attributes = append(attributes, fmt.Sprintf("CPUSET='%s'", resGroup.Cpuset))
+		}
+
+		// Memory Auditor: cgroup (value 1) vs vmtracker (available from GPDB 5.8.0)
+		if resGroup.MemoryAuditor == "1" { // Assuming "1" means cgroup
+			attributes = append(attributes, "MEMORY_AUDITOR=cgroup")
+		} else if srcDBVersion.IsGPDB() && srcDBVersion.AtLeast("5.8.0") {
+			attributes = append(attributes, "MEMORY_AUDITOR=vmtracker")
+		}
+
+		attributes = append(attributes, fmt.Sprintf("MEMORY_LIMIT=%s", resGroup.MemoryLimit))
+		attributes = append(attributes, fmt.Sprintf("MEMORY_SHARED_QUOTA=%s", resGroup.MemorySharedQuota))
+		attributes = append(attributes, fmt.Sprintf("MEMORY_SPILL_RATIO=%s", memorySpillRatio))
+		attributes = append(attributes, fmt.Sprintf("CONCURRENCY=%s", resGroup.Concurrency))
+		metadataFile.MustPrintf("\n\nCREATE RESOURCE GROUP %s WITH (%s);", resGroup.Name, strings.Join(attributes, ", "))
+
+		toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
+		PrintObjectMetadata(metadataFile, toc, resGroupMetadata[resGroup.GetUniqueID()], resGroup, "")
+	}
+}
+
+func PrintCreateResourceGroupStatementsBefore7(metadataFile *utils.FileWithByteCount, toc *toc.TOC, resGroups []ResourceGroupBefore7, resGroupMetadata MetadataMap) {
+	// Determine if the target database version is GPDB 7 or later, or any CloudberryDB family database.
+	// This flag helps in deciding which syntax or features to use for resource groups.
+	isTargetGpdb7OrLater := (destDBVersion.IsGPDB() && destDBVersion.AtLeast("7")) || destDBVersion.IsCBDBFamily()
+
+	for _, resGroup := range resGroups {
+		if isTargetGpdb7OrLater {
+			// If the target is GPDB 7+ or CloudberryDB, use the specific logic for these versions.
+			printResGroupStmtsBefore7ForTarget7OrLater(metadataFile, toc, resGroup, resGroupMetadata)
 		} else {
-			start = metadataFile.ByteCount
-			attributes := make([]string, 0)
-
-			/* special handling for cpu properties */
-			if !strings.HasPrefix(resGroup.CPURateLimit, "-") {
-				/* cpu rate mode */
-				attributes = append(attributes, fmt.Sprintf("CPU_RATE_LIMIT=%s", resGroup.CPURateLimit))
-			} else if (srcDBVersion.IsGPDB() && srcDBVersion.AtLeast("5.9.0")) || srcDBVersion.IsCBDBFamily() {
-				/* cpuset mode */
-				attributes = append(attributes, fmt.Sprintf("CPUSET='%s'", resGroup.Cpuset))
-			}
-
-			/*
-			 * Possible values of memory_auditor:
-			 * - "1": cgroup
-			 * - "0": vmtracker (default)
-			 */
-			if resGroup.MemoryAuditor == "1" {
-				attributes = append(attributes, "MEMORY_AUDITOR=cgroup")
-			} else if (srcDBVersion.IsGPDB() && srcDBVersion.AtLeast("5.8.0")) || srcDBVersion.IsCBDBFamily() {
-				attributes = append(attributes, "MEMORY_AUDITOR=vmtracker")
-			}
-
-			attributes = append(attributes, fmt.Sprintf("MEMORY_LIMIT=%s", resGroup.MemoryLimit))
-			attributes = append(attributes, fmt.Sprintf("MEMORY_SHARED_QUOTA=%s", resGroup.MemorySharedQuota))
-			attributes = append(attributes, fmt.Sprintf("MEMORY_SPILL_RATIO=%s", memorySpillRatio))
-			attributes = append(attributes, fmt.Sprintf("CONCURRENCY=%s", resGroup.Concurrency))
-			metadataFile.MustPrintf("\n\nCREATE RESOURCE GROUP %s WITH (%s);", resGroup.Name, strings.Join(attributes, ", "))
-
-			toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
-			PrintObjectMetadata(metadataFile, toc, resGroupMetadata[resGroup.GetUniqueID()], resGroup, "")
+			// Otherwise, use the logic for older GPDB versions (before 7).
+			printResGroupStmtsBefore7ForTargetBefore7(metadataFile, toc, resGroup, resGroupMetadata)
 		}
 	}
 }
