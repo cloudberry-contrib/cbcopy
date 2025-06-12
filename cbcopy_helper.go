@@ -9,8 +9,10 @@ import (
 )
 
 func main() {
-	defer helper.Stop()
+	helper := helper.NewHelper(helper.NewConfig())
+	if err := helper.Run(); err != nil {
+		os.Exit(helper.GetErrCode())
+	}
 
-	helper.Start()
-	os.Exit(helper.ErrCode)
+	os.Exit(0)
 }

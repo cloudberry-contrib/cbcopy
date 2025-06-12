@@ -12,14 +12,11 @@ import (
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 )
 
-var (
+type Helper struct {
+	config        *Config
 	metaFilePath  string
 	wasTerminated bool
-	ErrCode       int
-)
-
-type Helper struct {
-	config *Config
+	errCode       int
 }
 
 func NewHelper(cfg *Config) *Helper {
@@ -95,9 +92,9 @@ func (h *Helper) handleClient() error {
 }
 
 func (h *Helper) writeFile(cmdID string, segID int, port int) error {
-	metaFilePath = fmt.Sprintf("/tmp/cbcopy-%s-%d.txt", h.config.CmdID, h.config.SegID)
+	h.metaFilePath = fmt.Sprintf("/tmp/cbcopy-%s-%d.txt", h.config.CmdID, h.config.SegID)
 
-	metaFile, err := os.Create(metaFilePath)
+	metaFile, err := os.Create(h.metaFilePath)
 	if err != nil {
 		return err
 	}
@@ -111,12 +108,40 @@ func (h *Helper) writeFile(cmdID string, segID int, port int) error {
 	return err
 }
 
-func (h *Helper) cleanup() {
+func (h *Helper) Start() {
+	gplog.InitializeLogging("cbcopy_helper", "")
+
+	gplog.SetVerbosity(gplog.LOGERROR)
+
+	utils.InitializeSignalHandler(func(isTerminated bool) {
+		h.Cleanup(isTerminated)
+	}, "cbcopy_helper process", &h.wasTerminated)
+
+	gplog.Debug("Helper started with args %v", os.Args)
 
 }
 
+func (h *Helper) Stop() {
+	if err := recover(); err != nil {
+		gplog.Error("Panic recovered: %v", err)
+		gplog.Error("Stack trace: %s", debug.Stack())
+	}
+
+	gplog.Debug("Helper stopping")
+	h.errCode = gplog.GetErrorCode()
+
+	h.Cleanup(false)
+}
+
+func (h *Helper) Cleanup(isTerminated bool) {
+	if _, err := os.Stat(h.metaFilePath); err == nil {
+		_ = os.Remove(h.metaFilePath)
+	}
+}
+
 func (h *Helper) Run() error {
-	defer h.cleanup()
+	h.Start()
+	defer h.Stop()
 
 	shouldContinue, err := h.config.Parse()
 	if err != nil {
@@ -139,39 +164,6 @@ func (h *Helper) Run() error {
 	}
 }
 
-func Start() {
-	gplog.InitializeLogging("cbcopy_helper", "")
-
-	// Don't print non fatal messages to stdout
-	gplog.SetVerbosity(gplog.LOGERROR)
-
-	utils.InitializeSignalHandler(Cleanup, "cbcopy_helper process", &wasTerminated)
-
-	gplog.Debug("DoHelper enter with args %v", os.Args)
-
-	helper := NewHelper(NewConfig())
-	if err := helper.Run(); err != nil {
-		gplog.FatalOnError(err)
-	}
-
-	gplog.Debug("DoHelper quit")
-}
-
-func Stop() {
-	gplog.Debug("Helper stop")
-
-	if err := recover(); err != nil {
-		gplog.Error("%v", err)
-		gplog.Error("%s", debug.Stack())
-	}
-
-	ErrCode = gplog.GetErrorCode()
-	Cleanup(false)
-}
-
-func Cleanup(isTerminated bool) {
-
-	if len(metaFilePath) > 0 {
-		_ = os.Remove(metaFilePath)
-	}
+func (h *Helper) GetErrCode() int {
+	return h.errCode
 }
