@@ -6,11 +6,13 @@ import (
 	"os"
 
 	"github.com/cloudberrydb/cbcopy/helper"
+	"github.com/greenplum-db/gp-common-go-libs/gplog"
 )
 
 func main() {
 	helper := helper.NewHelper(helper.NewConfig())
 	if err := helper.Run(); err != nil {
+		gplog.Error("cbcopy_helper exited with error: %v", err)
 		os.Exit(helper.GetErrCode())
 	}
 
