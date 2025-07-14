@@ -22,37 +22,13 @@ type SegmentIpInfo struct {
 // For Cloudberry Enterprise DB, it attempts to get segments for the warehouse identified by 'SHOW warehouse'.
 // For other databases (GPDB, CBDB), it gets all primary segments.
 func GetSegmentsHost(conn *dbconn.DBConn) []SegmentHostInfo {
-	var query string
-
-	if conn.Version.IsCBEDB() {
-		var warehouseName string
-		errShowWarehouse := conn.Get(&warehouseName, "SHOW warehouse")
-		gplog.FatalOnError(errShowWarehouse, "Failed to get warehouse name")
-
-		query = fmt.Sprintf(`
-		WITH targetWarehouseID AS (
-			SELECT gw.oid AS wh_id
-			FROM gp_warehouse gw
-			WHERE gw.warehouse_name = '%s'
-		)
-		SELECT gsc.content, gsc.hostname
-		FROM gp_segment_configuration gsc
-		WHERE gsc.role = 'p'
-		AND gsc.content >= 0
-		AND gsc.status = 'u'
-		AND gsc.warehouseid = (SELECT wh_id FROM targetWarehouseID)
-		ORDER BY gsc.content;
-		`, warehouseName)
-	} else {
-		// For GPDB/CBDB: Get all primary segments
-		query = `
+	query := `
 		SELECT content, hostname
 		FROM gp_segment_configuration
 		WHERE role = 'p'
 		AND content >= 0
 		ORDER BY content
 		`
-	}
 
 	hosts := make([]SegmentHostInfo, 0)
 	gplog.Debug("GetSegmentsHost, query is %v", query)
