@@ -2,6 +2,7 @@ package dbconn
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
@@ -173,19 +174,55 @@ func (dbversion GPDBVersion) StringToSemVerRange(versionStr string) semver.Range
 	return validRange
 }
 
+// getComparableSemVer returns a version object suitable for comparison.
+// It maps HDW versions to corresponding GPDB major versions for compatibility checks,
+// but only when comparing against a target version that appears to be a GPDB version (e.g., major version >= 4).
+// This allows for native version checks for HDW-specific features (e.g., AtLeast("3.1.0")).
+func (dbversion GPDBVersion) getComparableSemVer(targetVersion string) semver.Version {
+	v := dbversion.SemVer
+
+	if !dbversion.IsHDW() {
+		return v
+	}
+
+	// Heuristic to decide if we're comparing against a GPDB version.
+	// We only map HDW versions if the target comparison version is for GPDB 4 or greater.
+	targetMajorStr := strings.Split(targetVersion, ".")[0]
+	targetMajor, err := strconv.Atoi(targetMajorStr)
+	// If targetVersion is not a valid number string, we don't map.
+	if err != nil {
+		return v
+	}
+
+	// Based on product versioning, HDW has a max major version of 3,
+	// while GPDB has a min major version of 4. Therefore, any target
+	// version >= 4 is considered a check against GPDB features.
+	if targetMajor >= 4 {
+		switch v.Major {
+		// HDW 2.x is compatible with GPDB 5.x
+		case 2:
+			v.Major = 5
+		// HDW 3.x is compatible with GPDB 6.x
+		case 3:
+			v.Major = 6
+		}
+	}
+	return v
+}
+
 func (dbversion GPDBVersion) Before(targetVersion string) bool {
 	validRange := dbversion.StringToSemVerRange("<" + targetVersion)
-	return validRange(dbversion.SemVer)
+	return validRange(dbversion.getComparableSemVer(targetVersion))
 }
 
 func (dbversion GPDBVersion) AtLeast(targetVersion string) bool {
 	validRange := dbversion.StringToSemVerRange(">=" + targetVersion)
-	return validRange(dbversion.SemVer)
+	return validRange(dbversion.getComparableSemVer(targetVersion))
 }
 
 func (dbversion GPDBVersion) Is(targetVersion string) bool {
 	validRange := dbversion.StringToSemVerRange("==" + targetVersion)
-	return validRange(dbversion.SemVer)
+	return validRange(dbversion.getComparableSemVer(targetVersion))
 }
 
 func (dbversion GPDBVersion) IsCBDB() bool {
@@ -205,7 +242,8 @@ func (dbversion GPDBVersion) IsCBDBFamily() bool {
 }
 
 func (dbversion GPDBVersion) IsGPDB() bool {
-	return dbversion.Type == GPDB
+	// we treat HDW as GPDB for now
+	return dbversion.Type == GPDB || dbversion.Type == HDW
 }
 
 func (dbversion GPDBVersion) IsHDW() bool {
