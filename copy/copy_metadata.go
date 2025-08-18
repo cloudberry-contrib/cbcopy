@@ -116,9 +116,10 @@ func (m *MetadataManager) fillTablePairChan(srcTables, destTables []option.Table
 	for i, t := range srcTables {
 		tablec <- option.TablePair{
 			SrcTable: option.Table{
-				Schema:    t.Schema,
-				Name:      t.Name,
-				RelTuples: t.RelTuples,
+				Schema:       t.Schema,
+				Name:         t.Name,
+				RelTuples:    t.RelTuples,
+				IsReplicated: t.IsReplicated,
 			},
 			DestTable: option.Table{
 				Schema: destTables[i].Schema,

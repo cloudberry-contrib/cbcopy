@@ -68,10 +68,11 @@ func (qw *QueryWrapper) excludeTables(includeTables, excludeTables map[string]op
 		if !exists {
 			sl := strings.Split(k, ".")
 			results = append(results, option.Table{
-				Schema:    sl[0],
-				Name:      sl[1],
-				Partition: v.Partition,
-				RelTuples: v.RelTuples,
+				Schema:       sl[0],
+				Name:         sl[1],
+				Partition:    v.Partition,
+				RelTuples:    v.RelTuples,
+				IsReplicated: v.IsReplicated,
 			})
 		}
 	}
@@ -116,10 +117,11 @@ func (qw *QueryWrapper) redirectIncludeTables(tables []option.Table) []option.Ta
 
 	for _, v := range tables {
 		results = append(results, option.Table{
-			Schema:    ds,
-			Name:      v.Name,
-			Partition: v.Partition,
-			RelTuples: v.RelTuples,
+			Schema:       ds,
+			Name:         v.Name,
+			Partition:    v.Partition,
+			RelTuples:    v.RelTuples,
+			IsReplicated: v.IsReplicated,
 		})
 	}
 
@@ -273,7 +275,11 @@ func (qw *QueryWrapper) FormUserTableMap(srcTables, destTables []option.Table) m
 	result := make(map[string]string)
 
 	for i, t := range srcTables {
-		result[destTables[i].Schema+"."+destTables[i].Name] = t.Schema + "." + t.Name + "." + strconv.FormatInt(t.RelTuples, 10)
+		isReplicatedStr := "false"
+		if t.IsReplicated {
+			isReplicatedStr = "true"
+		}
+		result[destTables[i].Schema+"."+destTables[i].Name] = t.Schema + "." + t.Name + "." + strconv.FormatInt(t.RelTuples, 10) + "." + isReplicatedStr
 	}
 
 	return result
@@ -391,7 +397,11 @@ func (qw *QueryWrapper) expandPartTables(conn *dbconn.DBConn, userTables map[str
 
 		stat, exists := userTables[fqn]
 		if exists {
-			expandMap[fqn] = option.TableStatistics{Partition: 0, RelTuples: stat.RelTuples}
+			expandMap[fqn] = option.TableStatistics{
+				Partition:    0,
+				RelTuples:    stat.RelTuples,
+				IsReplicated: stat.IsReplicated,
+			}
 		} else {
 			pendingCheckRels[fqn] = option.TableStatistics{Partition: 0, RelTuples: t.RelTuples}
 		}
@@ -471,16 +481,18 @@ func (qw *QueryWrapper) excludeTablePair(srcTables, destTables, exclTables []opt
 		sld := strings.Split(v, ".")
 
 		excludedSrcTabs = append(excludedSrcTabs, option.Table{
-			Schema:    sls[0],
-			Name:      sls[1],
-			Partition: u.Partition,
-			RelTuples: u.RelTuples,
+			Schema:       sls[0],
+			Name:         sls[1],
+			Partition:    u.Partition,
+			RelTuples:    u.RelTuples,
+			IsReplicated: u.IsReplicated,
 		})
 		excludedDstTabs = append(excludedDstTabs, option.Table{
-			Schema:    sld[0],
-			Name:      sld[1],
-			Partition: u.Partition,
-			RelTuples: u.RelTuples,
+			Schema:       sld[0],
+			Name:         sld[1],
+			Partition:    u.Partition,
+			RelTuples:    u.RelTuples,
+			IsReplicated: u.IsReplicated,
 		})
 
 		gplog.Debug("mapping table from \"%v\" to \"%v\"", k, v)

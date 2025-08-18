@@ -101,9 +101,25 @@ func formTablePair(schema, name string, tabMap map[string]string) (bool, option.
 	sl := strings.Split(srcFqn, ".")
 	relTuples, _ := strconv.ParseInt(sl[2], 10, 64)
 
+	isReplicated := false
+	if len(sl) > 3 && sl[3] == "true" {
+		isReplicated = true
+	}
+
 	delete(tabMap, destFqn)
 
-	return true, option.TablePair{SrcTable: option.Table{Schema: sl[0], Name: sl[1], RelTuples: relTuples}, DestTable: option.Table{Schema: schema, Name: name}}
+	return true, option.TablePair{
+		SrcTable: option.Table{
+			Schema:       sl[0],
+			Name:         sl[1],
+			RelTuples:    relTuples,
+			IsReplicated: isReplicated,
+		},
+		DestTable: option.Table{
+			Schema: schema,
+			Name:   name,
+		},
+	}
 }
 
 func executeStatementsForDependentObject(conn *dbconn.DBConn, runningInfos chan RunningInfo, numErrors *int32, progressBar utils.ProgressBar, whichConn int, partNameMap map[string][]string, tabMap map[string]string, tablec chan option.TablePair) {
@@ -247,11 +263,23 @@ func RestoreCleanup(tabMap map[string]string, tablec chan option.TablePair) {
 		dsl := strings.Split(k, ".")
 		relTuples, _ := strconv.ParseInt(ssl[2], 10, 64)
 
-		tp := option.TablePair{SrcTable: option.Table{Schema: ssl[0],
-			Name:      ssl[1],
-			RelTuples: relTuples},
-			DestTable: option.Table{Schema: dsl[0],
-				Name: dsl[1]}}
+		isReplicated := false
+		if len(ssl) > 3 && ssl[3] == "true" {
+			isReplicated = true
+		}
+
+		tp := option.TablePair{
+			SrcTable: option.Table{
+				Schema:       ssl[0],
+				Name:         ssl[1],
+				RelTuples:    relTuples,
+				IsReplicated: isReplicated,
+			},
+			DestTable: option.Table{
+				Schema: dsl[0],
+				Name:   dsl[1],
+			},
+		}
 		tablec <- tp
 	}
 }

@@ -69,10 +69,11 @@ type DbTable struct {
 }
 
 type Table struct {
-	Schema    string
-	Name      string
-	Partition int
-	RelTuples int64
+	Schema       string
+	Name         string
+	Partition    int
+	RelTuples    int64
+	IsReplicated bool
 }
 
 type TablePair struct {
@@ -86,8 +87,9 @@ type DbSchema struct {
 }
 
 type TableStatistics struct {
-	Partition int
-	RelTuples int64
+	Partition    int
+	RelTuples    int64
+	IsReplicated bool
 }
 
 type Option struct {

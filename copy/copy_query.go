@@ -62,14 +62,18 @@ func (qm *QueryManager) GetAllDatabases(conn *dbconn.DBConn) ([]string, error) {
 
 // GetUserTables retrieves user tables from the database
 // example output:
-// map[public.t1:{"Partition":0,"RelTuples":1000} public.t2:{"Partition":0,"RelTuples":2000}]
+// map[public.t1:{"Partition":0,"RelTuples":1000,"IsReplicated":false} public.t2:{"Partition":0,"RelTuples":2000,"IsReplicated":true}]
 func (tm *QueryManager) GetUserTables(conn *dbconn.DBConn) (map[string]option.TableStatistics, error) {
 	var query string
 
 	if (conn.Version.IsGPDB() && conn.Version.AtLeast("7")) || conn.Version.IsCBDBFamily() {
 		query = `
 		SELECT
-			quote_ident(n.nspname) AS schema, quote_ident(c.relname) as name, 0 as partition, cast(c.reltuples as bigint) AS relTuples
+			quote_ident(n.nspname) AS schema,
+			quote_ident(c.relname) as name,
+			0 as partition,
+			cast(c.reltuples as bigint) AS relTuples,
+			CASE WHEN p.policytype = 'r' THEN true ELSE false END as isReplicated
 		FROM
 			pg_class c
 			JOIN pg_namespace n ON (c.relnamespace=n.oid)
@@ -81,11 +85,15 @@ func (tm *QueryManager) GetUserTables(conn *dbconn.DBConn) (map[string]option.Ta
 			AND c.relkind <> 'm'
 		ORDER BY c.relpages DESC
 		`
-	} else {
+	} else if conn.Version.IsGPDB() && conn.Version.AtLeast("6") {
 		query = `
 		SELECT t.* FROM (
 		SELECT
-			quote_ident(n.nspname) AS schema, quote_ident(c.relname) as name, 0 as partition, cast(c.reltuples as bigint) AS relTuples
+			quote_ident(n.nspname) AS schema,
+			quote_ident(c.relname) as name,
+			0 as partition,
+			cast(c.reltuples as bigint) AS relTuples,
+			CASE WHEN p.policytype = 'r' THEN true ELSE false END as isReplicated
 		FROM
 			pg_class c
 			JOIN pg_namespace n ON (c.relnamespace=n.oid)
@@ -99,7 +107,48 @@ func (tm *QueryManager) GetUserTables(conn *dbconn.DBConn) (map[string]option.Ta
 		ORDER BY c.relpages DESC ) t
 		UNION ALL
 		SELECT
-			quote_ident(n.nspname) AS schema, quote_ident(cparent.relname) AS name, 0 as partition, cast(cparent.reltuples as bigint) AS relTuples
+			quote_ident(n.nspname) AS schema,
+			quote_ident(cparent.relname) AS name,
+			0 as partition,
+			cast(cparent.reltuples as bigint) AS relTuples,
+			false as isReplicated
+		FROM pg_partition p
+			JOIN pg_partition_rule r ON p.oid = r.paroid
+			JOIN pg_class cparent ON cparent.oid = r.parchildrelid
+			JOIN pg_namespace n ON cparent.relnamespace=n.oid
+			JOIN (SELECT parrelid AS relid, max(parlevel) AS pl
+				FROM pg_partition GROUP BY parrelid) AS levels ON p.parrelid = levels.relid
+		WHERE
+			r.parchildrelid != 0
+			AND p.parlevel = levels.pl
+			AND n.nspname NOT IN ('gpexpand', 'pg_bitmapindex', 'information_schema', 'gp_toolkit')
+			AND n.nspname NOT LIKE 'pg_temp_%' AND cparent.relstorage NOT IN ('v', 'x', 'f')`
+	} else {
+		query = `
+		SELECT t.* FROM (
+		SELECT
+			quote_ident(n.nspname) AS schema,
+			quote_ident(c.relname) as name,
+			0 as partition,
+			cast(c.reltuples as bigint) AS relTuples,
+			false as isReplicated
+		FROM
+			pg_class c
+			JOIN pg_namespace n ON (c.relnamespace=n.oid)
+		WHERE
+			c.oid NOT IN ( SELECT parchildrelid as oid FROM pg_partition_rule )
+			AND c.oid NOT IN ( SELECT parrelid as oid FROM pg_partition )
+			AND n.nspname NOT IN ('gpexpand', 'pg_bitmapindex', 'information_schema', 'gp_toolkit')
+			AND n.nspname NOT LIKE 'pg_temp_%' AND c.relstorage NOT IN ('v', 'x', 'f')
+			AND c.relkind <> 'm'
+		ORDER BY c.relpages DESC ) t
+		UNION ALL
+		SELECT
+			quote_ident(n.nspname) AS schema,
+			quote_ident(cparent.relname) AS name,
+			0 as partition,
+			cast(cparent.reltuples as bigint) AS relTuples,
+			false as isReplicated
 		FROM pg_partition p
 			JOIN pg_partition_rule r ON p.oid = r.paroid
 			JOIN pg_class cparent ON cparent.oid = r.parchildrelid
@@ -123,7 +172,7 @@ func (tm *QueryManager) GetUserTables(conn *dbconn.DBConn) (map[string]option.Ta
 	results := make(map[string]option.TableStatistics)
 	for _, t := range tables {
 		k := t.Schema + "." + t.Name
-		results[k] = option.TableStatistics{Partition: t.Partition, RelTuples: t.RelTuples}
+		results[k] = option.TableStatistics{Partition: t.Partition, RelTuples: t.RelTuples, IsReplicated: t.IsReplicated}
 	}
 
 	return results, nil

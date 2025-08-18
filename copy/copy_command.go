@@ -607,13 +607,23 @@ func createTestCopyStrategy(strategy string, workerId int, srcSegs []utils.Segme
 // - Number of segments in source and destination clusters (srcSegs, destSegs)
 // - Database versions of source and destination (srcConn.Version, destConn.Version)
 // It returns an instance of a struct that implements the CopyCommand interface.
-func CreateCopyStrategy(numTuples int64, workerId int, srcSegs []utils.SegmentHostInfo, destSegs []utils.SegmentIpInfo, srcConn, destConn *dbconn.DBConn) CopyCommand {
+func CreateCopyStrategy(isReplicated bool,
+	numTuples int64,
+	workerId int,
+	srcSegs []utils.SegmentHostInfo,
+	destSegs []utils.SegmentIpInfo,
+	srcConn, destConn *dbconn.DBConn) CopyCommand {
+	compArg := "--compress-type snappy"
+	if isReplicated {
+		gplog.Debug("Using CopyOnMaster strategy for replicated table")
+		return &CopyOnMaster{CopyBase: CopyBase{WorkerId: workerId, SrcSegmentsHostInfo: srcSegs, DestSegmentsIpInfo: destSegs, CompArg: compArg}}
+	}
+
 	if strategy := os.Getenv("TEST_COPY_STRATEGY"); strategy != "" {
 		gplog.Debug("Using test copy strategy: %s", strategy)
 		return createTestCopyStrategy(strategy, workerId, srcSegs, destSegs)
 	}
 
-	compArg := "--compress-type snappy"
 	if numTuples <= int64(utils.MustGetFlagInt(option.ON_SEGMENT_THRESHOLD)) {
 		if !utils.MustGetFlagBool(option.COMPRESSION) {
 			compArg = "--no-compression"

@@ -149,7 +149,6 @@ func (op *CopyOperation) handleFailure(donec chan struct{}, toErr error, fromErr
 	gplog.Debug("[Worker %v] Failed to copy %v.%v to %v.%v : %v",
 		op.connNum, op.srcTable.Schema, op.srcTable.Name,
 		op.destTable.Schema, op.destTable.Name, toErr)
-	time.Sleep(2 * time.Second)
 	if fromErr != nil {
 		<-donec
 		return fromErr
