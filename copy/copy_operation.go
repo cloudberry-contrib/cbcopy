@@ -18,17 +18,19 @@ type CopyOperation struct {
 	srcConn        *dbconn.DBConn
 	destConn       *dbconn.DBConn
 	destManageConn *dbconn.DBConn
+	srcManageConn  *dbconn.DBConn
 	srcTable       option.Table
 	destTable      option.Table
 	connNum        int
 	cmdID          string
+	connectionMode string
 	ctx            context.Context
 	cancel         context.CancelFunc
 }
 
 // NewCopyOperation creates a new CopyOperation instance
-func NewCopyOperation(command CopyCommand, srcConn, destConn, destManageConn *dbconn.DBConn,
-	srcTable, destTable option.Table, connNum int) *CopyOperation {
+func NewCopyOperation(command CopyCommand, srcConn, destConn, destManageConn, srcManageConn *dbconn.DBConn,
+	srcTable, destTable option.Table, connNum int, connectionMode string) *CopyOperation {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	return &CopyOperation{
@@ -36,10 +38,12 @@ func NewCopyOperation(command CopyCommand, srcConn, destConn, destManageConn *db
 		srcConn:        srcConn,
 		destConn:       destConn,
 		destManageConn: destManageConn,
+		srcManageConn:  srcManageConn,
 		srcTable:       srcTable,
 		destTable:      destTable,
 		connNum:        connNum,
 		cmdID:          uuid.NewV4().String(),
+		connectionMode: connectionMode,
 		ctx:            ctx,
 		cancel:         cancel,
 	}
@@ -49,7 +53,7 @@ func NewCopyOperation(command CopyCommand, srcConn, destConn, destManageConn *db
 func (op *CopyOperation) executeCopyFrom(donec chan struct{}, fromRows *int64, copyErr *error) {
 	defer close(donec)
 
-	rows, err := op.command.CopyFrom(op.destConn, op.ctx, op.destTable, op.cmdID)
+	rows, err := op.command.CopyFrom(op.destConn, op.ctx, op.destTable, nil, op.cmdID)
 	if err != nil {
 		*copyErr = err
 		return
@@ -57,12 +61,23 @@ func (op *CopyOperation) executeCopyFrom(donec chan struct{}, fromRows *int64, c
 	*fromRows = rows
 }
 
+func (op *CopyOperation) executeCopyTo(donec chan struct{}, toRows *int64, copyErr *error) {
+	defer close(donec)
+
+	rows, err := op.command.CopyTo(op.srcConn, op.srcTable, nil, op.cmdID)
+	if err != nil {
+		*copyErr = err
+		return
+	}
+	*toRows = rows
+}
+
 // waitForHelperPorts waits for and retrieves helper port information
-func (op *CopyOperation) waitForHelperPorts(timestamp string, donec chan struct{}, copyErr *error) ([]HelperPortInfo, error) {
+func (op *CopyOperation) waitForHelperPorts(dbconn *dbconn.DBConn, timestamp string, donec chan struct{}, copyErr *error) ([]HelperPortInfo, error) {
 	const maxRetries = 1000
 	const retryInterval = 500 * time.Millisecond
 
-	ph := NewPortHelper(op.destManageConn)
+	ph := NewPortHelper(dbconn)
 
 	for i := 0; i < maxRetries; i++ {
 		time.Sleep(retryInterval)
@@ -112,20 +127,38 @@ func (op *CopyOperation) logCopyResults(totalToRows, totalFromRows int64) {
 // Execute performs the copy operation
 func (op *CopyOperation) Execute(timestamp string) error {
 	var fromRows int64
+	var toRows int64
 	var copyErr error
 	donec := make(chan struct{})
 
 	// Start copy from operation in a separate goroutine
-	go op.executeCopyFrom(donec, &fromRows, &copyErr)
+	if op.connectionMode == option.ConnectionModePush || op.command.IsMasterCopy() {
+		go op.executeCopyFrom(donec, &fromRows, &copyErr)
+	} else {
+		go op.executeCopyTo(donec, &toRows, &copyErr)
+	}
 
 	// Wait for helper ports, checking for CopyFrom errors during wait
-	helperPorts, err := op.waitForHelperPorts(timestamp, donec, &copyErr)
+	var manageConn *dbconn.DBConn
+	if op.connectionMode == option.ConnectionModePush || op.command.IsMasterCopy() {
+		manageConn = op.destManageConn
+	} else {
+		manageConn = op.srcManageConn
+	}
+
+	helperPorts, err := op.waitForHelperPorts(manageConn, timestamp, donec, &copyErr)
+
 	if err != nil {
 		return op.handleFailure(donec, err, copyErr)
 	}
 
 	// Execute copy to operation
-	totalToRows, err := op.command.CopyTo(op.srcConn, op.srcTable, helperPorts, op.cmdID)
+	if op.connectionMode == option.ConnectionModePush || op.command.IsMasterCopy() {
+		toRows, err = op.command.CopyTo(op.srcConn, op.srcTable, helperPorts, op.cmdID)
+	} else {
+		fromRows, err = op.command.CopyFrom(op.destConn, op.ctx, op.destTable, helperPorts, op.cmdID)
+	}
+
 	if err != nil {
 		return op.handleFailure(donec, err, copyErr)
 	}
@@ -136,11 +169,11 @@ func (op *CopyOperation) Execute(timestamp string) error {
 	}
 
 	// Validate row counts
-	if err := op.validateRowCounts(fromRows, totalToRows); err != nil {
+	if err := op.validateRowCounts(fromRows, toRows); err != nil {
 		return err
 	}
 
-	op.logCopyResults(totalToRows, fromRows)
+	op.logCopyResults(toRows, fromRows)
 	return nil
 }
 

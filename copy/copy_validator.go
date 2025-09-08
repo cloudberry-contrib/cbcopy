@@ -426,6 +426,33 @@ func (v *FlagCombinationValidator) validateExclusiveFlags(flagNames []string) er
 	return nil
 }
 
+type ConnectionModeValidator struct {
+	*BaseValidator
+}
+
+func NewConnectionModeValidator(flags *pflag.FlagSet) *ConnectionModeValidator {
+	return &ConnectionModeValidator{NewBaseValidator(flags)}
+}
+
+// Validate implements the Validator interface
+func (v *ConnectionModeValidator) Validate() error {
+	return v.validateConnectionMode()
+}
+
+func (v *ConnectionModeValidator) validateConnectionMode() error {
+	connectionMode := utils.MustGetFlagString(option.CONNECTION_MODE)
+
+	// Check if connection mode is valid
+	if connectionMode != option.ConnectionModePush && connectionMode != option.ConnectionModePull {
+		return &ValidationError{
+			fmt.Sprintf("Invalid connection mode '%s'. Must be either '%s' or '%s'",
+				connectionMode, option.ConnectionModePush, option.ConnectionModePull),
+		}
+	}
+
+	return nil
+}
+
 // ValidatorManager manages all validators
 type ValidatorManager struct {
 	validators []Validator
@@ -442,6 +469,7 @@ func NewValidatorManager(flags *pflag.FlagSet) *ValidatorManager {
 			NewPortValidator(flags),
 			NewFlagCombinationValidator(flags),
 			NewOwnerMappingValidator(flags),
+			NewConnectionModeValidator(flags), // 添加新的验证器
 		},
 	}
 }

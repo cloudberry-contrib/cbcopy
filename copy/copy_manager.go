@@ -188,14 +188,17 @@ func (tc *TableCopier) copyData() error {
 		tc.manager.srcSegmentsHostInfo,
 		tc.manager.destSegmentsIpInfo,
 		tc.manager.srcConn,
-		tc.manager.destConn)
+		tc.manager.destConn,
+		config.GetConnectionMode())
 	copyOp := NewCopyOperation(command,
 		tc.manager.srcConn,
 		tc.manager.destConn,
 		tc.manager.destManageConn,
+		tc.manager.srcManageConn,
 		tc.srcTable,
 		tc.destTable,
-		tc.workerID)
+		tc.workerID,
+		config.GetConnectionMode())
 
 	return copyOp.Execute(tc.manager.timestamp)
 }
@@ -210,8 +213,9 @@ type CopyManager struct {
 	srcConn             *dbconn.DBConn
 	destConn            *dbconn.DBConn
 	destManageConn      *dbconn.DBConn
+	srcManageConn       *dbconn.DBConn
 	srcSegmentsHostInfo []utils.SegmentHostInfo
-	destSegmentsIpInfo  []utils.SegmentIpInfo
+	destSegmentsIpInfo  []utils.SegmentHostInfo
 	timestamp           string
 	appName             string
 	encodingGuc         *SessionGUCs
@@ -222,9 +226,9 @@ type CopyManager struct {
 	fSkipped            *os.File
 }
 
-func NewCopyManager(src, dest, destManageConn *dbconn.DBConn,
+func NewCopyManager(src, dest, destManageConn, srcManageConn *dbconn.DBConn,
 	srcSegmentsHostInfo []utils.SegmentHostInfo,
-	destSegmentsIpInfo []utils.SegmentIpInfo,
+	destSegmentsIpInfo []utils.SegmentHostInfo,
 	timestamp string,
 	appName string,
 	encodingGuc *SessionGUCs,
@@ -236,6 +240,7 @@ func NewCopyManager(src, dest, destManageConn *dbconn.DBConn,
 		srcConn:             src,
 		destConn:            dest,
 		destManageConn:      destManageConn,
+		srcManageConn:       srcManageConn,
 		srcSegmentsHostInfo: srcSegmentsHostInfo,
 		destSegmentsIpInfo:  destSegmentsIpInfo,
 		timestamp:           timestamp,

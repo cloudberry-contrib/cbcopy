@@ -13,11 +13,6 @@ type SegmentHostInfo struct {
 	Hostname string
 }
 
-type SegmentIpInfo struct {
-	Content int32
-	Ip      string
-}
-
 // GetSegmentsHost retrieves the content ID and hostname for each primary segment.
 // For Cloudberry Enterprise DB, it attempts to get segments for the warehouse identified by 'SHOW warehouse'.
 // For other databases (GPDB, CBDB), it gets all primary segments.
@@ -41,16 +36,16 @@ func GetSegmentsHost(conn *dbconn.DBConn) []SegmentHostInfo {
 // It first retrieves the list of primary segments and their hostnames using the GetSegmentsHost function.
 // Then, for each segment, it calls the getSegmentIpAddress function to resolve the IP address of the segment.
 // The function returns a slice of SegmentIpInfo structs containing the content ID and IP address for each primary segment.
-func GetSegmentsIpAddress(conn *dbconn.DBConn, timestamp string) []SegmentIpInfo {
+func GetSegmentsIpAddress(conn *dbconn.DBConn, timestamp string) []SegmentHostInfo {
 	hosts := GetSegmentsHost(conn)
-	results := make([]SegmentIpInfo, 0)
+	results := make([]SegmentHostInfo, 0)
 
 	for _, host := range hosts {
 		gplog.Debug("Resolving IP address of dest segment \"%v\"", host.Hostname)
 		segIp := getSegmentIpAddress(conn, timestamp, int(host.Content), host.Hostname)
 		gplog.Debug("dest segment content %v ip address %v", host.Content, segIp)
 
-		results = append(results, SegmentIpInfo{int32(host.Content), segIp})
+		results = append(results, SegmentHostInfo{int32(host.Content), segIp})
 	}
 
 	return results
@@ -71,12 +66,12 @@ func getSegmentIpAddress(conn *dbconn.DBConn, timestamp string, segId int, segHo
 	gplog.FatalOnError(err, fmt.Sprintf("Query was: %s", query))
 
 	query = fmt.Sprintf(`
-	SELECT id As content, content AS ip
+	SELECT id As content, content AS hostname
 	FROM cbcopy_hosts_temp_%v_%v`,
 		timestamp, segId)
 
 	gplog.Debug("getSegmentIpAddress, query is %v", query)
-	results := make([]SegmentIpInfo, 0)
+	results := make([]SegmentHostInfo, 0)
 	err = conn.Select(&results, query)
 	gplog.FatalOnError(err, fmt.Sprintf("Query was: %s", query))
 
@@ -85,5 +80,5 @@ func getSegmentIpAddress(conn *dbconn.DBConn, timestamp string, segId int, segHo
 			fmt.Sprintf("Query was: %s", query))
 	}
 
-	return results[0].Ip
+	return results[0].Hostname
 }

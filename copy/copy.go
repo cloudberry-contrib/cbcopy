@@ -57,15 +57,15 @@ type SessionGUCs struct {
 }
 
 type Application struct {
-	srcManageConn       *dbconn.DBConn
-	destManageConn      *dbconn.DBConn
-	destSegmentsIpInfo  []utils.SegmentIpInfo
-	srcSegmentsHostInfo []utils.SegmentHostInfo
-	queryManager        *QueryManager
-	queryWrapper        *QueryWrapper
-	timestamp           string
-	applicationName     string
-	encodingGuc         SessionGUCs
+	srcManageConn        *dbconn.DBConn
+	destManageConn       *dbconn.DBConn
+	destSegmentsHostInfo []utils.SegmentHostInfo
+	srcSegmentsHostInfo  []utils.SegmentHostInfo
+	queryManager         *QueryManager
+	queryWrapper         *QueryWrapper
+	timestamp            string
+	applicationName      string
+	encodingGuc          SessionGUCs
 }
 
 func NewApplication() *Application {
@@ -135,6 +135,7 @@ func (app *Application) SetFlagDefaults(flagSet *pflag.FlagSet) {
 	flagSet.String(option.TABLESPACE_MAPPING_FILE, "", "Tablespace mapping file, The line format is \"source_tablespace_name,dest_tablespace_name\"")
 	flagSet.Bool("version", false, "Print version number and exit")
 	flagSet.String(option.DATA_PORT_RANGE, "1024-65535", "The range of listening port number to choose for receiving data on dest cluster")
+	flagSet.String(option.CONNECTION_MODE, "push", "Connection mode, 'push' (source connects to dest) or 'pull' (dest connects to source)")
 }
 
 // doFlagValidation validates the command-line flags and performs necessary checks.
@@ -188,7 +189,7 @@ func (app *Application) doSetup() {
 		utils.MustGetFlagString(option.SOURCE_USER),
 		utils.MustGetFlagString(option.SOURCE_HOST),
 		utils.MustGetFlagInt(option.SOURCE_PORT),
-		1)
+		utils.MustGetFlagInt(option.COPY_JOBS))
 
 	if utils.MustGetFlagBool(option.GLOBAL_METADATA_ONLY) {
 		err = app.queryManager.CreateTestTable(app.srcManageConn, CbcopyTestTable)
@@ -248,17 +249,29 @@ func (app *Application) initializeConn(srcDbName, destDbName string) (*dbconn.DB
 }
 
 func (app *Application) initializeClusterResources() {
-	app.destSegmentsIpInfo = utils.GetSegmentsIpAddress(app.destManageConn, app.timestamp)
-	if len(app.destSegmentsIpInfo) == 0 {
-		gplog.FatalOnError(fmt.Errorf("no destination segments found"))
+	if config.GetConnectionMode() == option.ConnectionModePush {
+		app.srcSegmentsHostInfo = utils.GetSegmentsHost(app.srcManageConn)
+		app.destSegmentsHostInfo = utils.GetSegmentsIpAddress(app.destManageConn, app.timestamp)
+	} else {
+		app.srcSegmentsHostInfo = utils.GetSegmentsIpAddress(app.srcManageConn, app.timestamp)
+		app.destSegmentsHostInfo = utils.GetSegmentsHost(app.destManageConn)
 	}
 
-	app.srcSegmentsHostInfo = utils.GetSegmentsHost(app.srcManageConn)
 	if len(app.srcSegmentsHostInfo) == 0 {
 		gplog.FatalOnError(fmt.Errorf("no source segments found"))
 	}
+	if len(app.destSegmentsHostInfo) == 0 {
+		gplog.FatalOnError(fmt.Errorf("no destination segments found"))
+	}
 
-	ph := NewPortHelper(app.destManageConn)
+	var listenConn *dbconn.DBConn
+	if config.GetConnectionMode() == option.ConnectionModePush {
+		listenConn = app.destManageConn
+	} else {
+		listenConn = app.srcManageConn
+	}
+
+	ph := NewPortHelper(listenConn)
 	err := ph.CreateHelperPortTable(app.timestamp)
 	gplog.FatalOnError(err)
 }
@@ -302,8 +315,8 @@ func (app *Application) doCopy() {
 
 		tablec, pgsd := metaManager.MigrateMetadata(srcTables, destTables, nonPhysicalRels)
 		if !utils.MustGetFlagBool(option.METADATA_ONLY) {
-			copyManager := NewCopyManager(srcConn, destConn, app.destManageConn,
-				app.srcSegmentsHostInfo, app.destSegmentsIpInfo, app.timestamp,
+			copyManager := NewCopyManager(srcConn, destConn, app.destManageConn, app.srcManageConn,
+				app.srcSegmentsHostInfo, app.destSegmentsHostInfo, app.timestamp,
 				app.applicationName, &app.encodingGuc, pgsd)
 			copyManager.Copy(tablec)
 			copyManager.Close()

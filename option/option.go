@@ -49,6 +49,7 @@ const (
 	TABLESPACE_MAPPING_FILE = "tablespace-mapping-file"
 	VERBOSE                 = "verbose"
 	DATA_PORT_RANGE         = "data-port-range"
+	CONNECTION_MODE         = "connection-mode"
 )
 
 const (
@@ -56,6 +57,11 @@ const (
 	CopyModeDb     = "db"
 	CopyModeSchema = "schema"
 	CopyModeTable  = "table"
+)
+
+const (
+	ConnectionModePush = "push"
+	ConnectionModePull = "pull"
 )
 
 const (
@@ -93,8 +99,9 @@ type TableStatistics struct {
 }
 
 type Option struct {
-	copyMode  string
-	tableMode string
+	copyMode       string
+	tableMode      string
+	connectionMode string
 
 	sourceDbnames  []string
 	destDbnames    []string
@@ -112,6 +119,11 @@ type Option struct {
 
 func NewOption(initialFlags *pflag.FlagSet) (*Option, error) {
 	copyMode, tableMode := CopyModeFull, TableModeTruncate
+
+	connectionMode, err := initialFlags.GetString(CONNECTION_MODE)
+	if err != nil {
+		return nil, err
+	}
 
 	sourceDbnames, err := getDbNames(initialFlags, DBNAME)
 	if err != nil {
@@ -166,6 +178,7 @@ func NewOption(initialFlags *pflag.FlagSet) (*Option, error) {
 	return &Option{
 		copyMode:       copyMode,
 		tableMode:      tableMode,
+		connectionMode: connectionMode,
 		sourceDbnames:  sourceDbnames,
 		destDbnames:    destDbnames,
 		excludedTables: excludeTables,
@@ -312,6 +325,10 @@ func (o Option) GetCopyMode() string {
 
 func (o Option) GetTableMode() string {
 	return o.tableMode
+}
+
+func (o Option) GetConnectionMode() string {
+	return o.connectionMode
 }
 
 func (o Option) GetSourceDbnames() []string {

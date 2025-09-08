@@ -95,6 +95,66 @@ Before migrating data, you need to copy cbcopy_helper to the `$GPHOME/bin` direc
 
 By default, both metadata and data are migrated. You can use `--metadata-only` to migrate only metadata, or `--data-only` to migrate only data. Based on our best practices, we recommend migrating metadata first using `--metadata-only`, and then migrating data using `--data-only`. This two-step approach helps ensure a more controlled and reliable migration process.
 
+### Connection Modes
+
+cbcopy supports two connection modes to handle different network environments:
+
+- `--connection-mode=push` (default) - Source cluster connects to destination cluster. The destination cluster listens for incoming connections from the source cluster.
+- `--connection-mode=pull` - Destination cluster connects to source cluster. The source cluster listens for incoming connections from the destination cluster.
+
+#### When to use Pull Mode
+
+The **pull mode** is particularly useful when the destination cluster is running inside Kubernetes (K8s) or other containerized environments where:
+
+- The destination cluster cannot expose external ports for incoming connections
+- Network policies restrict inbound traffic to the destination cluster  
+- The source cluster is external to the K8s cluster and cannot reach internal services
+
+In pull mode, the destination cluster (running inside K8s) initiates connections to the source cluster (external), bypassing network connectivity restrictions common in containerized environments.
+
+#### Example Usage
+
+```bash
+# Push mode (default) - source connects to destination
+cbcopy --source-host=external-db --dest-host=dest-warehouse \
+    --connection-mode=push ...
+
+# Pull mode - destination connects to source (recommended for K8s scenarios)
+cbcopy --source-host=external-db --dest-host=k8s-warehouse-cluster \
+    --connection-mode=pull ...
+```
+
+### ⚠️ Important: Hostname Resolution
+
+**Common Issue**: Many users encounter connection failures when using hostname for `--dest-host` because the hostname cannot be resolved from the source cluster nodes.
+
+**Problem**: When you specify a hostname (e.g., `--dest-host=dest-warehouse-cluster`) instead of an IP address, all nodes in the source cluster must be able to resolve this hostname to the correct IP address. If the hostname resolution fails on any source cluster node, the migration will fail with connection errors.
+
+**Solutions**:
+
+1. **Use IP Address (Recommended)**: Replace hostnames with IP addresses
+   ```bash
+   # Instead of hostname
+   cbcopy --dest-host=dest-warehouse-cluster ...
+   
+   # Use IP address
+   cbcopy --dest-host=192.168.1.100 ...
+   ```
+
+2. **Configure DNS/Hosts File**: Ensure the hostname can be resolved on all source cluster nodes
+   ```bash
+   # Add to /etc/hosts on all source cluster nodes
+   192.168.1.100  dest-warehouse-cluster
+   ```
+
+3. **Verify Resolution**: Test hostname resolution from all source nodes before migration
+   ```bash
+   # Run on each source cluster node
+   nslookup dest-warehouse-cluster
+   # or
+   ping dest-warehouse-cluster
+   ```
+
 ### Database version requirements
 cbcopy relies on the "COPY ON SEGMENT" command of the database, so it has specific version requirements for the database.
 
@@ -260,6 +320,7 @@ Usage:
 Flags:
       --append                           Append destination table if it exists
       --compression                      Transfer the compression data, instead of the plain data
+      --connection-mode string           Connection mode, 'push' (source connects to dest) or 'pull' (dest connects to source) (default "push")
       --copy-jobs int                    The maximum number of tables that concurrently copies, valid values are between 1 and 512 (default 4)
       --data-only                        Only copy data, do not copy metadata
       --data-port-range string           The range of listening port number to choose for receiving data on dest cluster (default "1024-65535")

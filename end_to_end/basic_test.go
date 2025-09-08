@@ -417,27 +417,44 @@ var _ = Describe("Migration basic tests", func() {
 		})
 	})
 
-	It("runs cbcopy with different copy strategies", func() {
-		strategies := []string{"CopyOnMaster", "CopyOnSegment", "ExtDestGeCopy", "ExtDestLtCopy"}
+	It("runs cbcopy with different copy strategies and connection modes", func() {
+		testCases := []struct {
+			strategy       string
+			connectionMode string
+			description    string
+		}{
+			{"CopyOnMaster", "push", "master copy with push mode"},
+			{"CopyOnMaster", "pull", "master copy with pull mode"},
+			{"CopyOnSegment", "push", "segment copy with push mode"},
+			{"CopyOnSegment", "pull", "segment copy with pull mode"},
+			{"ExtDestGeCopy", "push", "external dest ge copy with push mode"},
+			{"ExtDestGeCopy", "pull", "external dest ge copy with pull mode"},
+			{"ExtDestLtCopy", "push", "external dest lt copy with push mode"},
+			{"ExtDestLtCopy", "pull", "external dest lt copy with pull mode"},
+		}
 
-		for _, strategy := range strategies {
-			By(fmt.Sprintf("Testing with %s strategy", strategy))
+		runCopyTest := func(strategy, connectionMode, description string) {
+			By(fmt.Sprintf("Testing %s", description))
 
 			srcTestConn := testutils.SetupTestDbConn("source_db")
 			destTestConn := testutils.SetupTestDbConn("target_db")
+			defer srcTestConn.Close()
+			defer destTestConn.Close()
 
 			// Create and populate source table
 			testhelper.AssertQueryRuns(srcTestConn, "CREATE TABLE public.test_table (i int)")
 			testhelper.AssertQueryRuns(srcTestConn, "INSERT INTO public.test_table SELECT generate_series(1,1000)")
+			defer testhelper.AssertQueryRuns(srcTestConn, "DROP TABLE IF EXISTS public.test_table")
 
 			testhelper.AssertQueryRuns(destTestConn, "CREATE TABLE public.test_table (i int)")
+			defer testhelper.AssertQueryRuns(destTestConn, "DROP TABLE IF EXISTS public.test_table")
 
-			// Set environment variable for testing specific strategy
 			os.Setenv("TEST_COPY_STRATEGY", strategy)
 			defer os.Unsetenv("TEST_COPY_STRATEGY")
 
 			time.Sleep(1 * time.Second)
-			cbcopy(cbcopyPath,
+
+			args := []string{
 				"--source-host", sourceConn.Host,
 				"--source-port", strconv.Itoa(sourceConn.Port),
 				"--source-user", sourceConn.User,
@@ -446,16 +463,19 @@ var _ = Describe("Migration basic tests", func() {
 				"--dest-user", destConn.User,
 				"--include-table", fmt.Sprintf("%s.public.test_table", "source_db"),
 				"--dest-table", "target_db.public.test_table",
-				"--truncate")
+				"--truncate",
+				"--connection-mode", connectionMode,
+			}
+
+			cbcopy(cbcopyPath, args...)
 
 			assertDataRestored(destTestConn, map[string]int{
 				"public.test_table": 1000,
 			})
+		}
 
-			testhelper.AssertQueryRuns(srcTestConn, "DROP TABLE IF EXISTS public.test_table")
-			testhelper.AssertQueryRuns(destTestConn, "DROP TABLE IF EXISTS public.test_table")
-			srcTestConn.Close()
-			destTestConn.Close()
+		for _, tc := range testCases {
+			runCopyTest(tc.strategy, tc.connectionMode, tc.description)
 		}
 	})
 
