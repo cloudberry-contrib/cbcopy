@@ -3,7 +3,6 @@ package helper
 import (
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -17,23 +16,19 @@ const (
 )
 
 type Server interface {
-	Serve()
-	WaitForFinished()
-	Stop()
-
-	createReader(net.Conn) (interface{}, error)
-	setError(error)
-	write(interface{}) error
-	increase()
-	sessionMain(*Session)
-
 	Start() int
-
+	Serve()
+	Stop()
+	WaitForFinished()
 	Err() error
 }
 
+type Handler interface {
+	handleConnection(conn net.Conn)
+}
+
 type ServerBase struct {
-	server       Server
+	handler      Handler
 	config       *Config
 	listener     net.Listener
 	quit         chan interface{}
@@ -84,7 +79,7 @@ func (t *ServerBase) Start() int {
 	port := t.listener.Addr().(*net.TCPAddr).Port
 
 	tListener := t.listener.(*net.TCPListener)
-	err = tListener.SetDeadline(time.Now().Add(time.Second * 86400))
+	err = tListener.SetDeadline(time.Now().Add(time.Second * 600))
 	if err != nil {
 		t.setError(fmt.Errorf("failed to set deadline:%v\n", err))
 		return 0
@@ -102,7 +97,6 @@ func (t *ServerBase) isDone() bool {
 func (t *ServerBase) setError(err error) {
 	t.emu.Lock()
 	defer t.emu.Unlock()
-
 	t.err = err
 }
 
@@ -149,7 +143,7 @@ func (t *ServerBase) serve() {
 			continue
 		}
 
-		t.server.sessionMain(&Session{conn: conn, server: t.server})
+		t.handler.handleConnection(conn)
 	}
 }
 
@@ -163,18 +157,10 @@ func createServerImpl(config *Config) Server {
 		index = config.SegID
 	}
 
-	var server Server
-
-	if len(config.NumClients) > 0 && len(config.NumClients) > index && config.ServerMode == "passive" {
+	if len(config.NumClients) > 0 && len(config.NumClients) > index {
 		nc, _ := strconv.Atoi(config.NumClients[index])
 		if nc > 1 {
-			if !config.ServerSerialMode {
-				server = NewConcurrentServer(int32(nc), os.Stdout, config)
-			} else {
-				server = NewSerialServer(int32(nc), os.Stdout, config)
-			}
-
-			return server
+			return NewConcurrentServer(int32(nc), config)
 		}
 	}
 

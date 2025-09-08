@@ -11,28 +11,33 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+const (
+	DirectionModeSend    = "send"
+	DirectionModeReceive = "receive"
+)
+
 type Config struct {
-	Hosts            CommaStringFlags
-	Ports            CommaIntFlags
-	DataPortRange    DashIntFlags
-	ListenMode       bool
-	NoCompression    bool
-	ToResolve        string
-	CmdID            string
-	SegID            int
-	PrintVersion     bool
-	MD5XORMode       bool
-	TransCompType    string
-	NumClients       CommaIntFlags
-	ServerSerialMode bool
-	ServerMode       string
+	Hosts         CommaStringFlags
+	Ports         CommaIntFlags
+	DataPortRange DashIntFlags
+	ListenMode    bool
+	NoCompression bool
+	ToResolve     string
+	CmdID         string
+	SegID         int
+	PrintVersion  bool
+	MD5XORMode    bool
+	TransCompType string
+	NumClients    CommaIntFlags
+	Direction     string
+	NumDests      int
 }
 
 func NewConfig() *Config {
 	return &Config{
 		SegID:         -2,
 		TransCompType: "gzip",
-		ServerMode:    "passive",
+		Direction:     DirectionModeReceive,
 	}
 }
 
@@ -49,8 +54,8 @@ func (c *Config) InitFlags() {
 	flag.BoolVar(&c.PrintVersion, "version", false, "Print version")
 	flag.StringVar(&c.TransCompType, "compress-type", "gzip", "Data compression algorithm, \"gzip\" or \"snappy\"")
 	flag.Var(&c.NumClients, "client-numbers", "Number of clients")
-	flag.BoolVar(&c.ServerSerialMode, "disable-parallel-mode", false, "Disable parallel mode")
-	flag.StringVar(&c.ServerMode, "server-mode", "passive", "Server mode")
+	flag.StringVar(&c.Direction, "direction", DirectionModeSend, "Data flow direction, 'send' (stdin to net) or 'receive' (net to stdout)")
+	flag.IntVar(&c.NumDests, "num-dests", 0, "Total number of destination segments, used for round-robin calculation")
 }
 
 func (c *Config) Parse() (bool, error) {
@@ -154,10 +159,7 @@ func (c *Config) validate() error {
 	if err := c.checkExclusiveFlags("resolve", "client-numbers"); err != nil {
 		return err
 	}
-	if err := c.checkExclusiveFlags("resolve", "disable-parallel-mode"); err != nil {
-		return err
-	}
-	if err := c.checkExclusiveFlags("resolve", "server-mode"); err != nil {
+	if err := c.checkExclusiveFlags("resolve", "direction"); err != nil {
 		return err
 	}
 
@@ -171,9 +173,6 @@ func (c *Config) validate() error {
 		return err
 	}
 	if err := c.checkExclusiveFlags("host", "disable-parallel-mode"); err != nil {
-		return err
-	}
-	if err := c.checkExclusiveFlags("host", "server-mode"); err != nil {
 		return err
 	}
 

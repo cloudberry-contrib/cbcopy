@@ -250,9 +250,6 @@ func RedirectStream(reader io.Reader, writeCloser io.WriteCloser) error {
 		if conn, ok := writeCloser.(net.Conn); ok {
 			writeCloser.Close()
 			gplog.Debug("Connection to %v is closed.", conn.RemoteAddr())
-		} else {
-			conn, _ = reader.(net.Conn)
-			gplog.Debug("Connection from %v is closed.", conn.RemoteAddr())
 		}
 	}()
 

@@ -16,11 +16,9 @@ type OneTimeServer struct {
 func (o *OneTimeServer) Stop() {
 }
 
-func (o *OneTimeServer) write(record interface{}) error { return nil }
-
-func (o *OneTimeServer) createReader(conn net.Conn) (interface{}, error) { return nil, nil }
-
-func (o *OneTimeServer) sessionMain(session *Session) {}
+func (o *OneTimeServer) handleConnection(conn net.Conn) {
+	gplog.Error("OneTimeServer.handleConnection should not be called")
+}
 
 func (o *OneTimeServer) WaitForFinished() {}
 
@@ -41,7 +39,7 @@ func (o *OneTimeServer) Serve() {
 	gplog.Debug("Server accept a connection from %v", netConn.RemoteAddr())
 
 	if !o.config.NoCompression {
-		conn, err = NewCompressConn(netConn, o.compressType, o.config.ServerMode == "passive")
+		conn, err = NewCompressConn(netConn, o.compressType, o.config.Direction == DirectionModeReceive)
 	} else {
 		conn = netConn
 	}
@@ -51,7 +49,7 @@ func (o *OneTimeServer) Serve() {
 		return
 	}
 
-	if o.config.ServerMode == "passive" {
+	if o.config.Direction == DirectionModeReceive {
 		gplog.Debug("passive server mode")
 		err = utils.RedirectStream(conn, os.Stdout)
 	} else {
@@ -74,7 +72,7 @@ func NewOneTimeServer(config *Config) Server {
 		isCompress:   !config.NoCompression,
 		compressType: getCompressionType(config.TransCompType)},
 	}
+	o.handler = o
 
-	o.server = o
 	return o
 }

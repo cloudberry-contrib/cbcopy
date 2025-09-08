@@ -1,12 +1,11 @@
 package helper
 
 import (
-	"compress/gzip"
 	"io"
 	"net"
+	"os"
 	"sync"
 
-	"github.com/golang/snappy"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 
 	"github.com/cloudberrydb/cbcopy/internal/reader"
@@ -14,7 +13,7 @@ import (
 
 type ConcurrentServer struct {
 	ServerBase
-	writer io.Writer
+	writer io.WriteCloser
 	wmu    sync.Mutex
 }
 
@@ -32,16 +31,57 @@ func (c *ConcurrentServer) write(record interface{}) error {
 	return err
 }
 
-func (c *ConcurrentServer) createReader(conn net.Conn) (interface{}, error) {
+func (c *ConcurrentServer) handleConnection(conn net.Conn) {
+	go c.processCsvRecord(conn)
+}
+
+func (c *ConcurrentServer) processCsvRecord(conn net.Conn) {
+	defer func() {
+		conn.Close()
+		c.increase()
+	}()
+
+	gplog.Debug("ConcurrentServer accept a connection from %v", conn.RemoteAddr())
+
+	r, err := c.getReader(conn)
+	if err != nil {
+		c.setError(err)
+		return
+	}
+
+	cr := r.(*reader.CsvReader)
+
+	for {
+		record, er := cr.Read()
+		if len(record) > 0 {
+			ew := c.write(record)
+			if ew != nil {
+				err = ew
+				break
+			}
+		}
+
+		if er == io.EOF {
+			break
+		}
+
+		if er != nil {
+			err = er
+			break
+		}
+	}
+
+	if err != nil {
+		c.setError(err)
+	}
+}
+
+func (c *ConcurrentServer) getReader(conn net.Conn) (interface{}, error) {
 	if !c.isCompress {
 		return reader.NewCsvReader(conn, defaultBufSize, '"', '"', reader.EolNl), nil
 	}
 
-	if c.compressType == CompressSnappy {
-		return reader.NewCsvReader(snappy.NewReader(conn), defaultBufSize, '"', '"', reader.EolNl), nil
-	}
-
-	r, err := gzip.NewReader(conn)
+	r, err := NewCompressReader(conn, c.compressType)
 	if err != nil {
 		return nil, err
 	}
@@ -49,11 +89,7 @@ func (c *ConcurrentServer) createReader(conn net.Conn) (interface{}, error) {
 	return reader.NewCsvReader(r, defaultBufSize, '"', '"', reader.EolNl), nil
 }
 
-func (c *ConcurrentServer) sessionMain(session *Session) {
-	go session.processRequest()
-}
-
-func NewConcurrentServer(numConn int32, writer io.Writer, config *Config) Server {
+func NewConcurrentServer(numConn int32, config *Config) Server {
 	gplog.Debug("Creating ConcurrentServer...")
 
 	c := &ConcurrentServer{ServerBase: ServerBase{
@@ -63,9 +99,9 @@ func NewConcurrentServer(numConn int32, writer io.Writer, config *Config) Server
 		numFinished:  0,
 		isCompress:   !config.NoCompression,
 		compressType: getCompressionType(config.TransCompType),
-	}, writer: writer}
+	}, writer: os.Stdout}
 
-	c.server = c
+	c.handler = c
 	c.wg.Add(1)
 	return c
 }

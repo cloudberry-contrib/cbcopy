@@ -20,24 +20,48 @@ const (
 	CompressGzip
 )
 
-// CompressConn is the wrapper of net.Conn, with compression
-type CompressConn struct {
+// baseCompressConn contains common fields and methods for compressed connections
+type baseCompressConn struct {
 	net.Conn
-	reader      io.Reader
-	writeCloser io.WriteCloser // Snappy has an extra closer
 	plainCloser io.Closer
 }
 
-func (conn *CompressConn) Read(bytes []byte) (int, error) {
+func (conn *baseCompressConn) Close() error {
+	return conn.plainCloser.Close()
+}
+
+type ReadOnlyCompressConn struct {
+	baseCompressConn
+	reader io.Reader
+}
+
+func (conn *ReadOnlyCompressConn) Read(bytes []byte) (int, error) {
 	return conn.reader.Read(bytes)
 }
 
-func (conn *CompressConn) Write(bytes []byte) (int, error) {
+func (conn *ReadOnlyCompressConn) Write(bytes []byte) (int, error) {
+	panic("Write() called on read-only compress connection")
+}
+
+func (conn *ReadOnlyCompressConn) Close() error {
+	return conn.plainCloser.Close()
+}
+
+type WriteOnlyCompressConn struct {
+	baseCompressConn
+	writeCloser io.WriteCloser
+}
+
+func (conn *WriteOnlyCompressConn) Read(bytes []byte) (int, error) {
+	panic("Read() called on write-only compress connection")
+}
+
+func (conn *WriteOnlyCompressConn) Write(bytes []byte) (int, error) {
 	return conn.writeCloser.Write(bytes)
 }
 
-// Close calls snappy.Writer and net.Conn's Close() methods
-func (conn *CompressConn) Close() error {
+// Close properly closes both the compressor and underlying connection
+func (conn *WriteOnlyCompressConn) Close() error {
 	var err1 error
 	var err2 error
 
@@ -51,40 +75,70 @@ func (conn *CompressConn) Close() error {
 	if err1 != nil {
 		return err1
 	}
-
 	return err2
 }
 
-// NewCompressConn construct a CompressConn
-func NewCompressConn(conn net.Conn, compressType CompressType, isReader bool) (net.Conn, error) {
+// NewCompressReader creates a read-only compressed connection
+func NewCompressReader(conn net.Conn, compressType CompressType) (net.Conn, error) {
+	var reader io.Reader
 	var err error
-	compressConn := &CompressConn{Conn: conn}
-	plainReader := io.Reader(compressConn.Conn)
-	plainWriteCloser := io.WriteCloser(compressConn.Conn)
-	plainCloser := io.Closer(compressConn.Conn)
 
 	switch compressType {
 	case CompressSnappy:
-		compressConn.reader = snappy.NewReader(plainReader)
-		compressConn.writeCloser = snappy.NewBufferedWriter(plainWriteCloser)
+		reader = snappy.NewReader(conn)
 	case CompressGzip:
-		if isReader {
-			gplog.Debug("Creating gzip reader")
-			compressConn.reader, err = gzip.NewReader(plainReader)
-			gplog.Debug("Finished creating gzip reader")
-		} else {
-			compressConn.writeCloser, err = gzip.NewWriterLevel(plainWriteCloser, gzip.DefaultCompression)
-		}
-
+		reader, err = gzip.NewReader(conn)
 		if err != nil {
 			return nil, err
 		}
 	default:
 		gplog.Fatal(errors.Errorf("No recognized compression type %v", compressType), "")
 	}
-	compressConn.plainCloser = plainCloser
 
-	return compressConn, nil
+	return &ReadOnlyCompressConn{
+		baseCompressConn: baseCompressConn{
+			Conn:        conn,
+			plainCloser: conn,
+		},
+		reader: reader,
+	}, nil
+}
+
+// NewCompressWriter creates a write-only compressed connection
+func NewCompressWriter(conn net.Conn, compressType CompressType) (net.Conn, error) {
+	var writeCloser io.WriteCloser
+	var err error
+
+	switch compressType {
+	case CompressSnappy:
+		writeCloser = snappy.NewBufferedWriter(conn)
+	case CompressGzip:
+		writeCloser, err = gzip.NewWriterLevel(conn, gzip.DefaultCompression)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		gplog.Fatal(errors.Errorf("No recognized compression type %v", compressType), "")
+	}
+
+	return &WriteOnlyCompressConn{
+		baseCompressConn: baseCompressConn{
+			Conn:        conn,
+			plainCloser: conn,
+		},
+		writeCloser: writeCloser,
+	}, nil
+}
+
+// NewCompressConn creates a unidirectional compressed connection for backward compatibility
+// isReader=true: creates a read-only connection for receiving compressed data
+// isReader=false: creates a write-only connection for sending compressed data
+func NewCompressConn(conn net.Conn, compressType CompressType, isReader bool) (net.Conn, error) {
+	if isReader {
+		return NewCompressReader(conn, compressType)
+	} else {
+		return NewCompressWriter(conn, compressType)
+	}
 }
 
 func getCompressionType(compType string) CompressType {

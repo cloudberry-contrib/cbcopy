@@ -81,14 +81,8 @@ func (h *Helper) handleListen() error {
 }
 
 func (h *Helper) handleClient() error {
-	client := NewClient()
-
-	if err := client.Open(h.config); err != nil {
-		return err
-	}
-	defer client.Close()
-
-	return client.send()
+	client := createClientImpl(h.config)
+	return client.Run()
 }
 
 func (h *Helper) writeFile(cmdID string, segID int, port int) error {
