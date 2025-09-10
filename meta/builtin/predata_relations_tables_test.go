@@ -356,7 +356,7 @@ ALTER TABLE ONLY public.tablename ALTER COLUMN i SET (n_distinct=1);`)
 				testutils.AssertBufferContents(tocfile.PredataEntries, buffer, `CREATE TABLE public.tablename (
 	i integer,
 	j character varying(20)
-) WITH (appendonly=true, orientation=column, fillfactor=42, compresstype=zlib, blocksize=32768, compresslevel=1) DISTRIBUTED RANDOMLY;`)
+) WITH (appendonly=true, orientation=column, compresstype=zlib, blocksize=32768, compresslevel=1) DISTRIBUTED RANDOMLY;`)
 			})
 			It("is an append-optimized column-oriented table with complex storage options and a single-column distribution key", func() {
 				testTable.DistPolicy = distSingle
@@ -365,7 +365,7 @@ ALTER TABLE ONLY public.tablename ALTER COLUMN i SET (n_distinct=1);`)
 				testutils.AssertBufferContents(tocfile.PredataEntries, buffer, `CREATE TABLE public.tablename (
 	i integer,
 	j character varying(20)
-) WITH (appendonly=true, orientation=column, fillfactor=42, compresstype=zlib, blocksize=32768, compresslevel=1) DISTRIBUTED BY (i);`)
+) WITH (appendonly=true, orientation=column, compresstype=zlib, blocksize=32768, compresslevel=1) DISTRIBUTED BY (i);`)
 			})
 			It("is an append-optimized column-oriented table with complex storage options and a two-column composite distribution key", func() {
 				testTable.DistPolicy = distComposite
@@ -374,7 +374,7 @@ ALTER TABLE ONLY public.tablename ALTER COLUMN i SET (n_distinct=1);`)
 				testutils.AssertBufferContents(tocfile.PredataEntries, buffer, `CREATE TABLE public.tablename (
 	i integer,
 	j character varying(20)
-) WITH (appendonly=true, orientation=column, fillfactor=42, compresstype=zlib, blocksize=32768, compresslevel=1) DISTRIBUTED BY (i, j);`)
+) WITH (appendonly=true, orientation=column, compresstype=zlib, blocksize=32768, compresslevel=1) DISTRIBUTED BY (i, j);`)
 			})
 			It("is a GPDB 7+ root partition", func() {
 				testutils.SkipIfBefore7(connectionPool)
