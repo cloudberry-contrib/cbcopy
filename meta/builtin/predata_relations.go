@@ -270,6 +270,10 @@ func PrintRegularTableCreateStatement(metadataFile *utils.FileWithByteCount, toc
 	}
 
 	if table.StorageOpts != "" {
+		if strings.Contains(table.StorageOpts, "appendonly=true") {
+			table.StorageOpts = removeFillFactor(table.StorageOpts)
+		}
+
 		if destDBVersion.IsHDW() && destDBVersion.Is("3") {
 			metadataFile.MustPrintf("WITH (%s) ", rewriteAppendonly(rewriteCompressAlgorithm(replaceBlocksize(table.StorageOpts))))
 		} else {
@@ -303,6 +307,18 @@ func PrintRegularTableCreateStatement(metadataFile *utils.FileWithByteCount, toc
 		section, entry := table.GetMetadataEntry()
 		toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
 	}
+}
+
+func removeFillFactor(storageOpts string) string {
+	opts := strings.Split(storageOpts, ",")
+	newOpts := make([]string, 0, len(opts))
+	for _, opt := range opts {
+		trimmedOpt := strings.TrimSpace(opt)
+		if !strings.HasPrefix(trimmedOpt, "fillfactor=") {
+			newOpts = append(newOpts, trimmedOpt)
+		}
+	}
+	return strings.Join(newOpts, ", ")
 }
 
 func replaceTableSpace(content string) string {
