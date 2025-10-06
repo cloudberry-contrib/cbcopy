@@ -75,8 +75,11 @@ func getSegmentIpAddress(conn *dbconn.DBConn, timestamp string, segId int, segHo
 	err = conn.Select(&results, query)
 	gplog.FatalOnError(err, fmt.Sprintf("Query was: %s", query))
 
-	if len(results) != 1 {
-		gplog.FatalOnError(errors.Errorf("Dest segment \"%v\" should return only one IP address", segHost),
+	if len(results) == 0 {
+		gplog.FatalOnError(
+			errors.Errorf("Unable to resolve segment hostname \"%v\" to IP address on coordinator. "+
+				"Please verify that the hostname field in gp_segment_configuration table contains valid hostnames "+
+				"that can be resolved to IP addresses on the coordinator", segHost),
 			fmt.Sprintf("Query was: %s", query))
 	}
 
