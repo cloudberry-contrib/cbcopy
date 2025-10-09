@@ -9,17 +9,17 @@ import (
 	"time"
 
 	// "github.com/greenplum-db/gp-common-go-libs/dbconn"
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
+	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 
 	// "github.com/greenplum-db/gp-common-go-libs/testhelper"
-	"github.com/cloudberrydb/cbcopy/internal/testhelper"
+	"github.com/cloudberry-contrib/cbcopy/internal/testhelper"
 
 	fp "github.com/greenplum-db/gpbackup/filepath"
 	// "github.com/greenplum-db/gpbackup/testutils"
-	"github.com/cloudberrydb/cbcopy/testutils"
+	"github.com/cloudberry-contrib/cbcopy/testutils"
 
 	// "github.com/greenplum-db/gpbackup/utils"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 
 
 	"golang.org/x/sys/unix"

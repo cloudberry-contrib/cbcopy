@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cloudberrydb/cbcopy/option"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/option"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 	"github.com/spf13/pflag"
 )
 

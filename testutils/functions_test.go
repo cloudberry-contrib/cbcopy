@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	//"github.com/greenplum-db/gpbackup/testutils"
-	"github.com/cloudberrydb/cbcopy/testutils"
+	"github.com/cloudberry-contrib/cbcopy/testutils"
 
 	// "github.com/greenplum-db/gpbackup/utils"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 
 	//"github.com/greenplum-db/gpbackup/toc"
-	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin/toc"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

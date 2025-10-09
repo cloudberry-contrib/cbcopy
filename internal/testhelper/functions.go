@@ -12,7 +12,7 @@ import (
 	"github.com/greenplum-db/gp-common-go-libs/operating"
 
 	// "github.com/greenplum-db/gp-common-go-libs/dbconn"
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
+	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 
 	"github.com/jmoiron/sqlx"
 	. "github.com/onsi/gomega"

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	// "github.com/greenplum-db/gpbackup/backup"
-	"github.com/cloudberrydb/cbcopy/meta/builtin"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin"
 
 	"regexp"
 

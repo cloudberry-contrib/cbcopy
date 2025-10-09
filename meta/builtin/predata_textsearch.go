@@ -13,8 +13,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin/toc"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 )
 
 func PrintCreateTextSearchParserStatement(metadataFile *utils.FileWithByteCount, toc *toc.TOC, parser TextSearchParser, parserMetadata ObjectMetadata) {

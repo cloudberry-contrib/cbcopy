@@ -1,10 +1,10 @@
 package copy
 
 import (
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
-	"github.com/cloudberrydb/cbcopy/meta"
-	"github.com/cloudberrydb/cbcopy/option"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
+	"github.com/cloudberry-contrib/cbcopy/meta"
+	"github.com/cloudberry-contrib/cbcopy/option"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 )
 
 // MetadataManager handles all metadata related operations during copy process

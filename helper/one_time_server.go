@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 )
 

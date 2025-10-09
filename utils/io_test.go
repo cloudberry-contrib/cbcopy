@@ -5,11 +5,11 @@ import (
 	"os"
 
 	// "github.com/greenplum-db/gpbackup/utils"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 
 	"github.com/greenplum-db/gp-common-go-libs/operating"
 	//"github.com/greenplum-db/gp-common-go-libs/testhelper"
-	"github.com/cloudberrydb/cbcopy/internal/testhelper"
+	"github.com/cloudberry-contrib/cbcopy/internal/testhelper"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

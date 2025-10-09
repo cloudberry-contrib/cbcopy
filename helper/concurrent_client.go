@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudberrydb/cbcopy/internal/reader"
+	"github.com/cloudberry-contrib/cbcopy/internal/reader"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 )
 

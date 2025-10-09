@@ -3,7 +3,7 @@ package utils_test
 import (
 
 	// "github.com/greenplum-db/gpbackup/utils"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

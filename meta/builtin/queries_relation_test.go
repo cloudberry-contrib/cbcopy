@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/cloudberrydb/cbcopy/meta/builtin"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin"
 	"github.com/greenplum-db/gp-common-go-libs/structmatcher"
 
 	. "github.com/onsi/ginkgo/v2"

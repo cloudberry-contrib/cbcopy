@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	// "github.com/greenplum-db/gp-common-go-libs/cluster"
-	"github.com/cloudberrydb/cbcopy/internal/cluster"
+	"github.com/cloudberry-contrib/cbcopy/internal/cluster"
 
 	"github.com/greenplum-db/gpbackup/filepath"
 
 	// "github.com/greenplum-db/gpbackup/utils"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 
 
 	. "github.com/onsi/ginkgo/v2"

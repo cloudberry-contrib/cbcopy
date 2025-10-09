@@ -1,7 +1,7 @@
 package copy
 
 import (
-	"github.com/cloudberrydb/cbcopy/option"
+	"github.com/cloudberry-contrib/cbcopy/option"
 )
 
 /*

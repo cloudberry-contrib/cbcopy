@@ -6,7 +6,7 @@ COPYHELPER=cbcopy_helper
 
 GINKGO_FLAGS := -r --keep-going --no-color
 GIT_VERSION := $(shell git describe --tags | perl -pe 's/(.*)-([0-9]*)-(g[0-9a-f]*)/\1+dev.\2.\3/')
-VERSION_STR="-X github.com/cloudberrydb/cbcopy/utils.Version=$(GIT_VERSION)"
+VERSION_STR="-X github.com/cloudberry-contrib/cbcopy/utils.Version=$(GIT_VERSION)"
 
 SUBDIRS_HAS_UNIT= meta/builtin/ testutils/ utils/
 GINKGO=$(shell go env GOPATH)/bin/ginkgo

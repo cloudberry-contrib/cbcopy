@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin/toc"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 )
 
 // https://github.com/greenplum-db/gpbackup/commit/bf1f0956b6dcb0145d66a6e8983460b3a8032d3a

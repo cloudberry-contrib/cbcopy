@@ -11,8 +11,8 @@ import (
 
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 
-	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin/toc"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 )
 
 // https://github.com/greenplum-db/gpbackup/commit/d8339777f709b47e62ecdeb2fc38f8c3eda8ed26
