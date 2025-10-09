@@ -5,8 +5,8 @@ package main
 import (
 	"os"
 
-	"github.com/cloudberrydb/cbcopy/copy"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/copy"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 	"github.com/spf13/cobra"
 )
 

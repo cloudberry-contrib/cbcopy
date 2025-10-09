@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin/toc"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 )
 
 var ACLRegex = regexp.MustCompile(`^(.*)=([a-zA-Z\*]*)/(.*)$`)

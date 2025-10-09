@@ -1,4 +1,4 @@
-module github.com/cloudberrydb/cbcopy
+module github.com/cloudberry-contrib/cbcopy
 
 go 1.19
 

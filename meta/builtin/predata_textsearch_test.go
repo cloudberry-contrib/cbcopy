@@ -3,10 +3,10 @@ package builtin_test
 import (
 
 	// "github.com/greenplum-db/gpbackup/backup"
-	"github.com/cloudberrydb/cbcopy/meta/builtin"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin"
 
 	// "github.com/greenplum-db/gpbackup/testutils"
-	"github.com/cloudberrydb/cbcopy/testutils"
+	"github.com/cloudberry-contrib/cbcopy/testutils"
 
 	. "github.com/onsi/ginkgo/v2"
 )

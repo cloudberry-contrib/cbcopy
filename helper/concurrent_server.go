@@ -8,7 +8,7 @@ import (
 
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 
-	"github.com/cloudberrydb/cbcopy/internal/reader"
+	"github.com/cloudberry-contrib/cbcopy/internal/reader"
 )
 
 type ConcurrentServer struct {

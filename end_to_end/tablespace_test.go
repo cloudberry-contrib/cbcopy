@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
-	"github.com/cloudberrydb/cbcopy/internal/testhelper"
+	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
+	"github.com/cloudberry-contrib/cbcopy/internal/testhelper"
 
-	"github.com/cloudberrydb/cbcopy/testutils"
+	"github.com/cloudberry-contrib/cbcopy/testutils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	// "github.com/greenplum-db/gp-common-go-libs/dbconn"
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
+	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"github.com/greenplum-db/gp-common-go-libs/operating"

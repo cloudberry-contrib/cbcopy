@@ -7,18 +7,18 @@ import (
 	"strings"
 
 	// "github.com/greenplum-db/gp-common-go-libs/dbconn"
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
+	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 
 	// "github.com/greenplum-db/gp-common-go-libs/testhelper"
-	"github.com/cloudberrydb/cbcopy/internal/testhelper"
+	"github.com/cloudberry-contrib/cbcopy/internal/testhelper"
 
 	"github.com/greenplum-db/gpbackup/options"
 	"github.com/greenplum-db/gpbackup/restore"
 	// "github.com/greenplum-db/gpbackup/toc"
-	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin/toc"
 
 	// "github.com/greenplum-db/gpbackup/utils"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 
 
 	. "github.com/onsi/ginkgo/v2"

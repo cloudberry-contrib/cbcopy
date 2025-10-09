@@ -5,10 +5,10 @@ import (
 	"database/sql/driver"
 
 	// "github.com/greenplum-db/gpbackup/backup"
-	"github.com/cloudberrydb/cbcopy/meta/builtin"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin"
 
 	// "github.com/greenplum-db/gpbackup/testutils"
-	"github.com/cloudberrydb/cbcopy/testutils"
+	"github.com/cloudberry-contrib/cbcopy/testutils"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/greenplum-db/gp-common-go-libs/structmatcher"

@@ -5,13 +5,13 @@ import (
 
 	"github.com/greenplum-db/gp-common-go-libs/structmatcher"
 	// "github.com/greenplum-db/gp-common-go-libs/testhelper"
-	"github.com/cloudberrydb/cbcopy/internal/testhelper"
+	"github.com/cloudberry-contrib/cbcopy/internal/testhelper"
 
 	// "github.com/greenplum-db/gpbackup/backup"
-	"github.com/cloudberrydb/cbcopy/meta/builtin"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin"
 
 	// "github.com/greenplum-db/gpbackup/testutils"
-	"github.com/cloudberrydb/cbcopy/testutils"
+	"github.com/cloudberry-contrib/cbcopy/testutils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

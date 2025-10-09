@@ -1,10 +1,10 @@
 package meta
 
 import (
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
-	"github.com/cloudberrydb/cbcopy/meta/builtin"
-	"github.com/cloudberrydb/cbcopy/option"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin"
+	"github.com/cloudberry-contrib/cbcopy/option"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 )
 
 type MetaOperator interface {

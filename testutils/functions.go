@@ -17,7 +17,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/cloudberrydb/cbcopy/meta/builtin"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin"
 	"github.com/sergi/go-diff/diffmatchpatch"
 
 	//"github.com/greenplum-db/gp-common-go-libs/cluster"
@@ -32,19 +32,19 @@ import (
 	"os"
 
 	// "github.com/greenplum-db/gp-common-go-libs/cluster"
-	"github.com/cloudberrydb/cbcopy/internal/cluster"
+	"github.com/cloudberry-contrib/cbcopy/internal/cluster"
 
 	// "github.com/greenplum-db/gp-common-go-libs/testhelper"
-	"github.com/cloudberrydb/cbcopy/internal/testhelper"
+	"github.com/cloudberry-contrib/cbcopy/internal/testhelper"
 
 	//"github.com/greenplum-db/gpbackup/backup"
 	//"github.com/greenplum-db/gpbackup/filepath"
 	//"github.com/greenplum-db/gpbackup/restore"
 	//"github.com/greenplum-db/gpbackup/toc"
 	//"github.com/greenplum-db/gpbackup/utils"
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
-	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
-	"github.com/cloudberrydb/cbcopy/utils"
+	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin/toc"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

@@ -7,7 +7,7 @@ import (
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"github.com/spf13/pflag"
 
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
+	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 )
 
 /*

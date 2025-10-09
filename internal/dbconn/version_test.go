@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/blang/semver"
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
+	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

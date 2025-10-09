@@ -3,8 +3,8 @@ package builtin
 import (
 	"fmt"
 
-	"github.com/cloudberrydb/cbcopy/internal/dbconn"
-	"github.com/cloudberrydb/cbcopy/meta/builtin/toc"
+	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin/toc"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 )
 
