@@ -5,7 +5,7 @@ import (
 
 	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 	"github.com/cloudberry-contrib/cbcopy/meta/builtin/toc"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/apache/cloudberry-go-libs/gplog"
 )
 
 func GetAOIncrementalMetadata(connectionPool *dbconn.DBConn) map[string]toc.AOEntry {

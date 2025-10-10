@@ -11,7 +11,7 @@ import (
 
 	"github.com/cloudberry-contrib/cbcopy/meta/builtin/toc"
 	"github.com/cloudberry-contrib/cbcopy/utils"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/apache/cloudberry-go-libs/gplog"
 	"github.com/pkg/errors"
 )
 

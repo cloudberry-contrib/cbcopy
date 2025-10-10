@@ -15,8 +15,8 @@ import (
 	// "github.com/greenplum-db/gp-common-go-libs/dbconn"
 	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
-	"github.com/greenplum-db/gp-common-go-libs/operating"
+	"github.com/apache/cloudberry-go-libs/gplog"
+	"github.com/apache/cloudberry-go-libs/operating"
 	"github.com/pkg/errors"
 )
 

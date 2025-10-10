@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/golang/snappy"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/apache/cloudberry-go-libs/gplog"
 )
 
 // CompressType is the compression format

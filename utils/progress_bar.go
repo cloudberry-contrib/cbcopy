@@ -7,7 +7,7 @@ package utils
 import (
 	"time"
 
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/apache/cloudberry-go-libs/gplog"
 	"github.com/vbauerster/mpb/v5"
 	"github.com/vbauerster/mpb/v5/decor"
 )

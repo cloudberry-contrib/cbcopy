@@ -8,7 +8,7 @@ package builtin
 import (
 	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 	"github.com/cloudberry-contrib/cbcopy/meta/builtin/toc"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/apache/cloudberry-go-libs/gplog"
 )
 
 // https://github.com/greenplum-db/gpbackup/commit/2d6054960258f347ffbacff5e0c5960b5dc67bbe

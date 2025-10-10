@@ -2,7 +2,7 @@ package integration
 
 /*
 import (
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/apache/cloudberry-go-libs/gplog"
 	// "github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/cloudberry-contrib/cbcopy/internal/testhelper"
 

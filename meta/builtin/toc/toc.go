@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/cloudberry-contrib/cbcopy/utils"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/apache/cloudberry-go-libs/gplog"
 	"gopkg.in/yaml.v2"
 )
 
