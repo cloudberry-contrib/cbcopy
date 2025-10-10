@@ -3,7 +3,7 @@ package integration
 import (
 	"sort"
 
-	"github.com/greenplum-db/gp-common-go-libs/structmatcher"
+	"github.com/apache/cloudberry-go-libs/structmatcher"
 	// "github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/cloudberry-contrib/cbcopy/internal/testhelper"
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/cloudberry-contrib/cbcopy/meta/builtin"
-	"github.com/greenplum-db/gp-common-go-libs/structmatcher"
+	"github.com/apache/cloudberry-go-libs/structmatcher"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

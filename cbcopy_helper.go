@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/cloudberry-contrib/cbcopy/helper"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/apache/cloudberry-go-libs/gplog"
 )
 
 func main() {

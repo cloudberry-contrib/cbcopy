@@ -7,7 +7,7 @@ import (
 	// "github.com/greenplum-db/gpbackup/utils"
 	"github.com/cloudberry-contrib/cbcopy/utils"
 
-	"github.com/greenplum-db/gp-common-go-libs/operating"
+	"github.com/apache/cloudberry-go-libs/operating"
 	//"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/cloudberry-contrib/cbcopy/internal/testhelper"
 

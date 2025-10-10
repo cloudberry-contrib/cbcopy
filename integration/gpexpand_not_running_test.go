@@ -9,7 +9,7 @@ import (
 	// "github.com/greenplum-db/gp-common-go-libs/dbconn"
 	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 
-	"github.com/greenplum-db/gp-common-go-libs/iohelper"
+	"github.com/apache/cloudberry-go-libs/iohelper"
 	// "github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/cloudberry-contrib/cbcopy/internal/testhelper"
 

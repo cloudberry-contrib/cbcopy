@@ -1,6 +1,6 @@
 module github.com/cloudberry-contrib/cbcopy
 
-go 1.19
+go 1.21
 
 // gpbackup update,
 // https://github.com/greenplum-db/gpbackup/commit/24797490747fdd4ae648f6da5cbaf2aed8284216
@@ -8,9 +8,9 @@ go 1.19
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
+	github.com/apache/cloudberry-go-libs v1.0.12-0.20250910014224-fc376e8a1056
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/golang/snappy v0.0.4
-	github.com/greenplum-db/gp-common-go-libs v1.0.19
 	github.com/jackc/pgx/v4 v4.18.2
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/klauspost/compress v1.16.7
@@ -43,7 +43,6 @@ require (
 	github.com/jackc/pgtype v1.14.0 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect

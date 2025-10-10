@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/cloudberry-contrib/cbcopy/option"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/apache/cloudberry-go-libs/gplog"
 
 	// "github.com/greenplum-db/gp-common-go-libs/cluster"
 	"github.com/cloudberry-contrib/cbcopy/internal/cluster"

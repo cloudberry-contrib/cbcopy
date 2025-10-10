@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/cloudberry-contrib/cbcopy/utils"
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/apache/cloudberry-go-libs/gplog"
 )
 
 // OneTimeClient handles single connection scenarios for sending or receiving data.
