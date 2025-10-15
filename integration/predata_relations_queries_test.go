@@ -501,6 +501,9 @@ var _ = Describe("cbcopy integration tests", func() {
 
 			results := builtin.GetAllViews(connectionPool)
 			materialView := builtin.View{Oid: 1, Schema: "public", Name: "simplematerialview", Definition: sql.NullString{String: " SELECT 1 AS a;", Valid: true}, IsMaterialized: true, DistPolicy: "DISTRIBUTED BY (a)"}
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
+				materialView.AccessMethodName = "heap"
+			}
 
 			Expect(results).To(HaveLen(1))
 			structmatcher.ExpectStructsToMatchExcluding(&materialView, &results[0], "Oid")
@@ -514,6 +517,9 @@ var _ = Describe("cbcopy integration tests", func() {
 
 			results := builtin.GetAllViews(connectionPool)
 			materialView := builtin.View{Oid: 1, Schema: "public", Name: "simplematerialview", Definition: sql.NullString{String: " SELECT 1 AS a;", Valid: true}, Options: " WITH (fillfactor=50, autovacuum_enabled=false)", IsMaterialized: true, DistPolicy: "DISTRIBUTED BY (a)"}
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
+				materialView.AccessMethodName = "heap"
+			}
 
 			Expect(results).To(HaveLen(1))
 			structmatcher.ExpectStructsToMatchExcluding(&materialView, &results[0], "Oid")
@@ -529,6 +535,9 @@ var _ = Describe("cbcopy integration tests", func() {
 
 			results := builtin.GetAllViews(connectionPool)
 			materialView := builtin.View{Oid: 1, Schema: "public", Name: "simplematerialview", Definition: sql.NullString{String: " SELECT 1 AS a;", Valid: true}, Tablespace: "test_tablespace", IsMaterialized: true, DistPolicy: "DISTRIBUTED BY (a)"}
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
+				materialView.AccessMethodName = "heap"
+			}
 
 			Expect(results).To(HaveLen(1))
 			structmatcher.ExpectStructsToMatchExcluding(&materialView, &results[0], "Oid")

@@ -550,6 +550,9 @@ SET SUBPARTITION TEMPLATE ` + `
 		})
 		It("creates a view with privileges, owner, security label, and comment", func() {
 			view := builtin.View{Oid: 1, Schema: "public", Name: "simplemview", Definition: sql.NullString{String: " SELECT 1 AS a;", Valid: true}, IsMaterialized: true, DistPolicy: "DISTRIBUTED BY (a)"}
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
+				view.AccessMethodName = "heap"
+			}
 			viewMetadata := testutils.DefaultMetadata("MATERIALIZED VIEW", true, true, true, includeSecurityLabels)
 
 			builtin.PrintCreateViewStatement(backupfile, tocfile, view, viewMetadata)
@@ -568,7 +571,9 @@ SET SUBPARTITION TEMPLATE ` + `
 		})
 		It("creates a materialized view with options", func() {
 			view := builtin.View{Oid: 1, Schema: "public", Name: "simplemview", Options: " WITH (fillfactor=10)", Definition: sql.NullString{String: " SELECT 1 AS a;", Valid: true}, IsMaterialized: true, DistPolicy: "DISTRIBUTED BY (a)"}
-
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
+				view.AccessMethodName = "heap"
+			}
 			builtin.PrintCreateViewStatement(backupfile, tocfile, view, builtin.ObjectMetadata{})
 
 			testhelper.AssertQueryRuns(connectionPool, buffer.String())

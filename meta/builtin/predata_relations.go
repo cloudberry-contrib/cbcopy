@@ -682,8 +682,12 @@ func PrintCreateViewStatement(metadataFile *utils.FileWithByteCount, toc *toc.TO
 			viewOptions = transformViewOptions(viewOptions)
 		}
 
-		metadataFile.MustPrintf("\n\nCREATE MATERIALIZED VIEW %s%s%s AS %s\nWITH NO DATA\n%s;\n",
-			view.FQN(), viewOptions, tablespaceClause, view.Definition.String[:len(view.Definition.String)-1], view.DistPolicy)
+		accessMethodClause := ""
+		if view.AccessMethodName != "" {
+			accessMethodClause = fmt.Sprintf(" USING %s", view.AccessMethodName)
+		}
+		metadataFile.MustPrintf("\n\nCREATE MATERIALIZED VIEW %s%s%s%s AS %s\nWITH NO DATA\n%s;\n",
+			view.FQN(), accessMethodClause, viewOptions, tablespaceClause, view.Definition.String[:len(view.Definition.String)-1], view.DistPolicy)
 	}
 	section, entry := view.GetMetadataEntry()
 	toc.AddMetadataEntry(section, entry, start, metadataFile.ByteCount)
