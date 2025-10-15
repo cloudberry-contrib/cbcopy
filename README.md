@@ -95,6 +95,29 @@ Before migrating data, you need to copy cbcopy_helper to the `$GPHOME/bin` direc
 
 By default, both metadata and data are migrated. You can use `--metadata-only` to migrate only metadata, or `--data-only` to migrate only data. Based on our best practices, we recommend migrating metadata first using `--metadata-only`, and then migrating data using `--data-only`. This two-step approach helps ensure a more controlled and reliable migration process.
 
+### Database version requirements
+cbcopy relies on the "COPY ON SEGMENT" command of the database, so it has specific version requirements for the database.
+
+- `GPDB 4.x` - A minimum of GPDB version 4.3.17 or higher is required. If your version does not meet this requirement, you can upgrade to GPDB 4.3.17.
+- `GPDB 5.x` - A minimum of GPDB version 5.1.0 or higher is required. If your version does not meet this requirement, you can upgrade to GPDB 5.1.0.
+- `GPDB 6.x` - cbcopy is compatible with all versions of GPDB 6.x.
+- `GPDB 7.x` - cbcopy is compatible with all versions of GPDB 7.x.
+- `CBDB 1.x` - cbcopy is compatible with all versions of CBDB 1.x.
+
+### ⚠️ Important: Common Issues
+
+#### Hostname Resolution
+
+**Common Issue**: Many users encounter connection failures when using hostname for `--dest-host` because the hostname cannot be resolved from the source cluster nodes.
+
+**Problem**: When you specify a hostname (e.g., `--dest-host=dest-warehouse-cluster`) instead of an IP address, all nodes in the source cluster must be able to resolve this hostname to the correct IP address. If the hostname resolution fails on any source cluster node, the migration will fail with connection errors.
+
+#### `cbcopy_helper` Not Deployed
+
+**Common Issue**: A common oversight is forgetting to copy the `cbcopy_helper` binary to all nodes in both the source and destination clusters. This can lead to connection errors that may appear to be DNS or network-related issues.
+
+**Problem**: The `cbcopy` utility relies on the `cbcopy_helper` executable being present on every node of both the source and destination clusters to facilitate data transfer. If the helper is missing on any node, `cbcopy` may fail with error messages, such as being unable to resolve hostnames or establish connections, because the necessary communication channel cannot be opened.
+
 ### Connection Modes
 
 cbcopy supports two connection modes to handle different network environments:
@@ -123,46 +146,6 @@ cbcopy --source-host=external-db --dest-host=dest-warehouse \
 cbcopy --source-host=external-db --dest-host=k8s-warehouse-cluster \
     --connection-mode=pull ...
 ```
-
-### ⚠️ Important: Hostname Resolution
-
-**Common Issue**: Many users encounter connection failures when using hostname for `--dest-host` because the hostname cannot be resolved from the source cluster nodes.
-
-**Problem**: When you specify a hostname (e.g., `--dest-host=dest-warehouse-cluster`) instead of an IP address, all nodes in the source cluster must be able to resolve this hostname to the correct IP address. If the hostname resolution fails on any source cluster node, the migration will fail with connection errors.
-
-**Solutions**:
-
-1. **Use IP Address (Recommended)**: Replace hostnames with IP addresses
-   ```bash
-   # Instead of hostname
-   cbcopy --dest-host=dest-warehouse-cluster ...
-   
-   # Use IP address
-   cbcopy --dest-host=192.168.1.100 ...
-   ```
-
-2. **Configure DNS/Hosts File**: Ensure the hostname can be resolved on all source cluster nodes
-   ```bash
-   # Add to /etc/hosts on all source cluster nodes
-   192.168.1.100  dest-warehouse-cluster
-   ```
-
-3. **Verify Resolution**: Test hostname resolution from all source nodes before migration
-   ```bash
-   # Run on each source cluster node
-   nslookup dest-warehouse-cluster
-   # or
-   ping dest-warehouse-cluster
-   ```
-
-### Database version requirements
-cbcopy relies on the "COPY ON SEGMENT" command of the database, so it has specific version requirements for the database.
-
-- `GPDB 4.x` - A minimum of GPDB version 4.3.17 or higher is required. If your version does not meet this requirement, you can upgrade to GPDB 4.3.17.
-- `GPDB 5.x` - A minimum of GPDB version 5.1.0 or higher is required. If your version does not meet this requirement, you can upgrade to GPDB 5.1.0.
-- `GPDB 6.x` - cbcopy is compatible with all versions of GPDB 6.x.
-- `GPDB 7.x` - cbcopy is compatible with all versions of GPDB 7.x.
-- `CBDB 1.x` - cbcopy is compatible with all versions of CBDB 1.x.
 
 ### Migration Modes
 
