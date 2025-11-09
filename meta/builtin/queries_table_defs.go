@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/apache/cloudberry-go-libs/gplog"
 	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 	"github.com/cloudberry-contrib/cbcopy/meta/builtin/toc"
-	"github.com/apache/cloudberry-go-libs/gplog"
 )
 
 type Table struct {
@@ -27,7 +27,17 @@ func (t Table) SkipDataBackup() bool {
 
 func (t Table) GetMetadataEntry() (string, toc.MetadataEntry) {
 	objectType := "TABLE"
+	// This check identifies genuine foreign tables created with CREATE FOREIGN TABLE.
+	// It does not apply to external tables, which are identified by the IsExternal flag
+	// and have their own specific logic for GPDB 7+ below.
 	if (t.ForeignDef != ForeignTableDefinition{}) {
+		objectType = "FOREIGN TABLE"
+	}
+
+	// In GPDB 7+ and Cloudberry, external tables are implemented as foreign tables.
+	// We must set the objectType to "FOREIGN TABLE" so that the generated
+	// "COMMENT ON" statement is correct, otherwise it would fail during restore.
+	if t.IsExternal && ((srcDBVersion.IsGPDB() && srcDBVersion.AtLeast("7")) || srcDBVersion.IsCBDBFamily()) {
 		objectType = "FOREIGN TABLE"
 	}
 	// https://github.com/greenplum-db/gpbackup/commit/526b859245dcba8ecc61ea6d305330048b0ddba2
