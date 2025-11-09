@@ -99,7 +99,12 @@ var _ = Describe("backup/predata_externals tests", func() {
 			extTableDef.URIs = []string{"file://host:port/path/file"}
 			testTable.ExtTableDef = extTableDef
 			builtin.PrintExternalTableCreateStatement(backupfile, tocfile, testTable)
-			testutils.ExpectEntry(tocfile.PredataEntries, 0, "public", "", "tablename", "TABLE")
+			// In GPDB 7+ and Cloudberry, external tables are foreign tables
+			expectedObjectType := "TABLE"
+			if (connectionPool.Version.IsGPDB() && connectionPool.Version.AtLeast("7")) || connectionPool.Version.IsCBDBFamily() {
+				expectedObjectType = "FOREIGN TABLE"
+			}
+			testutils.ExpectEntry(tocfile.PredataEntries, 0, "public", "", "tablename", expectedObjectType)
 			testutils.AssertBufferContents(tocfile.PredataEntries, buffer, `CREATE READABLE EXTERNAL TABLE public.tablename (
 ) LOCATION (
 	'file://host:port/path/file'
