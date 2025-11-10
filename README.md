@@ -10,7 +10,7 @@ cbcopy is an efficient database migration tool designed to transfer data and met
 The metadata migration feature of cbcopy is based on [gpbackup](https://github.com/greenplum-db/gpbackup-archive). Compared to GPDB's built-in `pg_dump`, cbcopy's main advantage is its ability to retrieve metadata in batches. While `pg_dump` fetches metadata one row or a few rows at a time, cbcopy retrieves it in batches. This batch processing approach significantly enhances performance, especially when handling large volumes of metadata, making it much faster than `pg_dump`.
 
 ### Data migration
-Both GPDB and CBDB support starting programs via SQL commands, and cbcopy utilizes this feature. During data migration, it uses SQL commands to start a program on the target database to receive and load data, while simultaneously using SQL commands to start a program on the source database to unload data and send it to the program on the target database.
+Both GPDB and CBDB support starting programs via SQL commands, and cbcopy utilizes this feature. During data migration, it uses SQL commands to start a program on the destination database to receive and load data, while simultaneously using SQL commands to start a program on the source database to unload data and send it to the program on the destination database.
 
 ## Pre-Requisites
 
@@ -91,7 +91,7 @@ This will:
 
 ## Migrating Data with cbcopy
 
-Before migrating data, you need to copy cbcopy_helper to the `$GPHOME/bin` directory on all nodes of both the source and target databases. Then you need to find a host that can connect to both the source database and the target database, and use the cbcopy command on that host to initiate the migration. Note that database superuser privileges are required for both source and target databases to perform the migration.
+Before migrating data, you need to copy cbcopy_helper to the `$GPHOME/bin` directory on all nodes of both the source and destination databases. Then you need to find a host that can connect to both the source database and the destination database, and use the cbcopy command on that host to initiate the migration. Note that database superuser privileges are required for both source and destination databases to perform the migration.
 
 By default, both metadata and data are migrated. You can use `--metadata-only` to migrate only metadata, or `--data-only` to migrate only data. Based on our best practices, we recommend migrating metadata first using `--metadata-only`, and then migrating data using `--data-only`. This two-step approach helps ensure a more controlled and reliable migration process.
 
@@ -110,13 +110,21 @@ cbcopy relies on the "COPY ON SEGMENT" command of the database, so it has specif
 
 **Common Issue**: Many users encounter connection failures when using hostname for `--dest-host` because the hostname cannot be resolved from the source cluster nodes.
 
-**Problem**: When you specify a hostname (e.g., `--dest-host=dest-warehouse-cluster`) instead of an IP address, all nodes in the source cluster must be able to resolve this hostname to the correct IP address. If the hostname resolution fails on any source cluster node, the migration will fail with connection errors.
+**Problem**: When you specify a hostname (e.g., `--dest-host=dest-warehouse-cluster`) instead of an IP address, all nodes in the source cluster must be able to resolve this hostname to the correct IP address. If the hostname resolution fails on any source cluster node, the migration will fail with errors such as `could not write to copy program: Broken pipe` or `extra data after last expected column`, which can be triggered by network issues.
 
 #### `cbcopy_helper` Not Deployed
 
 **Common Issue**: A common oversight is forgetting to copy the `cbcopy_helper` binary to all nodes in both the source and destination clusters. This can lead to connection errors that may appear to be DNS or network-related issues.
 
 **Problem**: The `cbcopy` utility relies on the `cbcopy_helper` executable being present on every node of both the source and destination clusters to facilitate data transfer. If the helper is missing on any node, `cbcopy` may fail with error messages, such as being unable to resolve hostnames or establish connections, because the necessary communication channel cannot be opened.
+
+#### Segment-to-Segment Network Connectivity
+
+**Common Issue**: The masters of the source and destination clusters can communicate via TCP, but the segments cannot connect to each other due to firewall restrictions.
+
+**Problem**: If you don't configure your firewall to allow TCP connections between segments of both clusters, you will likely encounter a situation where some tables (with small data volumes) migrate successfully while others (with large data volumes) fail.
+
+This happens because small tables are typically processed by the masters (copy on master), while large tables are distributed across segments for parallel processing (copy on segment). When segments cannot reach each other, the migration fails with the same error messages as network issues: `could not write to copy program: Broken pipe` or `extra data after last expected column`. This mixed success/failure pattern is a strong indicator of segment-to-segment connectivity problems.
 
 ### Connection Modes
 
@@ -151,13 +159,13 @@ cbcopy --source-host=external-db --dest-host=k8s-warehouse-cluster \
 
 cbcopy supports seven migration modes.
 
-- `--full` - Migrate all metadata and data from the source database to the target database.
-- `--dbname` - Migrate a specific database or multiple databases from the source to the target database.
-- `--schema` - Migrate a specific schema or multiple schemas from the source database to the target database.
--  `--schema-mapping-file` - Migrate specific schemas specified in a file from the source database to the target database.
-- `--include-table` - Migrate specific tables or multiple tables from the source database to the target database.
-- `--include-table-file` - Migrate specific tables specified in a file from the source database to the target database.
-- `--global-metadata-only` - Migrate global objects from the source database to the target database.
+- `--full` - Migrate all metadata and data from the source database to the destination database.
+- `--dbname` - Migrate a specific database or multiple databases from the source to the destination database.
+- `--schema` - Migrate a specific schema or multiple schemas from the source database to the destination database.
+-  `--schema-mapping-file` - Migrate specific schemas specified in a file from the source database to the destination database.
+- `--include-table` - Migrate specific tables or multiple tables from the source database to the destination database.
+- `--include-table-file` - Migrate specific tables specified in a file from the source database to the destination database.
+- `--global-metadata-only` - Migrate global objects from the source database to the destination database.
 
 ### Data Loading Modes
 cbcopy supports two data loading modes.
@@ -169,20 +177,20 @@ cbcopy supports two data loading modes.
 
 If the tables you are migrating depend on certain global objects (such as tablespaces), there are two ways to handle this:
 
-1. Include the `--with-global-metadata` option (default: false) during migration, which will automatically create these global objects in the target database.
+1. Include the `--with-global-metadata` option (default: false) during migration, which will automatically create these global objects in the destination database.
 
-2. If you choose not to use `--with-global-metadata`, you must manually create these global objects in the target database before running the migration. For example:
+2. If you choose not to use `--with-global-metadata`, you must manually create these global objects in the destination database before running the migration. For example:
    ```sql
    -- If your tables use custom tablespaces, create them first:
    CREATE TABLESPACE custom_tablespace LOCATION '/path/to/tablespace';
    ```
 
-If neither option is taken, the creation of dependent tables in the target database will fail with errors like "tablespace 'custom_tablespace' does not exist".
+If neither option is taken, the creation of dependent tables in the destination database will fail with errors like "tablespace 'custom_tablespace' does not exist".
 
 ### Role
-If you want to change the ownership of the tables during migration without creating identical roles in the target database (by disabling the `--with-global-metadata` option), you need to:
+If you want to change the ownership of the tables during migration without creating identical roles in the destination database (by disabling the `--with-global-metadata` option), you need to:
 
-1. First create the target roles in the target database
+1. First create the target roles in the destination database
 2. Use the `--owner-mapping-file` to specify the mapping between source and target roles
 
 For example, if you have a mapping file with:
@@ -196,19 +204,19 @@ The migration process will execute statements like:
 ALTER TABLE table_name OWNER TO target_role1;
 ```
 
-If the target role doesn't exist in the target database, these ownership change statements will fail with an error like "role 'target_role1' does not exist".
+If the target role doesn't exist in the destination database, these ownership change statements will fail with an error like "role 'target_role1' does not exist".
 
 ### Tablespace
 cbcopy provides three ways to handle tablespace migration:
 
-1. **Default Mode** - When no tablespace options are specified, objects will be created in the same tablespace names as they were in the source database. You have two options to ensure the tablespaces exist in the target database:
+1. **Default Mode** - When no tablespace options are specified, objects will be created in the same tablespace names as they were in the source database. You have two options to ensure the tablespaces exist in the destination database:
    - Use `--with-global-metadata` to automatically create matching tablespaces
-   - Manually create the tablespaces in the target database before migration:
+   - Manually create the tablespaces in the destination database before migration:
      ```sql
      CREATE TABLESPACE custom_space LOCATION '/path/to/tablespace';
      ```
 
-2. **Single Target Tablespace** (`--dest-tablespace`) - Migrate all source database objects into a single specified tablespace on the target database, regardless of their original tablespace locations. For example:
+2. **Single destination Tablespace** (`--dest-tablespace`) - Migrate all source database objects into a single specified tablespace on the destination database, regardless of their original tablespace locations. For example:
    ```bash
    cbcopy --dest-tablespace=new_space ...
    ```
@@ -220,7 +228,7 @@ cbcopy provides three ways to handle tablespace migration:
    ```
 
 Note: 
-- For the default mode, either use `--with-global-metadata` or ensure all required tablespaces exist in the target database before migration
+- For the default mode, either use `--with-global-metadata` or ensure all required tablespaces exist in the destination database before migration
 - If you need to migrate objects from different schemas into different tablespaces, you can either:
   1. Use `--tablespace-mapping-file` to specify all mappings at once
   2. Migrate one schema at a time using `--dest-tablespace` with different target tablespaces
@@ -230,15 +238,15 @@ Note:
 - `--copy-jobs` - The maximum number of tables that concurrently copies.
 
 ### Validate Migration
-During migration, we will compare the number of rows returned by `COPY TO` from the source database (i.e., the number of records coming out of the source database) with the number of rows returned by `COPY FROM` in the target database (i.e., the number of records loaded in the target database). If the two counts do not match, the migration of that table will fail.
+During migration, we will compare the number of rows returned by `COPY TO` from the source database (i.e., the number of records coming out of the source database) with the number of rows returned by `COPY FROM` in the destination database (i.e., the number of records loaded in the destination database). If the two counts do not match, the migration of that table will fail.
 
 ### Copy Strategies
 
 cbcopy internally supports three copy strategies for tables.
 
-- `Copy On Coordinator` - If the table's statistics `pg_class->reltuples` is less than `--on-segment-threshold`, cbcopy will enable the `Copy On Coordinator` strategy for this table, meaning that data migration between the source and target databases can only occur through the coordinator node.
-- `Copy On Segment` - If the table's statistics `pg_class->reltuples` is greater than `--on-segment-threshold`, and both the source and target databases have the same version and the same number of nodes, cbcopy will enable the `Copy On Segment` strategy for this table. This means that data migration between the source and target databases will occur in parallel across all segment nodes without data redistribution.
-- `Copy on External Table` - For tables that do not meet the conditions for the above two strategies, cbcopy will enable the `Copy On External Table` strategy. This means that data migration between the source and target databases will occur in parallel across all segment nodes with data redistribution.
+- `Copy On Coordinator` - If the table's statistics `pg_class->reltuples` is less than `--on-segment-threshold`, cbcopy will enable the `Copy On Coordinator` strategy for this table, meaning that data migration between the source and destination databases can only occur through the coordinator node.
+- `Copy On Segment` - If the table's statistics `pg_class->reltuples` is greater than `--on-segment-threshold`, and both the source and target databases have the same version and the same number of nodes, cbcopy will enable the `Copy On Segment` strategy for this table. This means that data migration between the source and destination databases will occur in parallel across all segment nodes without data redistribution.
+- `Copy on External Table` - For tables that do not meet the conditions for the above two strategies, cbcopy will enable the `Copy On External Table` strategy. This means that data migration between the source and destination databases will occur in parallel across all segment nodes with data redistribution.
 
 ### Log Files and Migration Results
 
