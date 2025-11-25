@@ -110,7 +110,7 @@ cbcopy relies on the "COPY ON SEGMENT" command of the database, so it has specif
 
 **Common Issue**: Many users encounter connection failures when using hostname for `--dest-host` because the hostname cannot be resolved from the source cluster nodes.
 
-**Problem**: When you specify a hostname (e.g., `--dest-host=dest-warehouse-cluster`) instead of an IP address, all nodes in the source cluster must be able to resolve this hostname to the correct IP address. If the hostname resolution fails on any source cluster node, the migration will fail with errors such as `could not write to copy program: Broken pipe` or `extra data after last expected column`, which can be triggered by network issues.
+**Problem**: When you specify a hostname (e.g., `--dest-host=dest-warehouse-cluster`) instead of an IP address, all nodes in the source cluster must be able to resolve this hostname to the correct IP address. If the hostname resolution fails on any source cluster node, the migration will fail with errors such as `could not write to copy program: Broken pipe` which can be triggered by network issues.
 
 #### `cbcopy_helper` Not Deployed
 
@@ -124,7 +124,18 @@ cbcopy relies on the "COPY ON SEGMENT" command of the database, so it has specif
 
 **Problem**: If you don't configure your firewall to allow TCP connections between segments of both clusters, you will likely encounter a situation where some tables (with small data volumes) migrate successfully while others (with large data volumes) fail.
 
-This happens because small tables are typically processed by the masters (copy on master), while large tables are distributed across segments for parallel processing (copy on segment). When segments cannot reach each other, the migration fails with the same error messages as network issues: `could not write to copy program: Broken pipe` or `extra data after last expected column`. This mixed success/failure pattern is a strong indicator of segment-to-segment connectivity problems.
+This happens because small tables are typically processed by the masters (copy on master), while large tables are distributed across segments for parallel processing (copy on segment). When segments cannot reach each other, the migration fails with the same error messages as network issues: `could not write to copy program: Broken pipe`. This mixed success/failure pattern is a strong indicator of segment-to-segment connectivity problems.
+
+#### Manual Query Cancellation
+
+If you manually cancel a running migration query (e.g., terminating the `COPY` command via `pg_cancel_backend` or similar), the `cbcopy_helper` process will be forced to exit. This typically leads to the following error signatures:
+
+- **Target Database Errors:** `extra data after last expected column` or `missing data for column xxx`.
+  - *Reason:* The Query Executor (QE) process reads incomplete or partial rows remaining in the pipe after the helper exits abruptly.
+- **Source Database Errors:** `could not write to copy program: Broken pipe`.
+  - *Reason:* The target-side `cbcopy_helper` closed the connection, breaking the pipe.
+
+These errors are expected side effects of a forced cancellation and indicate that the data transfer was interrupted mid-stream, rather than a data corruption issue.
 
 ### Connection Modes
 
