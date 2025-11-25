@@ -290,14 +290,16 @@ func (v *OwnerMappingValidator) Validate() error {
 func (v *OwnerMappingValidator) validateOwnerMappingFile() error {
 	ownerMappingFile := utils.MustGetFlagString(option.OWNER_MAPPING_FILE)
 	if len(ownerMappingFile) > 0 {
+		dbname := len(utils.MustGetFlagStringSlice(option.DBNAME))
 		schema := len(utils.MustGetFlagStringSlice(option.SCHEMA))
 		inclTabFile := len(utils.MustGetFlagString(option.INCLUDE_TABLE_FILE))
 		schemaMapfile := len(utils.MustGetFlagString(option.SCHEMA_MAPPING_FILE))
 
 		// Owner mapping file can only be used with specific options
-		if schema == 0 && inclTabFile == 0 && schemaMapfile == 0 {
+		if dbname == 0 && schema == 0 && inclTabFile == 0 && schemaMapfile == 0 {
 			return &ValidationError{
-				"Option[s] \"--owner-mapping-file\" only supports with option \"--schema or --include-table-file or --schema-mapping-file\"",
+				"Option[s] \"--owner-mapping-file\" only supports with option \"--dbname or --schema " +
+					"or --include-table-file or --schema-mapping-file\"",
 			}
 		}
 	}
