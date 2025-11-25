@@ -321,14 +321,14 @@ func (obj ObjectMetadata) GetPrivilegesStatements(objectName string, objectType 
 	if len(obj.Privileges) != 0 {
 		statements = append(statements, fmt.Sprintf("REVOKE ALL %sON %s%s FROM PUBLIC;", columnStr, typeStr, objectName))
 		if obj.Owner != "" {
-			statements = append(statements, fmt.Sprintf("REVOKE ALL %sON %s%s FROM %s;", columnStr, typeStr, objectName, obj.Owner))
+			statements = append(statements, fmt.Sprintf("REVOKE ALL %sON %s%s FROM %s;", columnStr, typeStr, objectName, getMappedRole(obj.Owner)))
 		}
 		for _, acl := range obj.Privileges {
 			grantee := ""
 			if acl.Grantee == "" {
 				grantee = "PUBLIC"
 			} else {
-				grantee = acl.Grantee
+				grantee = getMappedRole(acl.Grantee)
 			}
 			privStr, privWithGrantStr := createPrivilegeStrings(acl, objectType)
 			if privStr != "" {
@@ -494,15 +494,7 @@ func (obj ObjectMetadata) GetOwnerStatement(objectName string, objectType string
 	}
 	ownerStr := ""
 	if obj.Owner != "" {
-		newOwner := obj.Owner
-		if len(ownerMap) > 0 {
-			o, ok := ownerMap[obj.Owner]
-			if ok {
-				newOwner = o
-			}
-		}
-
-		ownerStr = fmt.Sprintf("ALTER %s %s OWNER TO %s;", typeStr, objectName, newOwner)
+		ownerStr = fmt.Sprintf("ALTER %s %s OWNER TO %s;", typeStr, objectName, getMappedRole(obj.Owner))
 	}
 	return ownerStr
 }
@@ -534,7 +526,7 @@ func PrintDefaultPrivilegesStatements(metadataFile *utils.FileWithByteCount, toc
 		statements := make([]string, 0)
 		roleStr := ""
 		if priv.Owner != "" {
-			roleStr = fmt.Sprintf(" FOR ROLE %s", priv.Owner)
+			roleStr = fmt.Sprintf(" FOR ROLE %s", getMappedRole(priv.Owner))
 		}
 		schemaStr := ""
 		if priv.Schema != "" {
@@ -555,14 +547,14 @@ func PrintDefaultPrivilegesStatements(metadataFile *utils.FileWithByteCount, toc
 		alterPrefix := fmt.Sprintf("ALTER DEFAULT PRIVILEGES%s%s", roleStr, schemaStr)
 		statements = append(statements, fmt.Sprintf("%s REVOKE ALL ON %sS FROM PUBLIC;", alterPrefix, objectType))
 		if priv.Owner != "" {
-			statements = append(statements, fmt.Sprintf("%s REVOKE ALL ON %sS FROM %s;", alterPrefix, objectType, priv.Owner))
+			statements = append(statements, fmt.Sprintf("%s REVOKE ALL ON %sS FROM %s;", alterPrefix, objectType, getMappedRole(priv.Owner)))
 		}
 		for _, acl := range priv.Privileges {
 			grantee := ""
 			if acl.Grantee == "" {
 				grantee = "PUBLIC"
 			} else {
-				grantee = acl.Grantee
+				grantee = getMappedRole(acl.Grantee)
 			}
 			privStr, privWithGrantStr := createPrivilegeStrings(acl, objectType)
 			if privStr != "" {
@@ -615,4 +607,13 @@ func ConstructDefaultPrivileges(results []DefaultPrivilegesQueryStruct) []Defaul
 	defaultPrivileges = append(defaultPrivileges, priv)
 
 	return defaultPrivileges
+}
+
+func getMappedRole(role string) string {
+	if len(ownerMap) > 0 {
+		if o, ok := ownerMap[role]; ok {
+			return o
+		}
+	}
+	return role
 }
