@@ -2,10 +2,11 @@ package option
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 
-	"github.com/cloudberry-contrib/cbcopy/utils"
 	"github.com/apache/cloudberry-go-libs/gplog"
+	"github.com/cloudberry-contrib/cbcopy/utils"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
@@ -288,10 +289,19 @@ func validateTables(title string, tableList []string) ([]*DbTable, error) {
 	}
 
 	if len(dbs) > 1 {
-		return nil, errors.Errorf(`All %s should belong to the same database.`, title)
+		return nil, formatDatabaseError(title, dbs)
 	}
 
 	return result, nil
+}
+
+func formatDatabaseError(subject string, dbs map[string]bool) error {
+	dbNames := make([]string, 0)
+	for db := range dbs {
+		dbNames = append(dbNames, db)
+	}
+	sort.Strings(dbNames)
+	return errors.Errorf(`All %s should belong to the same database. Found databases: %s`, subject, strings.Join(dbNames, ", "))
 }
 
 func validateSchemas(schemas []string) ([]*DbSchema, error) {
@@ -313,7 +323,7 @@ func validateSchemas(schemas []string) ([]*DbSchema, error) {
 	}
 
 	if len(dbs) > 1 {
-		return nil, errors.Errorf(`All schemas should belong to the same database.`)
+		return nil, formatDatabaseError("schemas", dbs)
 	}
 
 	return result, nil
