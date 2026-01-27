@@ -321,7 +321,8 @@ Usage:
 
 Flags:
       --append                           Append destination table if it exists
-      --compression                      Transfer the compression data, instead of the plain data
+      --compression                      Enable compression for data transfer (master: snappy, segment: zstd by default)
+      --compress-type string             Compression algorithm for segment copy: "gzip", "snappy", or "zstd" (master copy always uses snappy) (default "zstd")
       --connection-mode string           Connection mode, 'push' (source connects to dest) or 'pull' (dest connects to source) (default "push")
       --copy-jobs int                    The maximum number of tables that concurrently copies, valid values are between 1 and 512 (default 4)
       --data-only                        Only copy data, do not copy metadata

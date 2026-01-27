@@ -455,6 +455,33 @@ func (v *ConnectionModeValidator) validateConnectionMode() error {
 	return nil
 }
 
+type CompressTypeValidator struct {
+	*BaseValidator
+}
+
+func NewCompressTypeValidator(flags *pflag.FlagSet) *CompressTypeValidator {
+	return &CompressTypeValidator{NewBaseValidator(flags)}
+}
+
+func (v *CompressTypeValidator) Validate() error {
+	return v.validateCompressType()
+}
+
+func (v *CompressTypeValidator) validateCompressType() error {
+	compressType := utils.MustGetFlagString(option.COMPRESS_TYPE)
+
+	if compressType != option.CompressTypeGzip &&
+		compressType != option.CompressTypeSnappy &&
+		compressType != option.CompressTypeZstd {
+		return &ValidationError{
+			fmt.Sprintf("Invalid compression type '%s'. Must be one of: '%s', '%s', or '%s'",
+				compressType, option.CompressTypeGzip, option.CompressTypeSnappy, option.CompressTypeZstd),
+		}
+	}
+
+	return nil
+}
+
 // ValidatorManager manages all validators
 type ValidatorManager struct {
 	validators []Validator
@@ -471,7 +498,8 @@ func NewValidatorManager(flags *pflag.FlagSet) *ValidatorManager {
 			NewPortValidator(flags),
 			NewFlagCombinationValidator(flags),
 			NewOwnerMappingValidator(flags),
-			NewConnectionModeValidator(flags), // 添加新的验证器
+			NewConnectionModeValidator(flags),
+			NewCompressTypeValidator(flags),
 		},
 	}
 }

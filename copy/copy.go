@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/cloudberry-go-libs/gplog"
 	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 	"github.com/cloudberry-contrib/cbcopy/option"
 	"github.com/cloudberry-contrib/cbcopy/utils"
-	"github.com/apache/cloudberry-go-libs/gplog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -118,7 +118,8 @@ func (app *Application) SetFlagDefaults(flagSet *pflag.FlagSet) {
 	flagSet.Bool(option.GLOBAL_METADATA_ONLY, false, "Only copy global metadata, do not copy data")
 	flagSet.Bool(option.DATA_ONLY, false, "Only copy data, do not copy metadata")
 	flagSet.Bool(option.WITH_GLOBAL_METADATA, false, "Copy global metadata objects (default: false)")
-	flagSet.Bool(option.COMPRESSION, false, "Transfer the compression data, instead of the plain data")
+	flagSet.Bool(option.COMPRESSION, false, "Enable compression for data transfer (master: snappy, segment: zstd by default)")
+	flagSet.String(option.COMPRESS_TYPE, "zstd", "Compression algorithm for segment copy: \"gzip\", \"snappy\", or \"zstd\" (master copy always uses snappy)")
 	flagSet.Int(option.ON_SEGMENT_THRESHOLD, 1000000, "Copy between Coordinators directly, if the table has smaller or same number of rows")
 	flagSet.Bool(option.QUIET, false, "Suppress non-warning, non-error log messages")
 	flagSet.String(option.SOURCE_HOST, "127.0.0.1", "The host of source cluster")

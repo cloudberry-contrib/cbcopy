@@ -7,8 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/golang/snappy"
 	"github.com/apache/cloudberry-go-libs/gplog"
+	"github.com/golang/snappy"
+	"github.com/klauspost/compress/zstd"
 )
 
 // CompressType is the compression format
@@ -18,6 +19,7 @@ const (
 	// CompressSnappy is the Snappy compression format
 	CompressSnappy = iota
 	CompressGzip
+	CompressZstd
 )
 
 // baseCompressConn contains common fields and methods for compressed connections
@@ -91,6 +93,11 @@ func NewCompressReader(conn net.Conn, compressType CompressType) (net.Conn, erro
 		if err != nil {
 			return nil, err
 		}
+	case CompressZstd:
+		reader, err = zstd.NewReader(conn)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		gplog.Fatal(errors.Errorf("No recognized compression type %v", compressType), "")
 	}
@@ -114,6 +121,11 @@ func NewCompressWriter(conn net.Conn, compressType CompressType) (net.Conn, erro
 		writeCloser = snappy.NewBufferedWriter(conn)
 	case CompressGzip:
 		writeCloser, err = gzip.NewWriterLevel(conn, gzip.DefaultCompression)
+		if err != nil {
+			return nil, err
+		}
+	case CompressZstd:
+		writeCloser, err = zstd.NewWriter(conn, zstd.WithEncoderLevel(zstd.SpeedDefault))
 		if err != nil {
 			return nil, err
 		}
@@ -142,11 +154,14 @@ func NewCompressConn(conn net.Conn, compressType CompressType, isReader bool) (n
 }
 
 func getCompressionType(compType string) CompressType {
-	var result CompressType = CompressGzip
-
-	if compType == "snappy" {
-		result = CompressSnappy
+	switch compType {
+	case "snappy":
+		return CompressSnappy
+	case "zstd":
+		return CompressZstd
+	case "gzip":
+		return CompressGzip
+	default:
+		return CompressZstd
 	}
-
-	return result
 }

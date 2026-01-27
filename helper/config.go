@@ -52,7 +52,7 @@ func (c *Config) InitFlags() {
 	flag.Var(&c.DataPortRange, "data-port-range", "The range of listening port number to choose for receiving data on dest cluster")
 	flag.BoolVar(&c.NoCompression, "no-compression", false, "Transfer the plain data, instead of compressing as Snappy format")
 	flag.BoolVar(&c.PrintVersion, "version", false, "Print version")
-	flag.StringVar(&c.TransCompType, "compress-type", "gzip", "Data compression algorithm, \"gzip\" or \"snappy\"")
+	flag.StringVar(&c.TransCompType, "compress-type", "zstd", "Data compression algorithm: \"gzip\", \"snappy\", or \"zstd\"")
 	flag.Var(&c.NumClients, "client-numbers", "Number of clients")
 	flag.StringVar(&c.Direction, "direction", DirectionModeSend, "Data flow direction, 'send' (stdin to net) or 'receive' (net to stdout)")
 	flag.IntVar(&c.NumDests, "num-dests", 0, "Total number of destination segments, used for round-robin calculation")
@@ -112,8 +112,8 @@ func (c *Config) validateCompressType(cType string) error {
 		return nil
 	}
 
-	if cType != "gzip" && cType != "snappy" {
-		return fmt.Errorf("--compress-type must be \"gzip\" or \"snappy\"\n")
+	if cType != "gzip" && cType != "snappy" && cType != "zstd" {
+		return fmt.Errorf("--compress-type must be \"gzip\", \"snappy\", or \"zstd\"\n")
 	}
 
 	return nil

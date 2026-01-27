@@ -34,6 +34,7 @@ const (
 	DATA_ONLY               = "data-only"
 	WITH_GLOBAL_METADATA    = "with-global-metadata"
 	COMPRESSION             = "compression"
+	COMPRESS_TYPE           = "compress-type"
 	ON_SEGMENT_THRESHOLD    = "on-segment-threshold"
 	QUIET                   = "quiet"
 	SOURCE_HOST             = "source-host"
@@ -63,6 +64,12 @@ const (
 const (
 	ConnectionModePush = "push"
 	ConnectionModePull = "pull"
+)
+
+const (
+	CompressTypeGzip   = "gzip"
+	CompressTypeSnappy = "snappy"
+	CompressTypeZstd   = "zstd"
 )
 
 const (

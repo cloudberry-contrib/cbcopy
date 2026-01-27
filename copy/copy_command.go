@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/apache/cloudberry-go-libs/gplog"
 	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 	"github.com/cloudberry-contrib/cbcopy/option"
 	"github.com/cloudberry-contrib/cbcopy/utils"
-	"github.com/apache/cloudberry-go-libs/gplog"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -470,10 +470,12 @@ func (edlc *ExtDestLtCopy) IsCopyFromStarted(rows int64) bool {
 //   - workerId: the identifier of the worker process
 //   - srcSegs: information about the source segment hosts
 //   - destSegs: information about the destination segment IPs
+//   - useCompression: whether compression should be enabled
 //
 // It returns an instance of a struct that implements the CopyCommand interface.
-func createTestCopyStrategy(strategy string, workerId int, srcSegs []utils.SegmentHostInfo, destSegs []utils.SegmentHostInfo, connectionMode string) CopyCommand {
-	compArg := "--compress-type snappy"
+// Compression: CopyOnMaster forces snappy; segment copies support zstd, gzip, or snappy (default: zstd).
+func createTestCopyStrategy(strategy string, workerId int, srcSegs []utils.SegmentHostInfo, destSegs []utils.SegmentHostInfo, connectionMode string, useCompression bool) CopyCommand {
+	compArg := getCompressArg(strategy == "CopyOnMaster", useCompression)
 
 	switch strategy {
 	case "CopyOnMaster":
@@ -510,6 +512,11 @@ func createTestCopyStrategy(strategy string, workerId int, srcSegs []utils.Segme
 // - Number of segments in source and destination clusters (srcSegs, destSegs)
 // - Database versions of source and destination (srcConn.Version, destConn.Version)
 // It returns an instance of a struct that implements the CopyCommand interface.
+//
+// Compression logic:
+// - Compression is enabled if --compression is set OR --compress-type is explicitly specified
+// - CopyOnMaster (replicated/small tables): only uses snappy
+// - Segment copy (large tables): only uses zstd or gzip (default: zstd)
 func CreateCopyStrategy(isReplicated bool,
 	numTuples int64,
 	workerId int,
@@ -517,34 +524,29 @@ func CreateCopyStrategy(isReplicated bool,
 	destSegs []utils.SegmentHostInfo,
 	srcConn, destConn *dbconn.DBConn,
 	connectionMode string) CopyCommand {
-	compArg := "--compress-type snappy"
+	// Compression is enabled if --compression is set OR --compress-type is explicitly specified
+	useCompression := utils.MustGetFlagBool(option.COMPRESSION) || utils.CmdFlags.Changed(option.COMPRESS_TYPE)
 
 	if isReplicated {
+		compArg := getCompressArg(true, useCompression)
 		gplog.Debug("Using CopyOnMaster strategy for replicated table")
 		return &CopyOnMaster{CopyBase: CopyBase{WorkerId: workerId, SrcSegmentsHostInfo: srcSegs, DestSegmentsHostInfo: destSegs, ConnectionMode: connectionMode, CompArg: compArg}}
 	}
 
 	if strategy := os.Getenv("TEST_COPY_STRATEGY"); strategy != "" {
 		gplog.Debug("Using test copy strategy: %s", strategy)
-		// Note: Test strategy helper needs to be updated if it exists
-		// For now, let's assume createTestCopyStrategy is adapted or not used for this flow.
-		return createTestCopyStrategy(strategy, workerId, srcSegs, destSegs, connectionMode)
+		return createTestCopyStrategy(strategy, workerId, srcSegs, destSegs, connectionMode, useCompression)
 	}
 
 	if numTuples <= int64(utils.MustGetFlagInt(option.ON_SEGMENT_THRESHOLD)) {
-		if !utils.MustGetFlagBool(option.COMPRESSION) {
-			compArg = "--no-compression"
-		}
+		compArg := getCompressArg(true, useCompression)
 		return &CopyOnMaster{CopyBase: CopyBase{WorkerId: workerId, SrcSegmentsHostInfo: srcSegs, DestSegmentsHostInfo: destSegs, ConnectionMode: connectionMode, CompArg: compArg}}
 	}
 
 	numSrcSegs := len(srcSegs)
 	numDestSegs := len(destSegs)
 
-	compArg = "--compress-type gzip"
-	if !utils.MustGetFlagBool(option.COMPRESSION) {
-		compArg = "--no-compression"
-	}
+	compArg := getCompressArg(false, useCompression)
 
 	if srcConn.Version.Equals(destConn.Version) && numSrcSegs == numDestSegs {
 		return &CopyOnSegment{CopyBase: CopyBase{WorkerId: workerId, SrcSegmentsHostInfo: srcSegs, DestSegmentsHostInfo: destSegs, ConnectionMode: connectionMode, CompArg: compArg}}
@@ -555,4 +557,30 @@ func CreateCopyStrategy(isReplicated bool,
 	}
 
 	return newExtDestLtCopy(workerId, srcSegs, destSegs, connectionMode, compArg)
+}
+
+// getCompressArg generates the corresponding helper argument based on the strategy type and compression flags.
+// isMasterStrategy: whether the strategy is executed on the master side (e.g., CopyOnMaster).
+// useCompression: whether compression is enabled by the user.
+func getCompressArg(isMasterStrategy bool, useCompression bool) string {
+	if !useCompression {
+		return "--no-compression"
+	}
+
+	if isMasterStrategy {
+		// Master-side strategy (handling small tables) currently uses snappy for the best performance balance.
+		return "--compress-type snappy"
+	}
+
+	// Segment-side strategy (handling large table data) supports zstd, gzip, and snappy.
+	compressType := utils.MustGetFlagString(option.COMPRESS_TYPE)
+	switch compressType {
+	case option.CompressTypeGzip:
+		return "--compress-type gzip"
+	case option.CompressTypeSnappy:
+		return "--compress-type snappy"
+	default:
+		// Default to zstd for segment copy
+		return "--compress-type zstd"
+	}
 }
