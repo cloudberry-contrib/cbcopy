@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/user"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/apache/cloudberry-go-libs/operating"
@@ -14,11 +15,15 @@ import (
 	"github.com/spf13/pflag"
 )
 
-func TestMain(m *testing.M) {
-	// Initialize gplog with in-memory buffers so production logging calls
-	// (Info/Warn/Debug) don't dereference a nil writer at test time.
-	testhelper.SetupTestLogger()
-	os.Exit(m.Run())
+// testLoggerOnce ensures gplog has in-memory writers installed exactly once
+// across all tests in this file, without contending with the Ginkgo
+// BeforeEach in backup_suite_test.go that also touches the gplog singleton.
+var testLoggerOnce sync.Once
+
+func ensureTestLogger() {
+	testLoggerOnce.Do(func() {
+		testhelper.SetupTestLogger()
+	})
 }
 
 // installSkipExistingTestFixtures wires up the package-level state that
@@ -27,6 +32,7 @@ func TestMain(m *testing.M) {
 // an *option.Option around them and installs srcDBVersion accordingly.
 func installSkipExistingTestFixtures(t *testing.T, srcVer dbconn.GPDBVersion, destDb string, inv, parts map[string]struct{}) {
 	t.Helper()
+	ensureTestLogger()
 
 	srcDBVersion = srcVer
 	destDbName = destDb
@@ -112,6 +118,7 @@ func mkTable(schema, name, level string, inherits []string, isExternal bool) Tab
 }
 
 func TestFilter_FlagOff_NoOp(t *testing.T) {
+	ensureTestLogger()
 	srcDBVersion = dbconn.NewVersion("7.0.0")
 	destDbName = "dst"
 	runtimeOption = newOptionWithEmptyInventories()
@@ -314,6 +321,7 @@ func TestSkipReasonString(t *testing.T) {
 }
 
 func TestWriteSkipExistingList_EmptyIsNoOp(t *testing.T) {
+	ensureTestLogger()
 	ResetSkipExistingState()
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
@@ -329,6 +337,7 @@ func TestWriteSkipExistingList_EmptyIsNoOp(t *testing.T) {
 }
 
 func TestWriteSkipExistingList_PersistsAllEntries(t *testing.T) {
+	ensureTestLogger()
 	ResetSkipExistingState()
 	recordSkip(SkippedTable{
 		SourceSchema: "src_s", SourceName: "t1",
@@ -348,12 +357,15 @@ func TestWriteSkipExistingList_PersistsAllEntries(t *testing.T) {
 
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
-	// operating.System.CurrentUser may cache; rebind for the test.
-	prevSystem := operating.System
+	// operating.System is a *SystemFunctions, so we must swap the field
+	// directly (not the whole pointer) and restore the same field on exit;
+	// otherwise the override leaks into other tests in the binary and breaks
+	// dbconn.NewDBConnFromEnvironment in the Ginkgo BeforeEach.
+	prevCurrentUser := operating.System.CurrentUser
 	operating.System.CurrentUser = func() (*user.User, error) {
 		return &user.User{HomeDir: tmpHome}, nil
 	}
-	defer func() { operating.System = prevSystem }()
+	defer func() { operating.System.CurrentUser = prevCurrentUser }()
 
 	if err := WriteSkipExistingList("20260511_1830"); err != nil {
 		t.Fatalf("WriteSkipExistingList: %v", err)
