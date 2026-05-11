@@ -339,6 +339,14 @@ func (app *Application) doCopy() {
 		i++
 	}
 
+	// --skip-existing: emit a single summary line and persist the list of
+	// bypassed tables once all databases have been processed. No-ops when
+	// the option wasn't used or nothing was skipped.
+	builtin.LogSkipExistingSummary()
+	if err := builtin.WriteSkipExistingList(app.timestamp); err != nil {
+		gplog.Warn("[skip-existing] failed to write skip_existing.list: %v", err)
+	}
+
 	gplog.Info("Total elapsed time: %v", time.Since(start))
 }
 

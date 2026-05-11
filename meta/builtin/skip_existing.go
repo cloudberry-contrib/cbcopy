@@ -1,8 +1,13 @@
 package builtin
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
+	"github.com/apache/cloudberry-go-libs/operating"
 	"github.com/cloudberry-contrib/cbcopy/option"
 	"github.com/cloudberry-contrib/cbcopy/utils"
 	"github.com/apache/cloudberry-go-libs/gplog"
@@ -93,6 +98,101 @@ func RecordPairSkip(srcSchema, srcName, destSchema, destName string) {
 		DestName:     destName,
 		Reason:       SkipReasonExists,
 	})
+}
+
+// WriteSkipExistingList persists the full set of tables that were bypassed
+// because of --skip-existing into ~/gpAdminLogs/<timestamp>_skip_existing.list.
+// Layout: one tab-separated line per table —
+//
+//	<reason>	<source_schema>.<source_name>	<dest_schema>.<dest_name>
+//
+// The file is written once, after all databases have been processed.
+// Returns nil and writes nothing if no tables were skipped.
+func WriteSkipExistingList(timestamp string) error {
+	snapshot := SkipExistingTables()
+	if len(snapshot) == 0 {
+		return nil
+	}
+
+	homeDir, err := homeDirectory()
+	if err != nil {
+		return fmt.Errorf("resolve user home: %w", err)
+	}
+	logDir := filepath.Join(homeDir, "gpAdminLogs")
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
+		return fmt.Errorf("create %s: %w", logDir, err)
+	}
+	path := filepath.Join(logDir, fmt.Sprintf("%s_skip_existing.list", timestamp))
+
+	var b strings.Builder
+	for _, s := range snapshot {
+		b.WriteString(s.Reason.String())
+		b.WriteByte('\t')
+		b.WriteString(s.SourceSchema)
+		b.WriteByte('.')
+		b.WriteString(s.SourceName)
+		b.WriteByte('\t')
+		b.WriteString(s.DestSchema)
+		b.WriteByte('.')
+		b.WriteString(s.DestName)
+		b.WriteByte('\n')
+	}
+	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", path, err)
+	}
+	gplog.Info("[skip-existing] wrote %d entries to %s", len(snapshot), path)
+	return nil
+}
+
+// LogSkipExistingSummary writes a single Info-level line summarizing how
+// many tables --skip-existing bypassed during this run. Intended to be
+// called once near the end of cbcopy execution; complements (does not
+// replace) the per-database summary line emitted by CopyManager.
+func LogSkipExistingSummary() {
+	snapshot := SkipExistingTables()
+	if len(snapshot) == 0 {
+		return
+	}
+
+	var (
+		existsN     int
+		rootExistsN int
+		halfBuiltN  int
+	)
+	for _, s := range snapshot {
+		switch s.Reason {
+		case SkipReasonExists:
+			existsN++
+		case SkipReasonRootExists:
+			rootExistsN++
+		case SkipReasonHalfBuiltLeaf:
+			halfBuiltN++
+		}
+	}
+	gplog.Info("[skip-existing] bypassed %d table(s): %d already-exist, %d partition-tree (root present), %d half-built leaf warnings",
+		len(snapshot), existsN, rootExistsN, halfBuiltN)
+}
+
+// String returns a short label suitable for the skip_existing.list file.
+func (r SkipReason) String() string {
+	switch r {
+	case SkipReasonExists:
+		return "exists"
+	case SkipReasonRootExists:
+		return "root_exists"
+	case SkipReasonHalfBuiltLeaf:
+		return "half_built_leaf"
+	default:
+		return "unknown"
+	}
+}
+
+func homeDirectory() (string, error) {
+	user, err := operating.System.CurrentUser()
+	if err != nil {
+		return "", err
+	}
+	return user.HomeDir, nil
 }
 
 // FilterTablesByDestExisting removes tables that already exist on the

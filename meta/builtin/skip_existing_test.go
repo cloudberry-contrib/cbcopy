@@ -2,8 +2,11 @@ package builtin
 
 import (
 	"os"
+	"os/user"
+	"strings"
 	"testing"
 
+	"github.com/apache/cloudberry-go-libs/operating"
 	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 	"github.com/cloudberry-contrib/cbcopy/internal/testhelper"
 	"github.com/cloudberry-contrib/cbcopy/option"
@@ -290,5 +293,85 @@ func TestWalkToRoot_ParentMissingFallsBackToImmediate(t *testing.T) {
 	byFQN := map[string]Table{} // parent not present
 	if got := walkToRoot(leaf, byFQN); got != "public.gone" {
 		t.Fatalf("expected fallback to immediate parent FQN, got %s", got)
+	}
+}
+
+func TestSkipReasonString(t *testing.T) {
+	cases := []struct {
+		r    SkipReason
+		want string
+	}{
+		{SkipReasonExists, "exists"},
+		{SkipReasonRootExists, "root_exists"},
+		{SkipReasonHalfBuiltLeaf, "half_built_leaf"},
+		{SkipReason(99), "unknown"},
+	}
+	for _, tc := range cases {
+		if got := tc.r.String(); got != tc.want {
+			t.Errorf("SkipReason(%d).String() = %q, want %q", tc.r, got, tc.want)
+		}
+	}
+}
+
+func TestWriteSkipExistingList_EmptyIsNoOp(t *testing.T) {
+	ResetSkipExistingState()
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	if err := WriteSkipExistingList("ts"); err != nil {
+		t.Fatalf("expected no error on empty input, got %v", err)
+	}
+	// Should not create the file at all.
+	path := tmpHome + "/gpAdminLogs/ts_skip_existing.list"
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("expected no file to be created, got err=%v", err)
+	}
+}
+
+func TestWriteSkipExistingList_PersistsAllEntries(t *testing.T) {
+	ResetSkipExistingState()
+	recordSkip(SkippedTable{
+		SourceSchema: "src_s", SourceName: "t1",
+		DestSchema: "dst_s", DestName: "t1",
+		Reason: SkipReasonExists,
+	})
+	recordSkip(SkippedTable{
+		SourceSchema: "public", SourceName: "rootA",
+		DestSchema: "public", DestName: "rootA",
+		Reason: SkipReasonRootExists,
+	})
+	recordSkip(SkippedTable{
+		SourceSchema: "public", SourceName: "rootA_1_prt_a",
+		DestSchema: "public", DestName: "rootA_1_prt_a",
+		Reason: SkipReasonHalfBuiltLeaf,
+	})
+
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	// operating.System.CurrentUser may cache; rebind for the test.
+	prevSystem := operating.System
+	operating.System.CurrentUser = func() (*user.User, error) {
+		return &user.User{HomeDir: tmpHome}, nil
+	}
+	defer func() { operating.System = prevSystem }()
+
+	if err := WriteSkipExistingList("20260511_1830"); err != nil {
+		t.Fatalf("WriteSkipExistingList: %v", err)
+	}
+	path := tmpHome + "/gpAdminLogs/20260511_1830_skip_existing.list"
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read produced file: %v", err)
+	}
+	body := string(raw)
+	wants := []string{
+		"exists\tsrc_s.t1\tdst_s.t1",
+		"root_exists\tpublic.rootA\tpublic.rootA",
+		"half_built_leaf\tpublic.rootA_1_prt_a\tpublic.rootA_1_prt_a",
+	}
+	for _, w := range wants {
+		if !strings.Contains(body, w) {
+			t.Errorf("expected file to contain %q, got:\n%s", w, body)
+		}
 	}
 }
