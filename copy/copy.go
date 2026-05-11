@@ -10,6 +10,7 @@ import (
 
 	"github.com/apache/cloudberry-go-libs/gplog"
 	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin"
 	"github.com/cloudberry-contrib/cbcopy/option"
 	"github.com/cloudberry-contrib/cbcopy/utils"
 	"github.com/spf13/cobra"
@@ -185,6 +186,7 @@ func (app *Application) doSetup() {
 	var err error
 	config, err = option.NewOption(utils.CmdFlags)
 	gplog.FatalOnError(err)
+	builtin.SetOption(config)
 
 	gplog.Info("Establishing 1 source db management connection(s)...")
 	app.srcManageConn = app.initializeConnectionPool("postgres",

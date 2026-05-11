@@ -24,6 +24,12 @@ func RetrieveAndProcessTables(conn *dbconn.DBConn, includeTables []string) ([]Ta
 
 	tables := ConstructDefinitionsForTables(conn, tableRelations)
 
+	// --skip-existing: drop tables (and their entire partition trees, when
+	// the root exists on the destination) from the plan before metadata
+	// extraction sees them, so no DDL / ACL / owner / comment statements
+	// are generated for the skipped objects.
+	tables = FilterTablesByDestExisting(tables)
+
 	metadataTables, dataTables := SplitTablesByPartitionType(conn, tables, quotedIncludeRelations)
 	objectCounts["Tables"] = len(metadataTables)
 
