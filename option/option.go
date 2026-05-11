@@ -125,6 +125,15 @@ type Option struct {
 
 	ownerMap      map[string]string
 	tablespaceMap map[string]string
+
+	// destDbInventory is a per-destination-database snapshot of the user tables
+	// present on the destination cluster, keyed by db name and then by
+	// "schema.name" FQN. Populated by MarkDestTables. Used by IsDestTableExisting
+	// to support --skip-existing without re-querying the destination.
+	destDbInventory map[string]map[string]struct{}
+	// destDbRootParts mirrors destDbInventory but lists the root-partition tables
+	// (which may not appear in destDbInventory on every supported version).
+	destDbRootParts map[string]map[string]struct{}
 }
 
 func NewOption(initialFlags *pflag.FlagSet) (*Option, error) {
@@ -189,18 +198,20 @@ func NewOption(initialFlags *pflag.FlagSet) (*Option, error) {
 	}
 
 	return &Option{
-		copyMode:       copyMode,
-		tableMode:      tableMode,
-		connectionMode: connectionMode,
-		sourceDbnames:  sourceDbnames,
-		destDbnames:    destDbnames,
-		excludedTables: excludeTables,
-		includedTables: includeTables,
-		destTables:     destTables,
-		sourceSchemas:  sourceSchemas,
-		destSchemas:    destSchemas,
-		ownerMap:       ownerMap,
-		tablespaceMap:  tablespaceMap,
+		copyMode:        copyMode,
+		tableMode:       tableMode,
+		connectionMode:  connectionMode,
+		sourceDbnames:   sourceDbnames,
+		destDbnames:     destDbnames,
+		excludedTables:  excludeTables,
+		includedTables:  includeTables,
+		destTables:      destTables,
+		sourceSchemas:   sourceSchemas,
+		destSchemas:     destSchemas,
+		ownerMap:        ownerMap,
+		tablespaceMap:   tablespaceMap,
+		destDbInventory: make(map[string]map[string]struct{}),
+		destDbRootParts: make(map[string]map[string]struct{}),
 	}, nil
 }
 
@@ -448,6 +459,55 @@ func (o Option) MarkIncludeTables(dbname string, userTables map[string]TableStat
 
 func (o Option) MarkDestTables(dbname string, userTables map[string]TableStatistics, partTables map[string]bool) {
 	o.markTables(dbname, o.destTables, userTables, partTables)
+
+	// Persist a snapshot of the destination-side table inventory so that
+	// IsDestTableExisting can answer queries later without a second
+	// round-trip. Map keys mirror what markTables uses: "schema.name" FQN.
+	inv := make(map[string]struct{}, len(userTables))
+	for k := range userTables {
+		inv[k] = struct{}{}
+	}
+	o.destDbInventory[dbname] = inv
+
+	parts := make(map[string]struct{}, len(partTables))
+	for k := range partTables {
+		parts[k] = struct{}{}
+	}
+	o.destDbRootParts[dbname] = parts
+}
+
+// IsDestTableExisting reports whether a table with the given (already
+// schema-mapping-translated) destination schema and name is present in the
+// destination database. The check is by fully-qualified name only; column
+// definitions are not compared (matching gpcopy's --skip-existing semantics).
+// Root-partition tables are also recognized, so this returns true for the
+// root of a partition tree even if it was not listed in GetUserTables.
+func (o Option) IsDestTableExisting(destDbName, destSchema, destName string) bool {
+	fqn := destSchema + "." + destName
+	if inv, ok := o.destDbInventory[destDbName]; ok {
+		if _, exists := inv[fqn]; exists {
+			return true
+		}
+	}
+	if parts, ok := o.destDbRootParts[destDbName]; ok {
+		if _, exists := parts[fqn]; exists {
+			return true
+		}
+	}
+	return false
+}
+
+// TranslateToDestFQN converts a source-side (schema, name) pair into the
+// corresponding destination-side pair after applying --schema-mapping rules.
+// If no mapping applies (e.g., db-mode or full-mode without --schema-mapping),
+// the source schema is returned unchanged, mirroring cbcopy's default of
+// "same schema on both sides".
+func (o Option) TranslateToDestFQN(srcSchema, srcName string) (string, string) {
+	schemaMap := o.GetSchemaMap()
+	if destSchema, ok := schemaMap[srcSchema]; ok && destSchema != "" {
+		return destSchema, srcName
+	}
+	return srcSchema, srcName
 }
 
 func (o Option) MarkExcludeTables(dbname string, userTables map[string]TableStatistics, partTables map[string]bool) {
