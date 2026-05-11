@@ -79,6 +79,22 @@ func recordSkip(s SkippedTable) {
 	skipExistingTables = append(skipExistingTables, s)
 }
 
+// RecordPairSkip is the cross-package entry point used by the data-channel
+// filter (CopyModeTable + --dest-table flow in copy/copy_metadata.go), which
+// has the source and destination FQNs already paired up and so doesn't need
+// the partition/inheritance reasoning that FilterTablesByDestExisting
+// performs. The reason is fixed to SkipReasonExists because the caller has
+// already established that the destination row is present.
+func RecordPairSkip(srcSchema, srcName, destSchema, destName string) {
+	recordSkip(SkippedTable{
+		SourceSchema: srcSchema,
+		SourceName:   srcName,
+		DestSchema:   destSchema,
+		DestName:     destName,
+		Reason:       SkipReasonExists,
+	})
+}
+
 // FilterTablesByDestExisting removes tables that already exist on the
 // destination from the input slice and returns the survivors. Existence is
 // queried on the *translated* destination-side FQN (so --schema-mapping is

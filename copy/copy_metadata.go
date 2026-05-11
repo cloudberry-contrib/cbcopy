@@ -3,6 +3,7 @@ package copy
 import (
 	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 	"github.com/cloudberry-contrib/cbcopy/meta"
+	"github.com/cloudberry-contrib/cbcopy/meta/builtin"
 	"github.com/cloudberry-contrib/cbcopy/option"
 	"github.com/cloudberry-contrib/cbcopy/utils"
 )
@@ -53,6 +54,17 @@ func (m *MetadataManager) Close() {
 func (m *MetadataManager) MigrateMetadata(srcTables, destTables, nonPhysicalRels []option.Table) (chan option.TablePair, utils.ProgressBar) {
 	var pgd utils.ProgressBar
 
+	// --skip-existing: drop already-present-on-destination tables from the
+	// src/dest parallel arrays before the data channel is sized or filled.
+	// This covers CopyModeTable + --dest-table mode, where MigrateMetadata
+	// short-circuits through fillTablePairChan and the DDL pipeline's filter
+	// in RetrieveAndProcessTables never sees these tables. The DDL filter
+	// covers Full / Db / Schema / Table-without-dest-table modes; this one
+	// is the missing piece for the explicit-mapping path.
+	if utils.MustGetFlagBool(option.SKIP_EXISTING) {
+		srcTables, destTables = filterTablePairsByDestExisting(m.destConn.DBName, srcTables, destTables)
+	}
+
 	mode := config.GetCopyMode()
 	tablec := make(chan option.TablePair, len(destTables))
 
@@ -101,6 +113,28 @@ func (m *MetadataManager) Wait() {
 	}
 
 	<-m.donec
+}
+
+// filterTablePairsByDestExisting drops, from the parallel src/dest table
+// arrays, any entry whose destination side is already present on the
+// destination database. This covers the CopyModeTable + --dest-table flow
+// where MigrateMetadata bypasses DDL extraction entirely. Each filtered
+// pair is recorded via builtin.RecordPairSkip for the summary writer.
+func filterTablePairsByDestExisting(destDbName string, src, dst []option.Table) ([]option.Table, []option.Table) {
+	if len(src) == 0 {
+		return src, dst
+	}
+	keptSrc := make([]option.Table, 0, len(src))
+	keptDst := make([]option.Table, 0, len(dst))
+	for i := range src {
+		if config.IsDestTableExisting(destDbName, dst[i].Schema, dst[i].Name) {
+			builtin.RecordPairSkip(src[i].Schema, src[i].Name, dst[i].Schema, dst[i].Name)
+			continue
+		}
+		keptSrc = append(keptSrc, src[i])
+		keptDst = append(keptDst, dst[i])
+	}
+	return keptSrc, keptDst
 }
 
 // fillTablePairChan fills the table pair channel with source and destination tables
