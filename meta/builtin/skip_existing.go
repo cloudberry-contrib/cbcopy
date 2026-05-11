@@ -39,10 +39,15 @@ const (
 
 // SkippedTable records one decision made by the --skip-existing filter.
 // Both source-side and destination-side schema/name pairs are kept because
-// they may differ under --schema-mapping.
+// they may differ under --schema-mapping. SourceDbName and DestDbName
+// matter when cbcopy processes more than one db pair in a single run
+// (--full or --dbname db1,db2 mode) so an audit of skip_existing.list can
+// tell entries from different db pairs apart.
 type SkippedTable struct {
+	SourceDbName string
 	SourceSchema string
 	SourceName   string
+	DestDbName   string
 	DestSchema   string
 	DestName     string
 	Reason       SkipReason
@@ -90,10 +95,12 @@ func recordSkip(s SkippedTable) {
 // the partition/inheritance reasoning that FilterTablesByDestExisting
 // performs. The reason is fixed to SkipReasonExists because the caller has
 // already established that the destination row is present.
-func RecordPairSkip(srcSchema, srcName, destSchema, destName string) {
+func RecordPairSkip(srcDbName_ string, srcSchema, srcName string, destDbName_ string, destSchema, destName string) {
 	recordSkip(SkippedTable{
+		SourceDbName: srcDbName_,
 		SourceSchema: srcSchema,
 		SourceName:   srcName,
+		DestDbName:   destDbName_,
 		DestSchema:   destSchema,
 		DestName:     destName,
 		Reason:       SkipReasonExists,
@@ -104,10 +111,14 @@ func RecordPairSkip(srcSchema, srcName, destSchema, destName string) {
 // because of --skip-existing into ~/gpAdminLogs/<timestamp>_skip_existing.list.
 // Layout: one tab-separated line per table —
 //
-//	<reason>	<source_schema>.<source_name>	<dest_schema>.<dest_name>
+//	<reason>	<src_db>.<src_schema>.<src_name>	<dest_db>.<dest_schema>.<dest_name>
 //
-// The file is written once, after all databases have been processed.
-// Returns nil and writes nothing if no tables were skipped.
+// The db name is embedded into the FQN (matching cbcopy's existing
+// <db>.<schema>.<table> convention used by cbcopy_skipped / cbcopy_failed)
+// so that multi-database copies (--full or --dbname db1,db2) can be
+// audited unambiguously. The file is written once, after all databases
+// have been processed. Returns nil and writes nothing if no tables were
+// skipped.
 func WriteSkipExistingList(timestamp string) error {
 	snapshot := SkipExistingTables()
 	if len(snapshot) == 0 {
@@ -128,10 +139,18 @@ func WriteSkipExistingList(timestamp string) error {
 	for _, s := range snapshot {
 		b.WriteString(s.Reason.String())
 		b.WriteByte('\t')
+		if s.SourceDbName != "" {
+			b.WriteString(s.SourceDbName)
+			b.WriteByte('.')
+		}
 		b.WriteString(s.SourceSchema)
 		b.WriteByte('.')
 		b.WriteString(s.SourceName)
 		b.WriteByte('\t')
+		if s.DestDbName != "" {
+			b.WriteString(s.DestDbName)
+			b.WriteByte('.')
+		}
 		b.WriteString(s.DestSchema)
 		b.WriteByte('.')
 		b.WriteString(s.DestName)
@@ -245,8 +264,8 @@ func FilterTablesByDestExisting(tables []Table) []Table {
 			if rootSkip[srcFQN] {
 				ds, dn := runtimeOption.TranslateToDestFQN(t.Schema, t.Name)
 				recordSkip(SkippedTable{
-					SourceSchema: t.Schema, SourceName: t.Name,
-					DestSchema: ds, DestName: dn,
+					SourceDbName: srcDbName, SourceSchema: t.Schema, SourceName: t.Name,
+					DestDbName: destDbName, DestSchema: ds, DestName: dn,
 					Reason: SkipReasonExists,
 				})
 				continue
@@ -256,8 +275,8 @@ func FilterTablesByDestExisting(tables []Table) []Table {
 			if rootSkip[rootFQN] {
 				ds, dn := runtimeOption.TranslateToDestFQN(t.Schema, t.Name)
 				recordSkip(SkippedTable{
-					SourceSchema: t.Schema, SourceName: t.Name,
-					DestSchema: ds, DestName: dn,
+					SourceDbName: srcDbName, SourceSchema: t.Schema, SourceName: t.Name,
+					DestDbName: destDbName, DestSchema: ds, DestName: dn,
 					Reason: SkipReasonRootExists,
 				})
 				continue
@@ -273,8 +292,8 @@ func FilterTablesByDestExisting(tables []Table) []Table {
 					ds, dn := runtimeOption.TranslateToDestFQN(t.Schema, suffixed)
 					if runtimeOption.IsDestTableExisting(destDbName, ds, dn) {
 						recordSkip(SkippedTable{
-							SourceSchema: t.Schema, SourceName: t.Name,
-							DestSchema: ds, DestName: dn,
+							SourceDbName: srcDbName, SourceSchema: t.Schema, SourceName: t.Name,
+							DestDbName: destDbName, DestSchema: ds, DestName: dn,
 							Reason: SkipReasonExists,
 						})
 						continue
@@ -292,8 +311,8 @@ func FilterTablesByDestExisting(tables []Table) []Table {
 						gplog.Warn("[skip-existing] partition leaf %s.%s exists on destination but its root does not; existing leaf will be attached to a freshly created root and may diverge from the source. Inspect the destination cluster before relying on the result.",
 							ds, dn)
 						recordSkip(SkippedTable{
-							SourceSchema: t.Schema, SourceName: t.Name,
-							DestSchema: ds, DestName: dn,
+							SourceDbName: srcDbName, SourceSchema: t.Schema, SourceName: t.Name,
+							DestDbName: destDbName, DestSchema: ds, DestName: dn,
 							Reason: SkipReasonHalfBuiltLeaf,
 						})
 						// Intentionally do not "continue" — the leaf stays in

@@ -50,6 +50,7 @@ func (b *BuiltinMeta) Open(srcConn, destConn *dbconn.DBConn) {
 
 	srcDBVersion = srcConn.Version
 	destDBVersion = destConn.Version
+	srcDbName = srcConn.DBName
 	destDbName = destConn.DBName
 
 	globalTOC = &toc.TOC{}

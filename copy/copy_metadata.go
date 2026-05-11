@@ -62,7 +62,7 @@ func (m *MetadataManager) MigrateMetadata(srcTables, destTables, nonPhysicalRels
 	// covers Full / Db / Schema / Table-without-dest-table modes; this one
 	// is the missing piece for the explicit-mapping path.
 	if utils.MustGetFlagBool(option.SKIP_EXISTING) {
-		srcTables, destTables = filterTablePairsByDestExisting(m.destConn.DBName, srcTables, destTables)
+		srcTables, destTables = filterTablePairsByDestExisting(m.srcConn.DBName, m.destConn.DBName, srcTables, destTables)
 	}
 
 	mode := config.GetCopyMode()
@@ -120,7 +120,7 @@ func (m *MetadataManager) Wait() {
 // destination database. This covers the CopyModeTable + --dest-table flow
 // where MigrateMetadata bypasses DDL extraction entirely. Each filtered
 // pair is recorded via builtin.RecordPairSkip for the summary writer.
-func filterTablePairsByDestExisting(destDbName string, src, dst []option.Table) ([]option.Table, []option.Table) {
+func filterTablePairsByDestExisting(srcDbName, destDbName string, src, dst []option.Table) ([]option.Table, []option.Table) {
 	if len(src) == 0 {
 		return src, dst
 	}
@@ -128,7 +128,10 @@ func filterTablePairsByDestExisting(destDbName string, src, dst []option.Table) 
 	keptDst := make([]option.Table, 0, len(dst))
 	for i := range src {
 		if config.IsDestTableExisting(destDbName, dst[i].Schema, dst[i].Name) {
-			builtin.RecordPairSkip(src[i].Schema, src[i].Name, dst[i].Schema, dst[i].Name)
+			builtin.RecordPairSkip(
+				srcDbName, src[i].Schema, src[i].Name,
+				destDbName, dst[i].Schema, dst[i].Name,
+			)
 			continue
 		}
 		keptSrc = append(keptSrc, src[i])

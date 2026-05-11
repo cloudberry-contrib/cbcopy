@@ -62,7 +62,7 @@ func TestFilterTablePairs_NoneOnDest_AllKept(t *testing.T) {
 		{Schema: "dst_s", Name: "t1"},
 		{Schema: "dst_s", Name: "t2"},
 	}
-	keptSrc, keptDst := filterTablePairsByDestExisting("dst", src, dst)
+	keptSrc, keptDst := filterTablePairsByDestExisting("src", "dst", src, dst)
 	if !reflect.DeepEqual(keptSrc, src) || !reflect.DeepEqual(keptDst, dst) {
 		t.Fatalf("expected all pairs kept, got src=%v dst=%v", keptSrc, keptDst)
 	}
@@ -83,7 +83,7 @@ func TestFilterTablePairs_SomeOnDest_FilteredAndRecorded(t *testing.T) {
 		{Schema: "dst_s", Name: "t1"},
 		{Schema: "dst_s", Name: "t2"},
 	}
-	keptSrc, keptDst := filterTablePairsByDestExisting("dst", src, dst)
+	keptSrc, keptDst := filterTablePairsByDestExisting("src", "dst", src, dst)
 
 	if len(keptSrc) != 1 || keptSrc[0].Name != "src_t2" {
 		t.Fatalf("expected only src_t2 kept, got %v", keptSrc)
@@ -95,8 +95,8 @@ func TestFilterTablePairs_SomeOnDest_FilteredAndRecorded(t *testing.T) {
 		t.Fatalf("expected 1 recorded skip, got %d", builtin.NumSkipExisting())
 	}
 	rec := builtin.SkipExistingTables()[0]
-	if rec.SourceSchema != "src_s" || rec.SourceName != "src_t1" ||
-		rec.DestSchema != "dst_s" || rec.DestName != "t1" {
+	if rec.SourceDbName != "src" || rec.SourceSchema != "src_s" || rec.SourceName != "src_t1" ||
+		rec.DestDbName != "dst" || rec.DestSchema != "dst_s" || rec.DestName != "t1" {
 		t.Fatalf("unexpected skip record: %+v", rec)
 	}
 	if rec.Reason != builtin.SkipReasonExists {
@@ -115,7 +115,7 @@ func TestFilterTablePairs_AllOnDest_NoneKept(t *testing.T) {
 		{Schema: "dst_s", Name: "t1"},
 		{Schema: "dst_s", Name: "t2"},
 	}
-	keptSrc, keptDst := filterTablePairsByDestExisting("dst", src, dst)
+	keptSrc, keptDst := filterTablePairsByDestExisting("src", "dst", src, dst)
 	if len(keptSrc) != 0 || len(keptDst) != 0 {
 		t.Fatalf("expected no pairs kept, got src=%v dst=%v", keptSrc, keptDst)
 	}
@@ -127,7 +127,7 @@ func TestFilterTablePairs_AllOnDest_NoneKept(t *testing.T) {
 func TestFilterTablePairs_EmptyInput_Passthrough(t *testing.T) {
 	setupTablePairFilterFixtures(t, "dst", []string{"dst_s.anything"})
 
-	keptSrc, keptDst := filterTablePairsByDestExisting("dst", nil, nil)
+	keptSrc, keptDst := filterTablePairsByDestExisting("src", "dst", nil, nil)
 	if keptSrc != nil || keptDst != nil {
 		t.Fatalf("expected nil passthrough on empty input, got src=%v dst=%v", keptSrc, keptDst)
 	}

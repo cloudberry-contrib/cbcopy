@@ -20,9 +20,12 @@ var (
 	srcDBVersion  dbconn.GPDBVersion
 	destDBVersion dbconn.GPDBVersion
 
-	// destDbName is the name of the destination database currently being
-	// processed. Set by BuiltinMeta.Open; consumed by FilterTablesByDestExisting
-	// (and any future logic that needs to ask "does this table exist on dest?").
+	// srcDbName and destDbName name the source and destination databases
+	// currently being processed. Set by BuiltinMeta.Open; consumed by
+	// FilterTablesByDestExisting and the skip-existing recorder so each
+	// recorded entry knows which db pair it belongs to (relevant in
+	// multi-db copy modes like --full or --dbname db1,db2).
+	srcDbName  string
 	destDbName string
 
 	// runtimeOption is a handle to the global *option.Option used by

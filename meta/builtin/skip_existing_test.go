@@ -30,11 +30,14 @@ func ensureTestLogger() {
 // FilterTablesByDestExisting reads from. Callers pass the destination
 // inventory + root-partition inventory as plain maps; the helper builds
 // an *option.Option around them and installs srcDBVersion accordingly.
+// The source db name is fixed to "src" — tests that don't care about
+// the source db column don't need to look at it.
 func installSkipExistingTestFixtures(t *testing.T, srcVer dbconn.GPDBVersion, destDb string, inv, parts map[string]struct{}) {
 	t.Helper()
 	ensureTestLogger()
 
 	srcDBVersion = srcVer
+	srcDbName = "src"
 	destDbName = destDb
 
 	o := &option.Option{}
@@ -340,18 +343,18 @@ func TestWriteSkipExistingList_PersistsAllEntries(t *testing.T) {
 	ensureTestLogger()
 	ResetSkipExistingState()
 	recordSkip(SkippedTable{
-		SourceSchema: "src_s", SourceName: "t1",
-		DestSchema: "dst_s", DestName: "t1",
+		SourceDbName: "prod", SourceSchema: "src_s", SourceName: "t1",
+		DestDbName: "prod_new", DestSchema: "dst_s", DestName: "t1",
 		Reason: SkipReasonExists,
 	})
 	recordSkip(SkippedTable{
-		SourceSchema: "public", SourceName: "rootA",
-		DestSchema: "public", DestName: "rootA",
+		SourceDbName: "staging", SourceSchema: "public", SourceName: "rootA",
+		DestDbName: "staging_new", DestSchema: "public", DestName: "rootA",
 		Reason: SkipReasonRootExists,
 	})
 	recordSkip(SkippedTable{
-		SourceSchema: "public", SourceName: "rootA_1_prt_a",
-		DestSchema: "public", DestName: "rootA_1_prt_a",
+		SourceDbName: "prod", SourceSchema: "public", SourceName: "rootA_1_prt_a",
+		DestDbName: "prod_new", DestSchema: "public", DestName: "rootA_1_prt_a",
 		Reason: SkipReasonHalfBuiltLeaf,
 	})
 
@@ -377,13 +380,46 @@ func TestWriteSkipExistingList_PersistsAllEntries(t *testing.T) {
 	}
 	body := string(raw)
 	wants := []string{
-		"exists\tsrc_s.t1\tdst_s.t1",
-		"root_exists\tpublic.rootA\tpublic.rootA",
-		"half_built_leaf\tpublic.rootA_1_prt_a\tpublic.rootA_1_prt_a",
+		"exists\tprod.src_s.t1\tprod_new.dst_s.t1",
+		"root_exists\tstaging.public.rootA\tstaging_new.public.rootA",
+		"half_built_leaf\tprod.public.rootA_1_prt_a\tprod_new.public.rootA_1_prt_a",
 	}
 	for _, w := range wants {
 		if !strings.Contains(body, w) {
 			t.Errorf("expected file to contain %q, got:\n%s", w, body)
 		}
+	}
+}
+
+func TestWriteSkipExistingList_OmitsEmptyDbName(t *testing.T) {
+	// Defensive: if a record was produced without a db name (e.g., a code
+	// path that doesn't have it), the writer should still produce a valid
+	// FQN, falling back to "<schema>.<name>" instead of ".schema.name".
+	ensureTestLogger()
+	ResetSkipExistingState()
+	recordSkip(SkippedTable{
+		SourceSchema: "public", SourceName: "t1",
+		DestSchema: "public", DestName: "t1",
+		Reason: SkipReasonExists,
+	})
+
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	prevCurrentUser := operating.System.CurrentUser
+	operating.System.CurrentUser = func() (*user.User, error) {
+		return &user.User{HomeDir: tmpHome}, nil
+	}
+	defer func() { operating.System.CurrentUser = prevCurrentUser }()
+
+	if err := WriteSkipExistingList("no-db"); err != nil {
+		t.Fatalf("WriteSkipExistingList: %v", err)
+	}
+	raw, err := os.ReadFile(tmpHome + "/gpAdminLogs/no-db_skip_existing.list")
+	if err != nil {
+		t.Fatalf("read produced file: %v", err)
+	}
+	want := "exists\tpublic.t1\tpublic.t1"
+	if !strings.Contains(string(raw), want) {
+		t.Errorf("expected file to contain %q, got:\n%s", want, string(raw))
 	}
 }
