@@ -457,7 +457,7 @@ func (o Option) MarkIncludeTables(dbname string, userTables map[string]TableStat
 	o.markTables(dbname, o.includedTables, userTables, partTables)
 }
 
-func (o Option) MarkDestTables(dbname string, userTables map[string]TableStatistics, partTables map[string]bool) {
+func (o *Option) MarkDestTables(dbname string, userTables map[string]TableStatistics, partTables map[string]bool) {
 	o.markTables(dbname, o.destTables, userTables, partTables)
 
 	// Persist a snapshot of the destination-side table inventory so that
@@ -482,7 +482,7 @@ func (o Option) MarkDestTables(dbname string, userTables map[string]TableStatist
 // definitions are not compared (matching gpcopy's --skip-existing semantics).
 // Root-partition tables are also recognized, so this returns true for the
 // root of a partition tree even if it was not listed in GetUserTables.
-func (o Option) IsDestTableExisting(destDbName, destSchema, destName string) bool {
+func (o *Option) IsDestTableExisting(destDbName, destSchema, destName string) bool {
 	fqn := destSchema + "." + destName
 	if inv, ok := o.destDbInventory[destDbName]; ok {
 		if _, exists := inv[fqn]; exists {
@@ -502,7 +502,7 @@ func (o Option) IsDestTableExisting(destDbName, destSchema, destName string) boo
 // If no mapping applies (e.g., db-mode or full-mode without --schema-mapping),
 // the source schema is returned unchanged, mirroring cbcopy's default of
 // "same schema on both sides".
-func (o Option) TranslateToDestFQN(srcSchema, srcName string) (string, string) {
+func (o *Option) TranslateToDestFQN(srcSchema, srcName string) (string, string) {
 	schemaMap := o.GetSchemaMap()
 	if destSchema, ok := schemaMap[srcSchema]; ok && destSchema != "" {
 		return destSchema, srcName
