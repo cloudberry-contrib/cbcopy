@@ -90,11 +90,12 @@ func recordSkip(s SkippedTable) {
 }
 
 // RecordPairSkip is the cross-package entry point used by the data-channel
-// filter (CopyModeTable + --dest-table flow in copy/copy_metadata.go), which
-// has the source and destination FQNs already paired up and so doesn't need
-// the partition/inheritance reasoning that FilterTablesByDestExisting
-// performs. The reason is fixed to SkipReasonExists because the caller has
-// already established that the destination row is present.
+// filter (filterTablePairsByDestExisting in copy/copy_metadata.go), which
+// has the source and destination FQNs already paired up. Records the
+// skip with reason SkipReasonExists; if the same destination FQN is also
+// recorded by the DDL filter with a more specific reason (e.g.
+// SkipReasonRootExists), dedupByDestFQN at write time will keep the more
+// informative one.
 func RecordPairSkip(srcDbName_ string, srcSchema, srcName string, destDbName_ string, destSchema, destName string) {
 	recordSkip(SkippedTable{
 		SourceDbName: srcDbName_,
@@ -105,6 +106,46 @@ func RecordPairSkip(srcDbName_ string, srcSchema, srcName string, destDbName_ st
 		DestName:     destName,
 		Reason:       SkipReasonExists,
 	})
+}
+
+// dedupByDestFQN collapses entries that point to the same destination
+// table (DestDbName + DestSchema + DestName). When the same destination
+// is recorded by both the DDL filter (FilterTablesByDestExisting) and
+// the data-pair filter (filterTablePairsByDestExisting) the entry with
+// the more informative reason wins, scored
+// HalfBuiltLeaf > RootExists > Exists. First-occurrence order is
+// preserved so the file remains readable as a chronological audit.
+func dedupByDestFQN(snapshot []SkippedTable) []SkippedTable {
+	type key struct {
+		dbName, schema, name string
+	}
+	score := func(r SkipReason) int {
+		switch r {
+		case SkipReasonHalfBuiltLeaf:
+			return 3
+		case SkipReasonRootExists:
+			return 2
+		case SkipReasonExists:
+			return 1
+		default:
+			return 0
+		}
+	}
+
+	indexByKey := make(map[key]int, len(snapshot))
+	out := make([]SkippedTable, 0, len(snapshot))
+	for _, s := range snapshot {
+		k := key{s.DestDbName, s.DestSchema, s.DestName}
+		if idx, ok := indexByKey[k]; ok {
+			if score(s.Reason) > score(out[idx].Reason) {
+				out[idx].Reason = s.Reason
+			}
+			continue
+		}
+		indexByKey[k] = len(out)
+		out = append(out, s)
+	}
+	return out
 }
 
 // WriteSkipExistingList persists the full set of tables that were bypassed
@@ -124,6 +165,7 @@ func WriteSkipExistingList(timestamp string) error {
 	if len(snapshot) == 0 {
 		return nil
 	}
+	snapshot = dedupByDestFQN(snapshot)
 
 	homeDir, err := homeDirectory()
 	if err != nil {
@@ -172,6 +214,7 @@ func LogSkipExistingSummary() {
 	if len(snapshot) == 0 {
 		return
 	}
+	snapshot = dedupByDestFQN(snapshot)
 
 	var (
 		existsN     int

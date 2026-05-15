@@ -323,6 +323,71 @@ func TestSkipReasonString(t *testing.T) {
 	}
 }
 
+func TestDedupByDestFQN(t *testing.T) {
+	// Same destination FQN recorded twice (once with weaker reason, once
+	// with stronger) collapses to a single entry whose reason is the
+	// stronger one. Entry order is the first-occurrence order so the
+	// audit file reads chronologically.
+	in := []SkippedTable{
+		{SourceDbName: "s", SourceSchema: "public", SourceName: "p_1_prt_a",
+			DestDbName: "d", DestSchema: "public", DestName: "p_1_prt_a",
+			Reason: SkipReasonExists},
+		{SourceDbName: "s", SourceSchema: "public", SourceName: "regular",
+			DestDbName: "d", DestSchema: "public", DestName: "regular",
+			Reason: SkipReasonExists},
+		{SourceDbName: "s", SourceSchema: "public", SourceName: "p_1_prt_a",
+			DestDbName: "d", DestSchema: "public", DestName: "p_1_prt_a",
+			Reason: SkipReasonRootExists}, // upgrade for p_1_prt_a
+		{SourceDbName: "s", SourceSchema: "public", SourceName: "halfbuilt",
+			DestDbName: "d", DestSchema: "public", DestName: "halfbuilt",
+			Reason: SkipReasonExists},
+		{SourceDbName: "s", SourceSchema: "public", SourceName: "halfbuilt",
+			DestDbName: "d", DestSchema: "public", DestName: "halfbuilt",
+			Reason: SkipReasonHalfBuiltLeaf}, // upgrade for halfbuilt
+	}
+
+	out := dedupByDestFQN(in)
+
+	if len(out) != 3 {
+		t.Fatalf("len(out) = %d, want 3 (one per distinct dest FQN). out=%+v", len(out), out)
+	}
+
+	// Order: p_1_prt_a (first seen), regular, halfbuilt.
+	expectedOrder := []struct {
+		name   string
+		reason SkipReason
+	}{
+		{"p_1_prt_a", SkipReasonRootExists},
+		{"regular", SkipReasonExists},
+		{"halfbuilt", SkipReasonHalfBuiltLeaf},
+	}
+	for i, want := range expectedOrder {
+		if out[i].DestName != want.name {
+			t.Errorf("out[%d].DestName = %q, want %q", i, out[i].DestName, want.name)
+		}
+		if out[i].Reason != want.reason {
+			t.Errorf("out[%d].Reason = %v, want %v", i, out[i].Reason, want.reason)
+		}
+	}
+}
+
+// Weaker reason coming AFTER a stronger one must not downgrade.
+func TestDedupByDestFQN_DoesNotDowngrade(t *testing.T) {
+	in := []SkippedTable{
+		{DestDbName: "d", DestSchema: "public", DestName: "t",
+			Reason: SkipReasonRootExists},
+		{DestDbName: "d", DestSchema: "public", DestName: "t",
+			Reason: SkipReasonExists},
+	}
+	out := dedupByDestFQN(in)
+	if len(out) != 1 {
+		t.Fatalf("len(out) = %d, want 1", len(out))
+	}
+	if out[0].Reason != SkipReasonRootExists {
+		t.Errorf("Reason = %v, want SkipReasonRootExists (must not be downgraded by a later weaker record)", out[0].Reason)
+	}
+}
+
 func TestWriteSkipExistingList_EmptyIsNoOp(t *testing.T) {
 	ensureTestLogger()
 	ResetSkipExistingState()
