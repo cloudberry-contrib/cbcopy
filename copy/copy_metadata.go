@@ -50,20 +50,15 @@ func (m *MetadataManager) Close() {
 	m.metaOps.Close()
 }
 
-// MigrateMetadata manages all pre-data operations
+// MigrateMetadata manages all pre-data operations.
+//
+// Note: --skip-existing pair filtering happens in doCopy() before this
+// function is called, so srcTables/destTables here are already post-filter.
+// Filtering here would be too late -- TableMap (which RestoreCleanup
+// iterates at the tail of restorePredata) is constructed in NewMetadataManager
+// above us. See issue #34.
 func (m *MetadataManager) MigrateMetadata(srcTables, destTables, nonPhysicalRels []option.Table) (chan option.TablePair, utils.ProgressBar) {
 	var pgd utils.ProgressBar
-
-	// --skip-existing: drop already-present-on-destination tables from the
-	// src/dest parallel arrays before the data channel is sized or filled.
-	// This covers CopyModeTable + --dest-table mode, where MigrateMetadata
-	// short-circuits through fillTablePairChan and the DDL pipeline's filter
-	// in RetrieveAndProcessTables never sees these tables. The DDL filter
-	// covers Full / Db / Schema / Table-without-dest-table modes; this one
-	// is the missing piece for the explicit-mapping path.
-	if utils.MustGetFlagBool(option.SKIP_EXISTING) {
-		srcTables, destTables = filterTablePairsByDestExisting(m.srcConn.DBName, m.destConn.DBName, srcTables, destTables)
-	}
 
 	mode := config.GetCopyMode()
 	tablec := make(chan option.TablePair, len(destTables))

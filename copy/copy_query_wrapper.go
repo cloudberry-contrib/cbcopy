@@ -162,6 +162,14 @@ func (qw *QueryWrapper) GetUserTables(srcConn, destConn *dbconn.DBConn) ([]optio
 	if copyMode != option.CopyModeTable {
 		srcTables = qw.filterTablesBySchema(srcConn, srcTables)
 		results := qw.excludeTables(srcTables, exlTabs)
+		// --skip-existing needs the destination inventory to drive its
+		// filter (FilterTablesByDestExisting in meta/builtin). Without
+		// this call, IsDestTableExisting always returns false in Full /
+		// Db / Schema modes and the filter silently passes every table
+		// through. See issue #34.
+		if utils.MustGetFlagBool(option.SKIP_EXISTING) {
+			qw.loadDestInventory(destConn)
+		}
 		return results, qw.redirectSchemaTables(results), nil, qw.getPartitionTableMapping(srcConn, destConn, false)
 	}
 
@@ -177,6 +185,13 @@ func (qw *QueryWrapper) GetUserTables(srcConn, destConn *dbconn.DBConn) ([]optio
 		nonPhysicalRels := qw.GetNonPhysicalRelations(srcConn, excludedPendingCheckRels)
 		gplog.Info("Finished retrieving view, mat-view, sequence, foreigntable")
 
+		// Same wiring requirement as the Full/Db/Schema branch above:
+		// without this call, --skip-existing is a silent no-op for
+		// --include-table when --dest-table is not supplied. See
+		// issue #34.
+		if utils.MustGetFlagBool(option.SKIP_EXISTING) {
+			qw.loadDestInventory(destConn)
+		}
 		return excludedSrcTables, qw.redirectIncludeTables(excludedSrcTables), nonPhysicalRels, qw.getPartitionTableMapping(srcConn, destConn, false)
 	}
 
@@ -519,20 +534,36 @@ func (qw *QueryWrapper) GetNonPhysicalRelations(conn *dbconn.DBConn, pendingChec
 	return results
 }
 
-func (qw *QueryWrapper) processDestinationTables(srcConn, destConn *dbconn.DBConn, srcTables map[string]option.TableStatistics) ([]option.Table, []option.Table, []option.Table, map[string][]string) {
-	// Get destination tables
+// loadDestInventory queries the destination cluster for its current user
+// tables and root partition tables, then registers them with config via
+// MarkDestTables so that IsDestTableExisting can answer queries later
+// without another round-trip. Returns the destination user-table map so
+// callers that also need to validate against it (processDestinationTables)
+// avoid an extra query.
+//
+// This is the only writer of the destination-side inventory consumed by
+// FilterTablesByDestExisting (DDL pipeline) and filterTablePairsByDestExisting
+// (data channel). Any return path in GetUserTables that means to honour
+// --skip-existing must call this helper; otherwise IsDestTableExisting will
+// always return false on that path and the skip filters will silently pass
+// every table through.
+func (qw *QueryWrapper) loadDestInventory(destConn *dbconn.DBConn) map[string]option.TableStatistics {
 	gplog.Info("Retrieving user tables on destination database \"%v\"...", destConn.DBName)
 	destTables, err := qw.queryManager.GetUserTables(destConn)
 	gplog.FatalOnError(err)
 	gplog.Info("Finished retrieving user tables")
 
-	// Get destination partition tables
 	gplog.Info("Retrieving partition table on destination database \"%v\"...", destConn.DBName)
 	destDbPartTables, err := qw.GetRootPartTables(destConn, true)
 	gplog.FatalOnError(err)
 	gplog.Info("Finished retrieving partition table")
 
 	config.MarkDestTables(destConn.DBName, destTables, destDbPartTables)
+	return destTables
+}
+
+func (qw *QueryWrapper) processDestinationTables(srcConn, destConn *dbconn.DBConn, srcTables map[string]option.TableStatistics) ([]option.Table, []option.Table, []option.Table, map[string][]string) {
+	destTables := qw.loadDestInventory(destConn)
 
 	// Validate tables
 	config.ValidateIncludeTables(srcTables, srcConn.DBName)
