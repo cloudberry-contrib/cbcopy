@@ -1,6 +1,8 @@
 package copy
 
 import (
+	"strings"
+
 	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
 	"github.com/cloudberry-contrib/cbcopy/meta"
 	"github.com/cloudberry-contrib/cbcopy/meta/builtin"
@@ -112,20 +114,61 @@ func (m *MetadataManager) Wait() {
 
 // filterTablePairsByDestExisting drops, from the parallel src/dest table
 // arrays, any entry whose destination side is already present on the
-// destination database. This covers the CopyModeTable + --dest-table flow
-// where MigrateMetadata bypasses DDL extraction entirely. Each filtered
-// pair is recorded via builtin.RecordPairSkip for the summary writer.
-func filterTablePairsByDestExisting(srcDbName, destDbName string, src, dst []option.Table) ([]option.Table, []option.Table) {
+// destination database. A destination side counts as "present" if either
+//
+//   * its own FQN is in the destination inventory, or
+//   * it is a partition leaf whose root is in the destination inventory.
+//
+// The second case matches the DDL-filter semantics in
+// meta/builtin.FilterTablesByDestExisting (gpcopy parity: existence is
+// authoritative at the root, so a tree where the root exists on dest is
+// fully skipped, including leaves that exist only on the source). Without
+// this check, a leaf that is in source but absent on dest would be kept
+// here, its parent's DDL would still be skipped by the DDL filter, and
+// the subsequent COPY would fail with "relation does not exist".
+//
+// partNameMap is the post-redirect map from dest root FQN to dest leaf
+// FQNs returned by QueryWrapper.getPartitionTableMapping. May be empty
+// when no partitioned tables are in scope.
+func filterTablePairsByDestExisting(srcDbName, destDbName string, src, dst []option.Table, partNameMap map[string][]string) ([]option.Table, []option.Table) {
 	if len(src) == 0 {
 		return src, dst
 	}
+
+	// Invert partNameMap so we can ask "given a dest leaf FQN, what is
+	// the dest root FQN?" in O(1).
+	leafToRoot := make(map[string]string, len(partNameMap)*2)
+	for root, leaves := range partNameMap {
+		for _, leaf := range leaves {
+			leafToRoot[leaf] = root
+		}
+	}
+
+	rootExistsOnDest := func(rootFQN string) bool {
+		parts := strings.SplitN(rootFQN, ".", 2)
+		if len(parts) != 2 {
+			return false
+		}
+		return config.IsDestTableExisting(destDbName, parts[0], parts[1])
+	}
+
 	keptSrc := make([]option.Table, 0, len(src))
 	keptDst := make([]option.Table, 0, len(dst))
 	for i := range src {
-		if config.IsDestTableExisting(destDbName, dst[i].Schema, dst[i].Name) {
+		dstSchema := dst[i].Schema
+		dstName := dst[i].Name
+
+		skip := false
+		if config.IsDestTableExisting(destDbName, dstSchema, dstName) {
+			skip = true
+		} else if rootFQN, ok := leafToRoot[dstSchema+"."+dstName]; ok && rootExistsOnDest(rootFQN) {
+			skip = true
+		}
+
+		if skip {
 			builtin.RecordPairSkip(
 				srcDbName, src[i].Schema, src[i].Name,
-				destDbName, dst[i].Schema, dst[i].Name,
+				destDbName, dstSchema, dstName,
 			)
 			continue
 		}

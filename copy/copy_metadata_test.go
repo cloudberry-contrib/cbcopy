@@ -62,7 +62,7 @@ func TestFilterTablePairs_NoneOnDest_AllKept(t *testing.T) {
 		{Schema: "dst_s", Name: "t1"},
 		{Schema: "dst_s", Name: "t2"},
 	}
-	keptSrc, keptDst := filterTablePairsByDestExisting("src", "dst", src, dst)
+	keptSrc, keptDst := filterTablePairsByDestExisting("src", "dst", src, dst, nil)
 	if !reflect.DeepEqual(keptSrc, src) || !reflect.DeepEqual(keptDst, dst) {
 		t.Fatalf("expected all pairs kept, got src=%v dst=%v", keptSrc, keptDst)
 	}
@@ -83,7 +83,7 @@ func TestFilterTablePairs_SomeOnDest_FilteredAndRecorded(t *testing.T) {
 		{Schema: "dst_s", Name: "t1"},
 		{Schema: "dst_s", Name: "t2"},
 	}
-	keptSrc, keptDst := filterTablePairsByDestExisting("src", "dst", src, dst)
+	keptSrc, keptDst := filterTablePairsByDestExisting("src", "dst", src, dst, nil)
 
 	if len(keptSrc) != 1 || keptSrc[0].Name != "src_t2" {
 		t.Fatalf("expected only src_t2 kept, got %v", keptSrc)
@@ -115,7 +115,7 @@ func TestFilterTablePairs_AllOnDest_NoneKept(t *testing.T) {
 		{Schema: "dst_s", Name: "t1"},
 		{Schema: "dst_s", Name: "t2"},
 	}
-	keptSrc, keptDst := filterTablePairsByDestExisting("src", "dst", src, dst)
+	keptSrc, keptDst := filterTablePairsByDestExisting("src", "dst", src, dst, nil)
 	if len(keptSrc) != 0 || len(keptDst) != 0 {
 		t.Fatalf("expected no pairs kept, got src=%v dst=%v", keptSrc, keptDst)
 	}
@@ -127,7 +127,7 @@ func TestFilterTablePairs_AllOnDest_NoneKept(t *testing.T) {
 func TestFilterTablePairs_EmptyInput_Passthrough(t *testing.T) {
 	setupTablePairFilterFixtures(t, "dst", []string{"dst_s.anything"})
 
-	keptSrc, keptDst := filterTablePairsByDestExisting("src", "dst", nil, nil)
+	keptSrc, keptDst := filterTablePairsByDestExisting("src", "dst", nil, nil, nil)
 	if keptSrc != nil || keptDst != nil {
 		t.Fatalf("expected nil passthrough on empty input, got src=%v dst=%v", keptSrc, keptDst)
 	}
