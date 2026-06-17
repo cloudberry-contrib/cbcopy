@@ -36,6 +36,7 @@ const (
 	COMPRESSION             = "compression"
 	COMPRESS_TYPE           = "compress-type"
 	ON_SEGMENT_THRESHOLD    = "on-segment-threshold"
+	COPY_ON_SEGMENT         = "copy-on-segment"
 	QUIET                   = "quiet"
 	SOURCE_HOST             = "source-host"
 	SOURCE_PORT             = "source-port"
@@ -53,6 +54,7 @@ const (
 	VERBOSE                 = "verbose"
 	DATA_PORT_RANGE         = "data-port-range"
 	CONNECTION_MODE         = "connection-mode"
+	REDISTRIBUTE            = "redistribute"
 )
 
 const (
@@ -90,6 +92,11 @@ type Table struct {
 	Partition    int
 	RelTuples    int64
 	IsReplicated bool
+
+	// ForceOnSegment skips the row-count threshold check and forces the table
+	// to be copied ON SEGMENT (used for partition root tables and when the user
+	// passes --copy-on-segment).
+	ForceOnSegment bool
 }
 
 type TablePair struct {
@@ -572,7 +579,8 @@ func (o Option) GetTablespaceMap() map[string]string {
 func (o Option) validatePartTables(title string, tables []*DbTable, userTables map[string]TableStatistics, dbname string) {
 	for _, t := range tables {
 		if t.Partition == 1 {
-			gplog.Fatal(errors.Errorf("Found partition root table: %s.%s.%s in %s list", dbname, t.Schema, t.Name, title), "")
+			// Partition root tables are allowed; they will be expanded to child partitions later.
+			continue
 		}
 
 		k := t.Schema + "." + t.Name
@@ -593,7 +601,20 @@ func (o Option) ValidateExcludeTables(userTables map[string]TableStatistics, dbn
 }
 
 func (o Option) ValidateDestTables(userTables map[string]TableStatistics, dbname string) {
-	o.validatePartTables("dest table", o.destTables, userTables, dbname)
+	for _, t := range o.destTables {
+		if t.Partition == 1 {
+			// Partition root tables are allowed as dest tables;
+			// COPY INTO a partitioned table routes data to child partitions.
+			continue
+		}
+
+		k := t.Schema + "." + t.Name
+
+		_, exists := userTables[k]
+		if !exists {
+			gplog.Fatal(errors.Errorf("dest table \"%v\" does not exists on \"%v\" database", k, dbname), "")
+		}
+	}
 }
 
 func MakeIncludeOptions(initialFlags *pflag.FlagSet, testTableName string) {

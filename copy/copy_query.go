@@ -236,6 +236,12 @@ type PartLeafTable struct {
 	RootName  string
 	LeafName  string
 	RelTuples int64
+	// Boundary is a name-independent, deterministic representation of the
+	// leaf's partition range/list bound. Two leaves with the same bound
+	// produce the same Boundary string regardless of their partition names,
+	// so it is used to pair source and destination leaves (never the
+	// _1_prt_N name suffix, which drifts after add/drop partition).
+	Boundary string
 }
 
 // GetPartitionLeafTables retrieves partition leaf tables from the database
@@ -249,7 +255,8 @@ func (qm *QueryManager) GetPartitionLeafTables(conn *dbconn.DBConn) ([]PartLeafT
 		SELECT quote_ident(n.nspname) || '.' || quote_ident(relname) AS rootname,   
  	 	quote_ident(n.nspname) || '.' || 
  	 	(SELECT quote_ident(relname) FROM pg_class WHERE oid = inhrelid ) 
- 	 	AS 	leafname, cast(reltuples as bigint) AS relTuples
+ 	 	AS 	leafname, cast(reltuples as bigint) AS relTuples,
+ 	 	coalesce((SELECT pg_get_expr(relpartbound, oid) FROM pg_class WHERE oid = inhrelid), '') AS boundary
 		FROM pg_class c
 		JOIN pg_inherits p
 		  ON c.oid = p.inhparent
@@ -263,11 +270,17 @@ func (qm *QueryManager) GetPartitionLeafTables(conn *dbconn.DBConn) ([]PartLeafT
 		ORDER BY n.nspname, leafname;`
 	} else {
 		query = `
-		SELECT quote_ident(na.nspname) || '.' || quote_ident(cb.relname) AS rootname, quote_ident(pc.schema) ||'.' || quote_ident(pc.name) AS leafname, pc.relTuples
+		SELECT quote_ident(na.nspname) || '.' || quote_ident(cb.relname) AS rootname, quote_ident(pc.schema) ||'.' || quote_ident(pc.name) AS leafname, pc.relTuples, pc.boundary
 		FROM pg_namespace na
 		JOIN pg_class cb ON na.oid = cb.relnamespace
 		JOIN (SELECT
-		           p.parrelid AS parentid, n.nspname AS schema, cparent.relname AS name, cast(cparent.reltuples as bigint) AS relTuples
+		           p.parrelid AS parentid, n.nspname AS schema, cparent.relname AS name, cast(cparent.reltuples as bigint) AS relTuples,
+		           coalesce(r.parisdefault::text,'') || '|' ||
+		           coalesce(r.parrangestartincl::text,'') || '|' ||
+		           coalesce(r.parrangeendincl::text,'') || '|' ||
+		           coalesce(r.parrangestart::text,'') || '|' ||
+		           coalesce(r.parrangeend::text,'') || '|' ||
+		           coalesce(r.parlistvalues::text,'') AS boundary
 		          FROM pg_partition p
 		              JOIN pg_partition_rule r ON p.oid = r.paroid
 		              JOIN pg_class cparent ON cparent.oid = r.parchildrelid

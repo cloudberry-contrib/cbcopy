@@ -459,8 +459,125 @@ func (qw *QueryWrapper) GetPartitionLeafTables(conn *dbconn.DBConn, isDest bool)
 	return tables, nil
 }
 
+// leavesByRoot returns the partition leaf tables whose root equals rootFqn.
+func leavesByRoot(leaves []PartLeafTable, rootFqn string) []PartLeafTable {
+	results := make([]PartLeafTable, 0)
+	for _, l := range leaves {
+		if l.RootName == rootFqn {
+			results = append(results, l)
+		}
+	}
+	return results
+}
+
+// pairPartitionLeaves attempts to pair the source partition root's leaves to
+// the destination partition root's leaves by their range/list boundary
+// (NEVER by partition name or _1_prt_N ordinal, which drift after add/drop
+// partition and would silently route data into the wrong partition).
+//
+// It returns one source/destination option.Table per matched leaf together
+// with paired=true only when EVERY source leaf maps to exactly one
+// destination leaf with an identical boundary and vice versa. Any ambiguity
+// (duplicate boundaries, differing leaf counts, an unmatched boundary, or a
+// plain non-partitioned destination with no leaves) yields paired=false so
+// the caller falls back to the safe root->root ON SEGMENT copy.
+func (qw *QueryWrapper) pairPartitionLeaves(srcConn, destConn *dbconn.DBConn,
+	srcRoot option.Table, srcRootFqn, destRootFqn string) ([]option.Table, []option.Table, bool) {
+
+	srcLeavesAll, err := qw.GetPartitionLeafTables(srcConn, false)
+	if err != nil {
+		gplog.Debug("leaf pairing for \"%v\": cannot read source leaves (%v); falling back to root->root", srcRootFqn, err)
+		return nil, nil, false
+	}
+	destLeavesAll, err := qw.GetPartitionLeafTables(destConn, true)
+	if err != nil {
+		gplog.Debug("leaf pairing for \"%v\": cannot read dest leaves (%v); falling back to root->root", destRootFqn, err)
+		return nil, nil, false
+	}
+
+	srcLeaves := leavesByRoot(srcLeavesAll, srcRootFqn)
+	destLeaves := leavesByRoot(destLeavesAll, destRootFqn)
+
+	if len(srcLeaves) == 0 || len(destLeaves) == 0 {
+		gplog.Debug("leaf pairing for \"%v\"->\"%v\": src leaves=%v dest leaves=%v; falling back to root->root",
+			srcRootFqn, destRootFqn, len(srcLeaves), len(destLeaves))
+		return nil, nil, false
+	}
+
+	if len(srcLeaves) != len(destLeaves) {
+		gplog.Debug("leaf pairing for \"%v\"->\"%v\": leaf count mismatch (%v vs %v); falling back to root->root",
+			srcRootFqn, destRootFqn, len(srcLeaves), len(destLeaves))
+		return nil, nil, false
+	}
+
+	destByBoundary := make(map[string]PartLeafTable, len(destLeaves))
+	for _, d := range destLeaves {
+		if d.Boundary == "" {
+			gplog.Debug("leaf pairing for \"%v\"->\"%v\": dest leaf \"%v\" has empty boundary; falling back to root->root",
+				srcRootFqn, destRootFqn, d.LeafName)
+			return nil, nil, false
+		}
+		if _, dup := destByBoundary[d.Boundary]; dup {
+			gplog.Debug("leaf pairing for \"%v\"->\"%v\": duplicate dest boundary; falling back to root->root",
+				srcRootFqn, destRootFqn)
+			return nil, nil, false
+		}
+		destByBoundary[d.Boundary] = d
+	}
+
+	leafSrc := make([]option.Table, 0, len(srcLeaves))
+	leafDst := make([]option.Table, 0, len(srcLeaves))
+	seenSrcBoundary := make(map[string]bool, len(srcLeaves))
+
+	for _, s := range srcLeaves {
+		if s.Boundary == "" {
+			gplog.Debug("leaf pairing for \"%v\"->\"%v\": src leaf \"%v\" has empty boundary; falling back to root->root",
+				srcRootFqn, destRootFqn, s.LeafName)
+			return nil, nil, false
+		}
+		if seenSrcBoundary[s.Boundary] {
+			gplog.Debug("leaf pairing for \"%v\"->\"%v\": duplicate src boundary; falling back to root->root",
+				srcRootFqn, destRootFqn)
+			return nil, nil, false
+		}
+		seenSrcBoundary[s.Boundary] = true
+
+		d, ok := destByBoundary[s.Boundary]
+		if !ok {
+			gplog.Debug("leaf pairing for \"%v\"->\"%v\": src leaf \"%v\" boundary has no dest match; falling back to root->root",
+				srcRootFqn, destRootFqn, s.LeafName)
+			return nil, nil, false
+		}
+
+		ss := strings.Split(s.LeafName, ".")
+		ds := strings.Split(d.LeafName, ".")
+		if len(ss) != 2 || len(ds) != 2 {
+			gplog.Debug("leaf pairing for \"%v\"->\"%v\": unexpected leaf name format; falling back to root->root",
+				srcRootFqn, destRootFqn)
+			return nil, nil, false
+		}
+
+		leafSrc = append(leafSrc, option.Table{
+			Schema:    ss[0],
+			Name:      ss[1],
+			Partition: 0,
+			RelTuples: s.RelTuples,
+		})
+		leafDst = append(leafDst, option.Table{
+			Schema:    ds[0],
+			Name:      ds[1],
+			Partition: 0,
+			RelTuples: s.RelTuples,
+		})
+		gplog.Debug("leaf pair by boundary: \"%v\" -> \"%v\" (reltuples=%v)", s.LeafName, d.LeafName, s.RelTuples)
+	}
+
+	return leafSrc, leafDst, true
+}
+
 // excludeTablePair excludes table pairs based on source and destination tables
-func (qw *QueryWrapper) excludeTablePair(srcTables, destTables, exclTables []option.Table,
+func (qw *QueryWrapper) excludeTablePair(srcConn, destConn *dbconn.DBConn,
+	srcTables, destTables, exclTables []option.Table,
 	userTables map[string]option.TableStatistics, dbname string) ([]option.Table, []option.Table) {
 
 	if len(srcTables) != len(destTables) {
@@ -470,6 +587,13 @@ func (qw *QueryWrapper) excludeTablePair(srcTables, destTables, exclTables []opt
 	excludedSrcTabs := make([]option.Table, 0)
 	excludedDstTabs := make([]option.Table, 0)
 	tabMap := make(map[string]string)
+
+	// Build source table info map for partition root lookup
+	srcTabInfo := make(map[string]option.Table)
+	for _, t := range srcTables {
+		k := t.Schema + "." + t.Name
+		srcTabInfo[k] = t
+	}
 
 	// Build table mapping
 	for i, t := range srcTables {
@@ -488,6 +612,41 @@ func (qw *QueryWrapper) excludeTablePair(srcTables, destTables, exclTables []opt
 	for k, v := range tabMap {
 		u, exists := userTables[k]
 		if !exists {
+			// Check if it's a partition root table
+			if srcTab, ok := srcTabInfo[k]; ok && srcTab.Partition == 1 {
+				sls := strings.Split(k, ".")
+				sld := strings.Split(v, ".")
+
+				// Prefer per-leaf parallelism: pair source leaves to
+				// destination leaves by their (name-independent) range
+				// boundary and expand into one task per leaf.
+				leafSrc, leafDst, paired := qw.pairPartitionLeaves(srcConn, destConn, srcTab, k, v)
+				if paired {
+					excludedSrcTabs = append(excludedSrcTabs, leafSrc...)
+					excludedDstTabs = append(excludedDstTabs, leafDst...)
+					gplog.Info("mapping partition root \"%v\" to \"%v\" as %v leaf->leaf pair(s) by range boundary", k, v, len(leafSrc))
+					continue
+				}
+
+				// Fallback: root->root forced ON SEGMENT
+				excludedSrcTabs = append(excludedSrcTabs, option.Table{
+					Schema:         sls[0],
+					Name:           sls[1],
+					Partition:      1,
+					RelTuples:      srcTab.RelTuples,
+					ForceOnSegment: true,
+				})
+				excludedDstTabs = append(excludedDstTabs, option.Table{
+					Schema:    sld[0],
+					Name:      sld[1],
+					Partition: 0,
+					RelTuples: srcTab.RelTuples,
+				})
+
+				gplog.Debug("mapping partition root table (root->root ON SEGMENT) from \"%v\" to \"%v\"", k, v)
+				continue
+			}
+
 			gplog.Warn("Relation \"%v\" does not exists on source database \"%v\"", k, dbname)
 			continue
 		}
@@ -571,6 +730,7 @@ func (qw *QueryWrapper) processDestinationTables(srcConn, destConn *dbconn.DBCon
 	config.ValidateDestTables(destTables, destConn.DBName)
 
 	excludedSrcTabs, excludedDstTabs := qw.excludeTablePair(
+		srcConn, destConn,
 		config.GetIncludeTablesByDb(srcConn.DBName),
 		config.GetDestTablesByDb(destConn.DBName),
 		config.GetExclTablesByDb(srcConn.DBName),

@@ -122,6 +122,7 @@ func (app *Application) SetFlagDefaults(flagSet *pflag.FlagSet) {
 	flagSet.Bool(option.COMPRESSION, false, "Enable compression for data transfer (master: snappy, segment: zstd by default)")
 	flagSet.String(option.COMPRESS_TYPE, "zstd", "Compression algorithm for segment copy: \"gzip\", \"snappy\", or \"zstd\" (master copy always uses snappy)")
 	flagSet.Int(option.ON_SEGMENT_THRESHOLD, 1000000, "Copy between Coordinators directly, if the table has smaller or same number of rows")
+	flagSet.Bool(option.COPY_ON_SEGMENT, false, "Force all tables to be copied ON SEGMENT, bypassing the --on-segment-threshold row-count check")
 	flagSet.Bool(option.QUIET, false, "Suppress non-warning, non-error log messages")
 	flagSet.String(option.SOURCE_HOST, "127.0.0.1", "The host of source cluster. Must be reachable from the destination cluster under --connection-mode pull.")
 	flagSet.Int(option.SOURCE_PORT, 5432, "The port of source cluster")
@@ -139,6 +140,7 @@ func (app *Application) SetFlagDefaults(flagSet *pflag.FlagSet) {
 	flagSet.Bool("version", false, "Print version number and exit")
 	flagSet.String(option.DATA_PORT_RANGE, "1024-65535", "The range of listening port number to choose for receiving data on dest cluster")
 	flagSet.String(option.CONNECTION_MODE, "push", "Connection mode, 'push' (source connects to dest) or 'pull' (dest connects to source)")
+	flagSet.Bool(option.REDISTRIBUTE, false, "When source and destination distribution keys differ, copy on segment in parallel and redistribute to the destination's distribution key (instead of failing). Note: when set, all segment-copied tables are redistributed, including same-key ones.")
 }
 
 // doFlagValidation validates the command-line flags and performs necessary checks.

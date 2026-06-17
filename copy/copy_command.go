@@ -553,6 +553,7 @@ func createTestCopyStrategy(strategy string, workerId int, srcSegs []utils.Segme
 // - Segment copy (large tables): only uses zstd or gzip (default: zstd)
 func CreateCopyStrategy(isReplicated bool,
 	numTuples int64,
+	forceOnSegment bool,
 	workerId int,
 	srcSegs []utils.SegmentHostInfo,
 	destSegs []utils.SegmentHostInfo,
@@ -572,7 +573,9 @@ func CreateCopyStrategy(isReplicated bool,
 		return createTestCopyStrategy(strategy, workerId, srcSegs, destSegs, connectionMode, useCompression)
 	}
 
-	if numTuples <= int64(utils.MustGetFlagInt(option.ON_SEGMENT_THRESHOLD)) {
+	globalForce := utils.MustGetFlagBool(option.COPY_ON_SEGMENT)
+	if !forceOnSegment && !globalForce &&
+		numTuples <= int64(utils.MustGetFlagInt(option.ON_SEGMENT_THRESHOLD)) {
 		compArg := getCompressArg(true, useCompression)
 		return &CopyOnMaster{CopyBase: CopyBase{WorkerId: workerId, SrcSegmentsHostInfo: srcSegs, DestSegmentsHostInfo: destSegs, ConnectionMode: connectionMode, CompArg: compArg}}
 	}
@@ -583,6 +586,10 @@ func CreateCopyStrategy(isReplicated bool,
 	compArg := getCompressArg(false, useCompression)
 
 	if srcConn.Version.Equals(destConn.Version) && numSrcSegs == numDestSegs {
+		if utils.MustGetFlagBool(option.REDISTRIBUTE) {
+			gplog.Debug("--redistribute set: using ExtDestGeCopy to redistribute by destination distribution key")
+			return &ExtDestGeCopy{CopyBase: CopyBase{WorkerId: workerId, SrcSegmentsHostInfo: srcSegs, DestSegmentsHostInfo: destSegs, ConnectionMode: connectionMode, CompArg: compArg}}
+		}
 		return &CopyOnSegment{CopyBase: CopyBase{WorkerId: workerId, SrcSegmentsHostInfo: srcSegs, DestSegmentsHostInfo: destSegs, ConnectionMode: connectionMode, CompArg: compArg}}
 	}
 

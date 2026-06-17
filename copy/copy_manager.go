@@ -3,6 +3,7 @@ package copy
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/cloudberry-contrib/cbcopy/internal/dbconn"
@@ -171,6 +172,12 @@ func (tc *TableCopier) cleanupAfterCopy(isSkipped bool, inTxn bool, err error) {
 		tc.copiedMap[tablePath] = COPY_FAILED
 		utils.WriteDataFile(tc.manager.fFailed, tc.manager.srcConn.DBName+"."+tc.srcTable.Schema+"."+tc.srcTable.Name+"\n")
 		gplog.Error("[Worker %v] Failed to copy table %v: %v", tc.workerID, tablePath, err)
+		if strings.Contains(err.Error(), "distribution key") &&
+			strings.Contains(err.Error(), "belong to segment") {
+			gplog.Error("[Worker %v] Table %v: source and destination distribution keys differ. "+
+				"Re-run with --redistribute to copy on segment and redistribute to the destination's distribution key.",
+				tc.workerID, tablePath)
+		}
 
 		tc.rollback(inTxn)
 		return
@@ -184,6 +191,7 @@ func (tc *TableCopier) cleanupAfterCopy(isSkipped bool, inTxn bool, err error) {
 func (tc *TableCopier) copyData() error {
 	command := CreateCopyStrategy(tc.srcTable.IsReplicated,
 		tc.srcTable.RelTuples,
+		tc.srcTable.ForceOnSegment,
 		tc.workerID,
 		tc.manager.srcSegmentsHostInfo,
 		tc.manager.destSegmentsIpInfo,
