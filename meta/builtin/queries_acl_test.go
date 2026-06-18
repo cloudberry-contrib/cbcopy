@@ -74,7 +74,7 @@ var _ = Describe("queries_acl tests", func() {
 	FROM table o
 		LEFT JOIN pg_description d ON (d.objoid = o.oid AND d.classoid = 'table'::regclass AND d.objsubid = 0)
 		JOIN pg_namespace n ON o.schema = n.oid%s
-	WHERE n.nspname NOT LIKE 'pg_temp_%%' AND n.nspname NOT LIKE 'pg_toast%%' AND n.nspname NOT IN ('gp_toolkit', 'information_schema', 'pg_aoseg', 'pg_bitmapindex', 'pg_catalog')
+	WHERE n.nspname NOT LIKE 'pg_temp_%%' AND n.nspname NOT LIKE 'pg_toast%%' AND n.nspname NOT IN ('gp_toolkit', 'information_schema', 'pg_aoseg', 'pg_bitmapindex', 'pg_catalog', 'pg_ext_aux')
 	ORDER BY o.oid`, securityLabelSelectReplace, securityLabelJoinReplace))).WillReturnRows(emptyRows)
 			params.SchemaField = "schema"
 			builtin.GetMetadataForObjectType(connectionPool, params)
