@@ -184,6 +184,7 @@ func (tc *TableCopier) cleanupAfterCopy(isSkipped bool, inTxn bool, err error) {
 func (tc *TableCopier) copyData() error {
 	command := CreateCopyStrategy(tc.srcTable.IsReplicated,
 		tc.srcTable.RelTuples,
+		tc.srcTable.ForceOnSegment,
 		tc.workerID,
 		tc.manager.srcSegmentsHostInfo,
 		tc.manager.destSegmentsIpInfo,
