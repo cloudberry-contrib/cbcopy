@@ -156,7 +156,15 @@ func (t *ServerBase) serve() {
 	// All expected clients are connected. Stop letting the listener's accept
 	// deadline bound the rest of the transfer: close the listener so the
 	// in-flight data connections stream to completion with no timeout (issue #44).
-	_ = t.listener.Close()
+	if err := t.listener.Close(); err != nil {
+		// Benign at this point: all expected clients are already connected and
+		// streaming, so a listener-close failure does not affect the transfer.
+		// Deliberately do NOT setError here -- failing an otherwise-healthy
+		// transfer on this would reintroduce the class of spurious teardown
+		// that issue #44 is about. Log for visibility only.
+		gplog.Debug("Failed to close listener after accept phase, seg-id %v cmd-id %v: %v",
+			t.config.SegID, t.config.CmdID, err)
+	}
 }
 
 func (t *ServerBase) Err() error {
