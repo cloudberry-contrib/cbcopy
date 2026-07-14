@@ -367,7 +367,7 @@ func (executor *GPDBExecutor) ExecuteClusterCommand(scope Scope, commandList []S
  *    - e.g. running multiple scps on coordinator to push a file to all segments
  */
 func (cluster *Cluster) GenerateAndExecuteCommand(verboseMsg string, scope Scope, generator interface{}) *RemoteOutput {
-	gplog.Verbose(verboseMsg)
+	gplog.Verbose("%s", verboseMsg)
 	commandList := cluster.GenerateSSHCommandList(scope, generator)
 	return cluster.ExecuteClusterCommand(scope, commandList)
 }
@@ -391,7 +391,7 @@ func (cluster *Cluster) CheckClusterError(remoteOutput *RemoteOutput, finalErrMs
 	}
 
 	if len(noFatal) == 1 && noFatal[0] == true {
-		gplog.Error(finalErrMsg)
+		gplog.Error("%s", finalErrMsg)
 	} else {
 		LogFatalClusterError(finalErrMsg, remoteOutput.Scope, remoteOutput.NumErrors)
 	}

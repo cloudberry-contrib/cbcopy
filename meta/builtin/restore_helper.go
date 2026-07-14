@@ -120,7 +120,7 @@ func RestoreSchemas(conn *dbconn.DBConn, schemaStatements []toc.StatementWithTyp
 			if strings.Contains(err.Error(), "already exists") {
 			} else {
 				errMsg := fmt.Sprintf("Error encountered while creating schema %s", schema.Name)
-				gplog.Verbose(fmt.Sprintf("%s: %s", errMsg, err.Error()))
+				gplog.Verbose("%s: %s", errMsg, err.Error())
 				numErrors++
 			}
 		}

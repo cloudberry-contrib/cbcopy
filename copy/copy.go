@@ -384,7 +384,7 @@ func (app *Application) doTeardown() {
 	if err := recover(); err != nil {
 		// gplog's Fatal will cause a panic with error code 2
 		if gplog.GetErrorCode() != 2 {
-			gplog.Error(fmt.Sprintf("%v: %s", err, debug.Stack()))
+			gplog.Error("%v: %s", err, debug.Stack())
 			gplog.SetErrorCode(2)
 		} else {
 			errStr = fmt.Sprintf("%v", err)
