@@ -130,21 +130,33 @@ func (t *ServerBase) Serve() {
 func (t *ServerBase) serve() {
 	defer t.wg.Done()
 
-	for {
+	var accepted int32
+	for accepted < t.numConn {
 		conn, err := t.listener.Accept()
 		if err != nil {
 			select {
 			case <-t.quit:
 				return
 			default:
+				// Reaching here means not all expected clients connected
+				// before the listener's accept deadline/error fired. That is
+				// a real, fatal error for the accept phase. Return instead of
+				// continuing so we never busy-spin on an already-tripped
+				// deadline (issue #44).
 				gplog.Error("Listener.Accept() failed: %v", err)
 				t.setError(err)
+				return
 			}
-			continue
 		}
 
+		accepted++
 		t.handler.handleConnection(conn)
 	}
+
+	// All expected clients are connected. Stop letting the listener's accept
+	// deadline bound the rest of the transfer: close the listener so the
+	// in-flight data connections stream to completion with no timeout (issue #44).
+	_ = t.listener.Close()
 }
 
 func (t *ServerBase) Err() error {
