@@ -139,7 +139,7 @@ type MetadataQueryStruct struct {
 }
 
 func GetMetadataForObjectType(connectionPool *dbconn.DBConn, params MetadataQueryParams) MetadataMap {
-	gplog.Verbose("Getting object type metadata from " + params.CatalogTable)
+	gplog.Verbose("Getting object type metadata from %s", params.CatalogTable)
 
 	tableName := params.CatalogTable
 	nameCol := "''"

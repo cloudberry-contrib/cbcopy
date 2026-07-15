@@ -1,6 +1,6 @@
 module github.com/cloudberry-contrib/cbcopy
 
-go 1.21
+go 1.25.0
 
 // gpbackup update,
 // https://github.com/greenplum-db/gpbackup/commit/24797490747fdd4ae648f6da5cbaf2aed8284216
