@@ -122,6 +122,8 @@ func (app *Application) SetFlagDefaults(flagSet *pflag.FlagSet) {
 	flagSet.Bool(option.COMPRESSION, false, "Enable compression for data transfer (master: snappy, segment: zstd by default)")
 	flagSet.String(option.COMPRESS_TYPE, "zstd", "Compression algorithm for segment copy: \"gzip\", \"snappy\", or \"zstd\" (master copy always uses snappy)")
 	flagSet.Int(option.ON_SEGMENT_THRESHOLD, 1000000, "Copy between Coordinators directly, if the table has smaller or same number of rows")
+	flagSet.Bool(option.COPY_ON_SEGMENT, false, "Force all tables to be copied ON SEGMENT, bypassing the --on-segment-threshold row-count check")
+	flagSet.Bool(option.ALLOW_PARTITION_RESHAPE, false, "Allow root->root fallback when source and destination partition structures differ (leaf count or boundary mismatch). Without this flag, structural mismatches are fatal.")
 	flagSet.Bool(option.QUIET, false, "Suppress non-warning, non-error log messages")
 	flagSet.String(option.SOURCE_HOST, "127.0.0.1", "The host of source cluster. Must be reachable from the destination cluster under --connection-mode pull.")
 	flagSet.Int(option.SOURCE_PORT, 5432, "The port of source cluster")

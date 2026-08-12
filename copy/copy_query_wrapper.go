@@ -459,8 +459,176 @@ func (qw *QueryWrapper) GetPartitionLeafTables(conn *dbconn.DBConn, isDest bool)
 	return tables, nil
 }
 
+// leavesByRoot returns the partition leaf tables whose root equals rootFqn.
+func leavesByRoot(leaves []PartLeafTable, rootFqn string) []PartLeafTable {
+	results := make([]PartLeafTable, 0)
+	for _, l := range leaves {
+		if l.RootName == rootFqn {
+			results = append(results, l)
+		}
+	}
+	return results
+}
+
+// PairAction describes the outcome of a leaf-pairing attempt.
+type PairAction string
+
+const (
+	PairFull         PairAction = "full"          // all src leaves matched — leaf-to-leaf
+	PairPartial      PairAction = "partial"       // some matched, some unmatched — needs allowReshape
+	PairRootFallback PairAction = "root_fallback" // zero matches + allowReshape — root→root
+	PairFatal        PairAction = "fatal"         // partial or zero matches without allowReshape
+)
+
+// decidePairAction returns the action to take based on match counts and the
+// --allow-partition-reshape flag.  This is a pure function with no side effects,
+// making it straightforward to test.
+func decidePairAction(matchedCount, unmatchedCount int, allowReshape bool) PairAction {
+	if matchedCount == 0 {
+		if allowReshape {
+			return PairRootFallback
+		}
+		return PairFatal
+	}
+	if unmatchedCount > 0 {
+		if allowReshape {
+			return PairPartial
+		}
+		return PairFatal
+	}
+	return PairFull
+}
+
+// matchLeavesByBoundary is the pure, DB-free matching core.  It normalises
+// boundary strings on both sides and pairs src leaves to dst leaves by equal
+// normalised boundary.  Leaves with empty, duplicate, or unmatched boundaries
+// are returned in unmatchedSrc.
+func matchLeavesByBoundary(srcLeaves, destLeaves []PartLeafTable) (
+	matchedSrc, matchedDst []option.Table, unmatchedSrc []PartLeafTable,
+) {
+	if len(srcLeaves) == 0 || len(destLeaves) == 0 {
+		return nil, nil, nil
+	}
+
+	// Build destination lookup by normalised boundary.
+	destByNorm := make(map[string]PartLeafTable, len(destLeaves))
+	for _, d := range destLeaves {
+		nb := normalizeBoundary(d.Boundary)
+		if nb == "" {
+			continue
+		}
+		if _, dup := destByNorm[nb]; dup {
+			delete(destByNorm, nb)
+			continue
+		}
+		destByNorm[nb] = d
+	}
+
+	// Count normalised src boundaries to detect duplicates.
+	normCount := make(map[string]int, len(srcLeaves))
+	for _, s := range srcLeaves {
+		normCount[normalizeBoundary(s.Boundary)]++
+	}
+
+	leafSrc := make([]option.Table, 0, len(srcLeaves))
+	leafDst := make([]option.Table, 0, len(srcLeaves))
+	unmatched := make([]PartLeafTable, 0)
+
+	for _, s := range srcLeaves {
+		nb := normalizeBoundary(s.Boundary)
+		if nb == "" || normCount[nb] > 1 {
+			unmatched = append(unmatched, s)
+			continue
+		}
+
+		d, found := destByNorm[nb]
+		if !found {
+			unmatched = append(unmatched, s)
+			continue
+		}
+
+		ss := strings.Split(s.LeafName, ".")
+		ds := strings.Split(d.LeafName, ".")
+		if len(ss) != 2 || len(ds) != 2 {
+			unmatched = append(unmatched, s)
+			continue
+		}
+
+		leafSrc = append(leafSrc, option.Table{Schema: ss[0], Name: ss[1], Partition: 0, RelTuples: s.RelTuples})
+		leafDst = append(leafDst, option.Table{Schema: ds[0], Name: ds[1], Partition: 0, RelTuples: s.RelTuples})
+	}
+	return leafSrc, leafDst, unmatched
+}
+
+// pairPartitionLeaves orchestrates leaf pairing: fetches leaves from the DB,
+// calls matchLeavesByBoundary for the pure matching, then applies the
+// decidePairAction gate to determine whether the copy should proceed, fall
+// back, or abort.
+func (qw *QueryWrapper) pairPartitionLeaves(srcConn, destConn *dbconn.DBConn,
+	srcRoot option.Table, srcRootFqn, destRootFqn string, allowReshape bool,
+) (matchedSrc, matchedDst []option.Table, unmatchedSrc []PartLeafTable, rootFallback bool) {
+
+	srcLeavesAll, err := qw.GetPartitionLeafTables(srcConn, false)
+	if err != nil {
+		gplog.Fatal(errors.Errorf("leaf pairing for %q: cannot read source leaves: %v", srcRootFqn, err), "")
+	}
+	destLeavesAll, err := qw.GetPartitionLeafTables(destConn, true)
+	if err != nil {
+		gplog.Fatal(errors.Errorf("leaf pairing for %q: cannot read dest leaves: %v", destRootFqn, err), "")
+	}
+
+	srcLeaves := leavesByRoot(srcLeavesAll, srcRootFqn)
+	destLeaves := leavesByRoot(destLeavesAll, destRootFqn)
+
+	if len(srcLeaves) == 0 {
+		gplog.Warn("leaf pairing for %q->%q: src has no partition leaves; falling back to root->root",
+			srcRootFqn, destRootFqn)
+		return nil, nil, nil, true
+	}
+	if len(destLeaves) == 0 {
+		gplog.Warn("leaf pairing for %q->%q: destination has no partition leaves (plain table); "+
+			"falling back to root->root (data will be flattened into a single table)",
+			srcRootFqn, destRootFqn)
+		return nil, nil, nil, true
+	}
+
+	leafSrc, leafDst, unmatched := matchLeavesByBoundary(srcLeaves, destLeaves)
+
+	action := decidePairAction(len(leafSrc), len(unmatched), allowReshape)
+	switch action {
+	case PairFatal:
+		if len(leafSrc) == 0 {
+			gplog.Fatal(errors.Errorf("leaf pairing for %q->%q: no boundary matches found (boundary format may differ across versions). "+
+				"Use --allow-partition-reshape to allow root->root fallback.", srcRootFqn, destRootFqn), "")
+		} else {
+			gplog.Fatal(errors.Errorf("leaf pairing for %q->%q: %d of %d src leaves could not be matched by boundary. "+
+				"Use --allow-partition-reshape to allow partial leaf-to-leaf copy with unmatched leaves falling back to dst root.",
+				srcRootFqn, destRootFqn, len(unmatched), len(srcLeaves)), "")
+		}
+	case PairRootFallback:
+		gplog.Warn("leaf pairing for %q->%q: no boundary matches found; falling back to root->root ON SEGMENT (per --allow-partition-reshape)",
+			srcRootFqn, destRootFqn)
+		return nil, nil, nil, true
+	case PairPartial:
+		gplog.Warn("leaf pairing for %q->%q: %d of %d src leaves could not be matched by boundary; "+
+			"unmatched leaves will be copied individually to dst root (per --allow-partition-reshape). "+
+			"Ensure dst has a DEFAULT partition or that all unmatched values fall within existing dst ranges.",
+			srcRootFqn, destRootFqn, len(unmatched), len(srcLeaves))
+	case PairFull:
+		gplog.Info("partition %q->%q: all %d leaves matched by boundary (leaf-to-leaf)", srcRootFqn, destRootFqn, len(leafSrc))
+	}
+
+	for i := range leafSrc {
+		gplog.Debug("leaf pair by boundary: %q.%q -> %q.%q (reltuples=%v)",
+			leafSrc[i].Schema, leafSrc[i].Name, leafDst[i].Schema, leafDst[i].Name, leafSrc[i].RelTuples)
+	}
+
+	return leafSrc, leafDst, unmatched, false
+}
+
 // excludeTablePair excludes table pairs based on source and destination tables
-func (qw *QueryWrapper) excludeTablePair(srcTables, destTables, exclTables []option.Table,
+func (qw *QueryWrapper) excludeTablePair(srcConn, destConn *dbconn.DBConn,
+	srcTables, destTables, exclTables []option.Table,
 	userTables map[string]option.TableStatistics, dbname string) ([]option.Table, []option.Table) {
 
 	if len(srcTables) != len(destTables) {
@@ -470,6 +638,13 @@ func (qw *QueryWrapper) excludeTablePair(srcTables, destTables, exclTables []opt
 	excludedSrcTabs := make([]option.Table, 0)
 	excludedDstTabs := make([]option.Table, 0)
 	tabMap := make(map[string]string)
+
+	// Build source table info map for partition root lookup
+	srcTabInfo := make(map[string]option.Table)
+	for _, t := range srcTables {
+		k := t.Schema + "." + t.Name
+		srcTabInfo[k] = t
+	}
 
 	// Build table mapping
 	for i, t := range srcTables {
@@ -488,6 +663,63 @@ func (qw *QueryWrapper) excludeTablePair(srcTables, destTables, exclTables []opt
 	for k, v := range tabMap {
 		u, exists := userTables[k]
 		if !exists {
+			// Check if it's a partition root table
+			if srcTab, ok := srcTabInfo[k]; ok && srcTab.Partition == 1 {
+				sls := strings.Split(k, ".")
+				sld := strings.Split(v, ".")
+
+				allowReshape := utils.MustGetFlagBool(option.ALLOW_PARTITION_RESHAPE)
+				matchedSrc, matchedDst, unmatchedLeaves, rootFallback := qw.pairPartitionLeaves(srcConn, destConn, srcTab, k, v, allowReshape)
+
+				if rootFallback {
+					// Full root->root (plain dest, zero matches, or read error).
+					gplog.Warn("mapping partition root %q to %q as root->root ON SEGMENT; per-leaf parallelism is lost", k, v)
+					excludedSrcTabs = append(excludedSrcTabs, option.Table{
+						Schema:         sls[0],
+						Name:           sls[1],
+						Partition:      1,
+						RelTuples:      srcTab.RelTuples,
+						ForceOnSegment: true,
+					})
+					excludedDstTabs = append(excludedDstTabs, option.Table{
+						Schema:    sld[0],
+						Name:      sld[1],
+						Partition: 0,
+						RelTuples: srcTab.RelTuples,
+					})
+					continue
+				}
+
+				// Add matched leaf pairs (leaf-to-leaf).
+				excludedSrcTabs = append(excludedSrcTabs, matchedSrc...)
+				excludedDstTabs = append(excludedDstTabs, matchedDst...)
+				gplog.Info("mapping partition root %q to %q: %d leaf->leaf pair(s) by boundary", k, v, len(matchedSrc))
+
+				// Add unmatched src leaves as individual copies to dst root.
+				for _, ul := range unmatchedLeaves {
+					uls := strings.Split(ul.LeafName, ".")
+					if len(uls) != 2 {
+						gplog.Warn("unexpected leaf name format %q; skipping unmatched leaf", ul.LeafName)
+						continue
+					}
+					gplog.Warn("unmatched src leaf %q will be copied individually to dst root %q", ul.LeafName, v)
+					excludedSrcTabs = append(excludedSrcTabs, option.Table{
+						Schema:         uls[0],
+						Name:           uls[1],
+						Partition:      0,
+						RelTuples:      ul.RelTuples,
+						ForceOnSegment: true,
+					})
+					excludedDstTabs = append(excludedDstTabs, option.Table{
+						Schema:    sld[0],
+						Name:      sld[1],
+						Partition: 0,
+						RelTuples: ul.RelTuples,
+					})
+				}
+				continue
+			}
+
 			gplog.Warn("Relation \"%v\" does not exists on source database \"%v\"", k, dbname)
 			continue
 		}
@@ -571,6 +803,7 @@ func (qw *QueryWrapper) processDestinationTables(srcConn, destConn *dbconn.DBCon
 	config.ValidateDestTables(destTables, destConn.DBName)
 
 	excludedSrcTabs, excludedDstTabs := qw.excludeTablePair(
+		srcConn, destConn,
 		config.GetIncludeTablesByDb(srcConn.DBName),
 		config.GetDestTablesByDb(destConn.DBName),
 		config.GetExclTablesByDb(srcConn.DBName),
