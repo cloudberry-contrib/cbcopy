@@ -27,7 +27,7 @@ const (
 	gpdbPattern  = `\(Greenplum Database ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
 	cbdbPattern  = `\(Cloudberry Database ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
 	cbedbPattern = `\(HashData Enterprise ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
-	acbdbPattern = `\(Apache Cloudberry ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
+	acbdbPattern = `\(Apache Cloudberry (?:[A-Za-z]+ )*([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
 	hdwPattern   = `\(HashData Warehouse ([0-9]+\.[0-9]+\.[0-9]+)[^)]*\)`
 	pgsqlPattern = `^PostgreSQL\s+([0-9]+\.[0-9]+\.[0-9]+)`
 )
