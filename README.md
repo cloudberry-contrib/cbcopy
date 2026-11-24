@@ -337,7 +337,7 @@ Flags:
       --dest-host string                 The host of destination cluster. Must be reachable from the source cluster under --connection-mode push. (default "127.0.0.1")
       --dest-port int                    The port of destination cluster (default 5432)
       --dest-schema strings              The schema(s) in destination database to copy to, separated by commas
-      --dest-table strings               The renamed dest table(s) for include-table, separated by commas
+      --dest-table strings               The renamed dest table(s) for include-table, separated by commas. The dest table(s) must already exist on the destination database.
       --dest-table-file string           The renamed dest table(s) for include-table-file, The line format is "dbname.schema.table"
       --dest-tablespace string           Create all database objects in the specified tablespace on destination database
       --dest-user string                 The user of destination cluster (default "gpadmin")
